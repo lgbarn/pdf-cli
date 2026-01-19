@@ -84,3 +84,15 @@ func PrintVerbose(format string, args ...interface{}) {
 		fmt.Fprintf(os.Stderr, format+"\n", args...)
 	}
 }
+
+// PrintStatus prints a status message to stderr (always shown)
+func PrintStatus(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
+
+// PrintProgress prints a progress message (shown in verbose mode or for long operations)
+func PrintProgress(operation string) {
+	if Verbose() {
+		fmt.Fprintf(os.Stderr, "Processing: %s...\n", operation)
+	}
+}
