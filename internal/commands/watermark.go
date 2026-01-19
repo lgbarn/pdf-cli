@@ -11,7 +11,7 @@ import (
 
 func init() {
 	cli.AddCommand(watermarkCmd)
-	cli.AddOutputFlag(watermarkCmd, "Output file path")
+	cli.AddOutputFlag(watermarkCmd, "Output file path (only with single file)")
 	cli.AddPagesFlag(watermarkCmd, "Pages to watermark (default: all)")
 	cli.AddPasswordFlag(watermarkCmd, "Password for encrypted PDFs")
 	watermarkCmd.Flags().StringP("text", "t", "", "Text watermark content")
@@ -19,33 +19,34 @@ func init() {
 }
 
 var watermarkCmd = &cobra.Command{
-	Use:   "watermark <file.pdf>",
-	Short: "Add a watermark to a PDF",
-	Long: `Add a text or image watermark to a PDF.
+	Use:   "watermark <file.pdf> [file2.pdf...]",
+	Short: "Add a watermark to PDF(s)",
+	Long: `Add a text or image watermark to PDF file(s).
 
 Text watermarks are rendered diagonally across each page.
 Image watermarks are centered on each page.
 
 Either --text or --image must be specified.
 
+Supports batch processing of multiple files. When processing
+multiple files, output files are named with '_watermarked' suffix.
+
 Examples:
   pdf watermark document.pdf -t "CONFIDENTIAL" -o marked.pdf
   pdf watermark document.pdf -t "DRAFT" -p 1-5 -o draft.pdf
-  pdf watermark document.pdf -i logo.png -o branded.pdf`,
-	Args: cobra.ExactArgs(1),
+  pdf watermark document.pdf -i logo.png -o branded.pdf
+  pdf watermark *.pdf -t "CONFIDENTIAL"       # Batch watermark
+  pdf watermark doc1.pdf doc2.pdf -t "DRAFT"  # Multiple files`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: runWatermark,
 }
 
 func runWatermark(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
+	output := cli.GetOutput(cmd)
 	text, _ := cmd.Flags().GetString("text")
 	image, _ := cmd.Flags().GetString("image")
-
-	if err := util.ValidatePDFFile(inputFile); err != nil {
-		return err
-	}
 
 	if text == "" && image == "" {
 		return fmt.Errorf("must specify either --text or --image for watermark")
@@ -58,12 +59,26 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("image file not found: %s", image)
 	}
 
+	if err := validateBatchOutput(args, output, "_watermarked"); err != nil {
+		return err
+	}
+
+	return processBatch(args, func(inputFile string) error {
+		return watermarkFile(inputFile, output, pagesStr, password, text, image)
+	})
+}
+
+func watermarkFile(inputFile, explicitOutput, pagesStr, password, text, image string) error {
+	if err := util.ValidatePDFFile(inputFile); err != nil {
+		return err
+	}
+
 	pages, err := parseAndValidatePages(pagesStr, inputFile, password)
 	if err != nil {
 		return err
 	}
 
-	output := outputOrDefault(cli.GetOutput(cmd), inputFile, "_watermarked")
+	output := outputOrDefault(explicitOutput, inputFile, "_watermarked")
 
 	if err := checkOutputFile(output); err != nil {
 		return err

@@ -46,7 +46,7 @@ func runMerge(cmd *cobra.Command, args []string) error {
 
 	cli.PrintVerbose("Merging %d files into %s", len(args), output)
 
-	if err := pdf.Merge(args, output, password); err != nil {
+	if err := pdf.MergeWithProgress(args, output, password, cli.Progress()); err != nil {
 		return util.WrapError("merging files", output, err)
 	}
 

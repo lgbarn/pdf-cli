@@ -14,7 +14,38 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/schollz/progressbar/v3"
 )
+
+// progressBarTheme is the default theme for progress bars
+var progressBarTheme = progressbar.Theme{
+	Saucer:        "=",
+	SaucerHead:    ">",
+	SaucerPadding: " ",
+	BarStart:      "[",
+	BarEnd:        "]",
+}
+
+// newProgressBar creates a consistent progress bar with the given description and total count.
+// Returns nil if total is below the threshold for showing progress.
+func newProgressBar(description string, total int, threshold int) *progressbar.ProgressBar {
+	if total <= threshold {
+		return nil
+	}
+	return progressbar.NewOptions(total,
+		progressbar.OptionSetDescription(description),
+		progressbar.OptionSetWriter(os.Stderr),
+		progressbar.OptionShowCount(),
+		progressbar.OptionSetTheme(progressBarTheme),
+	)
+}
+
+// finishProgressBar prints a newline after the progress bar if it exists
+func finishProgressBar(bar *progressbar.ProgressBar) {
+	if bar != nil {
+		fmt.Fprintln(os.Stderr)
+	}
+}
 
 // newConfig creates a pdfcpu configuration with optional password.
 func newConfig(password string) *model.Configuration {
@@ -105,17 +136,123 @@ func PageCount(path, password string) (int, error) {
 
 // Merge combines multiple PDF files into one
 func Merge(inputs []string, output, password string) error {
-	return api.MergeCreateFile(inputs, output, false, newConfig(password))
+	return MergeWithProgress(inputs, output, password, false)
+}
+
+// MergeWithProgress combines multiple PDF files into one with optional progress bar
+func MergeWithProgress(inputs []string, output, password string, showProgress bool) error {
+	if len(inputs) == 0 {
+		return fmt.Errorf("no input files provided")
+	}
+
+	// For small number of files or no progress, use the standard merge
+	if !showProgress || len(inputs) <= 3 {
+		return api.MergeCreateFile(inputs, output, false, newConfig(password))
+	}
+
+	// For larger number of files with progress, merge incrementally
+	bar := newProgressBar("Merging PDFs", len(inputs), 0)
+
+	// Create temp file for intermediate results
+	tmpFile, err := os.CreateTemp("", "pdf-merge-*.pdf")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+	defer os.Remove(tmpPath)
+
+	// Copy first file to temp
+	firstContent, err := os.ReadFile(inputs[0])
+	if err != nil {
+		return fmt.Errorf("failed to read first file: %w", err)
+	}
+	if err := os.WriteFile(tmpPath, firstContent, 0600); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	_ = bar.Add(1)
+
+	// Merge remaining files one at a time
+	for i := 1; i < len(inputs); i++ {
+		err := api.MergeCreateFile([]string{tmpPath, inputs[i]}, tmpPath+".new", false, newConfig(password))
+		if err != nil {
+			return fmt.Errorf("failed to merge file %s: %w", inputs[i], err)
+		}
+		// Replace temp with new merged result
+		if err := os.Rename(tmpPath+".new", tmpPath); err != nil {
+			return fmt.Errorf("failed to update temp file: %w", err)
+		}
+		_ = bar.Add(1)
+	}
+
+	finishProgressBar(bar)
+
+	// Move final result to output
+	return os.Rename(tmpPath, output)
 }
 
 // Split splits a PDF into individual pages
 func Split(input, outputDir, password string) error {
-	return api.SplitFile(input, outputDir, 1, newConfig(password))
+	return SplitWithProgress(input, outputDir, 1, password, false)
 }
 
 // SplitByPageCount splits a PDF into chunks of n pages
 func SplitByPageCount(input, outputDir string, pageCount int, password string) error {
-	return api.SplitFile(input, outputDir, pageCount, newConfig(password))
+	return SplitWithProgress(input, outputDir, pageCount, password, false)
+}
+
+// SplitWithProgress splits a PDF with optional progress bar
+func SplitWithProgress(input, outputDir string, pageCount int, password string, showProgress bool) error {
+	totalPages, err := PageCount(input, password)
+	if err != nil {
+		return fmt.Errorf("failed to get page count: %w", err)
+	}
+
+	// For small PDFs or no progress, use the standard split
+	if !showProgress || totalPages <= 5 {
+		return api.SplitFile(input, outputDir, pageCount, newConfig(password))
+	}
+
+	// Calculate number of output files
+	numOutputFiles := (totalPages + pageCount - 1) / pageCount
+	bar := newProgressBar("Splitting PDF", numOutputFiles, 0)
+
+	// Get base name for output files
+	baseName := filepath.Base(input)
+	ext := filepath.Ext(baseName)
+	baseName = baseName[:len(baseName)-len(ext)]
+
+	// Split page by page (or chunk by chunk)
+	for i := 0; i < numOutputFiles; i++ {
+		startPage := i*pageCount + 1
+		endPage := startPage + pageCount - 1
+		if endPage > totalPages {
+			endPage = totalPages
+		}
+
+		// Build page list for this chunk
+		var pages []int
+		for p := startPage; p <= endPage; p++ {
+			pages = append(pages, p)
+		}
+
+		// Create output filename
+		var outputFile string
+		if pageCount == 1 {
+			outputFile = filepath.Join(outputDir, fmt.Sprintf("%s_%d%s", baseName, startPage, ext))
+		} else {
+			outputFile = filepath.Join(outputDir, fmt.Sprintf("%s_%d-%d%s", baseName, startPage, endPage, ext))
+		}
+
+		if err := ExtractPages(input, outputFile, pages, password); err != nil {
+			return fmt.Errorf("failed to extract pages %d-%d: %w", startPage, endPage, err)
+		}
+
+		_ = bar.Add(1)
+	}
+
+	finishProgressBar(bar)
+	return nil
 }
 
 // ExtractPages extracts specific pages from a PDF into a new file
@@ -152,8 +289,13 @@ func Decrypt(input, output, password string) error {
 
 // ExtractText extracts text content from a PDF
 func ExtractText(input string, pages []int, password string) (string, error) {
+	return ExtractTextWithProgress(input, pages, password, false)
+}
+
+// ExtractTextWithProgress extracts text content from a PDF with optional progress bar
+func ExtractTextWithProgress(input string, pages []int, password string, showProgress bool) (string, error) {
 	// Try using ledongthuc/pdf first for better text extraction
-	text, err := extractTextPrimary(input, pages)
+	text, err := extractTextPrimary(input, pages, showProgress)
 	if err == nil && strings.TrimSpace(text) != "" {
 		return text, nil
 	}
@@ -163,101 +305,107 @@ func ExtractText(input string, pages []int, password string) (string, error) {
 }
 
 // extractTextPrimary uses the ledongthuc/pdf library for text extraction
-func extractTextPrimary(input string, pages []int) (string, error) {
+func extractTextPrimary(input string, pages []int, showProgress bool) (string, error) {
 	f, r, err := pdf.Open(input)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	// If no specific pages requested, extract from all pages
-	if len(pages) == 0 {
-		var buf bytes.Buffer
-		b, err := r.GetPlainText()
-		if err != nil {
-			return "", err
-		}
-		if _, err := buf.ReadFrom(b); err != nil {
-			return "", fmt.Errorf("failed to read text: %w", err)
-		}
-		return buf.String(), nil
-	}
-
-	// Extract from specific pages
-	sortedPages := make([]int, len(pages))
-	copy(sortedPages, pages)
-	sort.Ints(sortedPages)
-
 	totalPages := r.NumPage()
 
-	// For small number of pages, extract sequentially
-	if len(sortedPages) <= 5 {
-		return extractPagesSequential(r, sortedPages, totalPages)
+	// If no specific pages requested, extract from all pages
+	if len(pages) == 0 {
+		pages = make([]int, totalPages)
+		for i := range pages {
+			pages[i] = i + 1
+		}
+	} else {
+		// Sort specific pages for consistent ordering
+		sortedPages := make([]int, len(pages))
+		copy(sortedPages, pages)
+		sort.Ints(sortedPages)
+		pages = sortedPages
 	}
 
-	// For larger number of pages, extract in parallel
-	return extractPagesParallel(r, sortedPages, totalPages)
+	// Use parallel extraction for larger page counts
+	if len(pages) > 5 {
+		return extractPagesParallel(r, pages, totalPages, showProgress)
+	}
+
+	return extractPagesSequential(r, pages, totalPages, showProgress)
 }
 
 // extractPagesSequential extracts text from pages sequentially
-func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int) (string, error) {
-	var result strings.Builder
+func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
+	var bar *progressbar.ProgressBar
+	if showProgress {
+		bar = newProgressBar("Extracting text", len(pages), 5)
+	}
+	defer finishProgressBar(bar)
 
+	var result strings.Builder
 	for _, pageNum := range pages {
-		if pageNum < 1 || pageNum > totalPages {
-			continue
+		text := extractPageText(r, pageNum, totalPages)
+		if text != "" {
+			if result.Len() > 0 {
+				result.WriteString("\n")
+			}
+			result.WriteString(text)
 		}
-		p := r.Page(pageNum)
-		if p.V.IsNull() {
-			continue
+		if bar != nil {
+			_ = bar.Add(1)
 		}
-		text, err := p.GetPlainText(nil)
-		if err != nil {
-			continue
-		}
-		if result.Len() > 0 {
-			result.WriteString("\n")
-		}
-		result.WriteString(text)
 	}
 
 	return result.String(), nil
 }
 
+// extractPageText extracts text from a single page, returning empty string on any error
+func extractPageText(r *pdf.Reader, pageNum, totalPages int) string {
+	if pageNum < 1 || pageNum > totalPages {
+		return ""
+	}
+	p := r.Page(pageNum)
+	if p.V.IsNull() {
+		return ""
+	}
+	text, err := p.GetPlainText(nil)
+	if err != nil {
+		return ""
+	}
+	return text
+}
+
 // extractPagesParallel extracts text from pages in parallel
-func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int) (string, error) {
+func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	type pageResult struct {
 		pageNum int
 		text    string
 	}
 
+	var bar *progressbar.ProgressBar
+	if showProgress {
+		bar = newProgressBar("Extracting text", len(pages), 5)
+	}
+	defer finishProgressBar(bar)
+
 	results := make(chan pageResult, len(pages))
 
 	for _, pageNum := range pages {
 		go func(pn int) {
-			if pn < 1 || pn > totalPages {
-				results <- pageResult{pageNum: pn, text: ""}
-				return
-			}
-			p := r.Page(pn)
-			if p.V.IsNull() {
-				results <- pageResult{pageNum: pn, text: ""}
-				return
-			}
-			text, err := p.GetPlainText(nil)
-			if err != nil {
-				results <- pageResult{pageNum: pn, text: ""}
-				return
-			}
-			results <- pageResult{pageNum: pn, text: text}
+			results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
 		}(pageNum)
 	}
 
 	// Collect results into a map
 	pageTexts := make(map[int]string)
 	for range pages {
-		r := <-results
-		pageTexts[r.pageNum] = r.text
+		res := <-results
+		pageTexts[res.pageNum] = res.text
+		if bar != nil {
+			_ = bar.Add(1)
+		}
 	}
 
 	// Build result in page order
@@ -318,18 +466,9 @@ func extractTextFallback(input string, pages []int, password string) (string, er
 // parseTextFromPDFContent extracts readable text from raw PDF content stream
 func parseTextFromPDFContent(content string) string {
 	var result strings.Builder
-	inText := false
 	i := 0
 
 	for i < len(content) {
-		// Look for text show operators: Tj, TJ, ', "
-		if i+1 < len(content) {
-			op := content[i : i+2]
-			if op == "Tj" || op == "TJ" {
-				inText = false
-			}
-		}
-
 		// Look for string literals in parentheses
 		if content[i] == '(' {
 			// Find matching close parenthesis, handling escapes and nesting
@@ -339,7 +478,6 @@ func parseTextFromPDFContent(content string) string {
 					result.WriteString(" ")
 				}
 				result.WriteString(text)
-				inText = true
 			}
 			if endIdx > i {
 				i = endIdx
@@ -357,7 +495,6 @@ func parseTextFromPDFContent(content string) string {
 		i++
 	}
 
-	_ = inText // suppress unused warning
 	return strings.TrimSpace(result.String())
 }
 

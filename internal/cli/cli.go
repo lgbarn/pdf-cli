@@ -49,6 +49,7 @@ func init() {
 	rootCmd.SetVersionTemplate(fmt.Sprintf("pdf-cli version %s\ncommit: %s\nbuilt: %s\n", version, commit, buildDate))
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "Overwrite existing files without prompting")
+	rootCmd.PersistentFlags().Bool("progress", false, "Show progress bar for long operations")
 }
 
 // Execute runs the root command
@@ -76,6 +77,12 @@ func Verbose() bool {
 func Force() bool {
 	f, _ := rootCmd.PersistentFlags().GetBool("force")
 	return f
+}
+
+// Progress returns whether progress bar is enabled
+func Progress() bool {
+	p, _ := rootCmd.PersistentFlags().GetBool("progress")
+	return p
 }
 
 // PrintVerbose prints a message if verbose mode is enabled

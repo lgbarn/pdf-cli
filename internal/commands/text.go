@@ -3,8 +3,10 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/ocr"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/util"
 	"github.com/spf13/cobra"
@@ -15,6 +17,8 @@ func init() {
 	cli.AddOutputFlag(textCmd, "Output file path (default: stdout)")
 	cli.AddPagesFlag(textCmd, "Pages to extract text from (default: all)")
 	cli.AddPasswordFlag(textCmd, "Password for encrypted PDFs")
+	textCmd.Flags().Bool("ocr", false, "Use OCR for image-based PDFs")
+	textCmd.Flags().String("ocr-lang", "eng", "OCR language(s), e.g., 'eng' or 'eng+fra'")
 }
 
 var textCmd = &cobra.Command{
@@ -25,10 +29,15 @@ var textCmd = &cobra.Command{
 By default, extracts text from all pages and prints to stdout.
 Use -o to save to a file, or -p to extract from specific pages.
 
+For scanned or image-based PDFs, use --ocr to enable OCR text extraction.
+OCR requires downloading tessdata on first use (~15MB per language).
+
 Examples:
   pdf text document.pdf
   pdf text document.pdf -o content.txt
-  pdf text document.pdf -p 1-5 -o chapter1.txt`,
+  pdf text document.pdf -p 1-5 -o chapter1.txt
+  pdf text scanned.pdf --ocr                    # OCR for scanned PDF
+  pdf text scanned.pdf --ocr --ocr-lang eng+fra # Multi-language OCR`,
 	Args: cobra.ExactArgs(1),
 	RunE: runText,
 }
@@ -38,6 +47,8 @@ func runText(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
+	useOCR, _ := cmd.Flags().GetBool("ocr")
+	ocrLang, _ := cmd.Flags().GetString("ocr-lang")
 
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
@@ -48,11 +59,34 @@ func runText(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cli.PrintVerbose("Extracting text from %s", inputFile)
+	var text string
 
-	text, err := pdf.ExtractText(inputFile, pages, password)
-	if err != nil {
-		return util.WrapError("extracting text", inputFile, err)
+	if useOCR {
+		// Use OCR for text extraction
+		cli.PrintVerbose("Extracting text from %s using OCR (language: %s)", inputFile, ocrLang)
+
+		engine, err := ocr.NewEngine(ocrLang)
+		if err != nil {
+			return util.WrapError("initializing OCR", inputFile, err)
+		}
+
+		text, err = engine.ExtractTextFromPDF(inputFile, pages, password, cli.Progress())
+		if err != nil {
+			return util.WrapError("extracting text with OCR", inputFile, err)
+		}
+	} else {
+		// Try normal text extraction first
+		cli.PrintVerbose("Extracting text from %s", inputFile)
+
+		text, err = pdf.ExtractTextWithProgress(inputFile, pages, password, cli.Progress())
+		if err != nil {
+			return util.WrapError("extracting text", inputFile, err)
+		}
+
+		// If no text found and not explicitly OCR, suggest using --ocr
+		if strings.TrimSpace(text) == "" {
+			cli.PrintStatus("No text found. Try using --ocr for scanned/image-based PDFs.")
+		}
 	}
 
 	if output == "" {

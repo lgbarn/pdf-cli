@@ -11,36 +11,50 @@ import (
 
 func init() {
 	cli.AddCommand(compressCmd)
-	cli.AddOutputFlag(compressCmd, "Output file path")
+	cli.AddOutputFlag(compressCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(compressCmd, "Password for encrypted PDFs")
 }
 
 var compressCmd = &cobra.Command{
-	Use:   "compress <file.pdf>",
-	Short: "Compress and optimize a PDF",
-	Long: `Compress and optimize a PDF file to reduce its size.
+	Use:   "compress <file.pdf> [file2.pdf...]",
+	Short: "Compress and optimize PDF(s)",
+	Long: `Compress and optimize PDF file(s) to reduce their size.
 
 This removes redundant data, optimizes internal structures,
 and can significantly reduce file size without losing quality.
 
+Supports batch processing of multiple files. When processing
+multiple files, output files are named with '_compressed' suffix.
+
 Examples:
   pdf compress large.pdf -o smaller.pdf
   pdf compress document.pdf
-  pdf compress scan.pdf -o optimized.pdf`,
-	Args: cobra.ExactArgs(1),
+  pdf compress *.pdf                      # Batch compress
+  pdf compress doc1.pdf doc2.pdf doc3.pdf # Multiple files`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: runCompress,
 }
 
 func runCompress(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
 	password := cli.GetPassword(cmd)
+	output := cli.GetOutput(cmd)
 
+	if err := validateBatchOutput(args, output, "_compressed"); err != nil {
+		return err
+	}
+
+	return processBatch(args, func(inputFile string) error {
+		return compressFile(inputFile, output, password)
+	})
+}
+
+func compressFile(inputFile, explicitOutput, password string) error {
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
 	originalSize, _ := util.GetFileSize(inputFile)
-	output := outputOrDefault(cli.GetOutput(cmd), inputFile, "_compressed")
+	output := outputOrDefault(explicitOutput, inputFile, "_compressed")
 
 	if err := checkOutputFile(output); err != nil {
 		return err
