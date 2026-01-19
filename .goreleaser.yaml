@@ -34,7 +34,8 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
+    formats:
+      - tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -42,7 +43,8 @@ archives:
       {{- .Arch }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     files:
       - README.md
       - LICENSE
@@ -70,23 +72,6 @@ release:
   draft: false
   prerelease: auto
   name_template: "{{.ProjectName}} v{{.Version}}"
-
-brews:
-  - name: pdf-cli
-    repository:
-      owner: lgbarn
-      name: homebrew-tap
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    homepage: "https://github.com/lgbarn/pdf-cli"
-    description: "A fast, single-binary CLI tool for common PDF operations"
-    license: "MIT"
-    skip_upload: auto
-    install: |
-      bin.install "pdf"
-    test: |
-      system "#{bin}/pdf", "--version"
 
 nfpms:
   - id: packages
