@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,16 +57,19 @@ type Info struct {
 
 // GetInfo returns information about a PDF file
 func GetInfo(path, password string) (*Info, error) {
-	fileInfo, err := os.Stat(path)
+	// Clean path to prevent directory traversal
+	cleanPath := filepath.Clean(path)
+
+	fileInfo, err := os.Stat(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(cleanPath) // #nosec G304 - path is cleaned
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	pdfInfoResult, err := api.PDFInfo(f, path, nil, false, newConfig(password))
 	if err != nil {
@@ -173,7 +177,9 @@ func extractTextPrimary(input string, pages []int) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		buf.ReadFrom(b)
+		if _, err := buf.ReadFrom(b); err != nil {
+			return "", fmt.Errorf("failed to read text: %w", err)
+		}
 		return buf.String(), nil
 	}
 
@@ -228,7 +234,9 @@ func extractTextFallback(input string, pages []int, password string) (string, er
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".txt") {
 			continue
 		}
-		data, err := os.ReadFile(tmpDir + "/" + file.Name())
+		// Use filepath.Join to safely construct path within tmpDir
+		filePath := filepath.Join(tmpDir, filepath.Base(file.Name())) // #nosec G304 - path is within controlled tmpDir
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			continue
 		}

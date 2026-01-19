@@ -14,7 +14,7 @@ func init() {
 	cli.AddOutputFlag(encryptCmd, "Output file path")
 	cli.AddPasswordFlag(encryptCmd, "User password (required)")
 	encryptCmd.Flags().String("owner-password", "", "Owner password (defaults to user password)")
-	encryptCmd.MarkFlagRequired("password")
+	_ = encryptCmd.MarkFlagRequired("password")
 }
 
 var encryptCmd = &cobra.Command{
