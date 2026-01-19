@@ -65,7 +65,7 @@ func GetInfo(path, password string) (*Info, error) {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	f, err := os.Open(cleanPath) // #nosec G304 - path is cleaned
+	f, err := os.Open(cleanPath) // #nosec G304 -- path is cleaned
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -235,8 +235,8 @@ func extractTextFallback(input string, pages []int, password string) (string, er
 			continue
 		}
 		// Use filepath.Join to safely construct path within tmpDir
-		filePath := filepath.Join(tmpDir, filepath.Base(file.Name())) // #nosec G304 - path is within controlled tmpDir
-		data, err := os.ReadFile(filePath)
+		filePath := filepath.Join(tmpDir, filepath.Base(file.Name()))
+		data, err := os.ReadFile(filePath) // #nosec G304 -- path is within controlled tmpDir
 		if err != nil {
 			continue
 		}
