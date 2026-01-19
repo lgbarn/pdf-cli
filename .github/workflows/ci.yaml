@@ -87,7 +87,7 @@ jobs:
           go build -ldflags="-s -w" -o pdf-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} ./cmd/pdf
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pdf-${{ matrix.goos }}-${{ matrix.goarch }}
           path: pdf-*
