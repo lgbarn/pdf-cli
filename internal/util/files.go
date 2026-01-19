@@ -1,0 +1,166 @@
+package util
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+)
+
+// FileExists checks if a file exists
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// IsDir checks if a path is a directory
+func IsDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
+// EnsureDir creates a directory if it doesn't exist
+func EnsureDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+// EnsureParentDir creates the parent directory of a file path if it doesn't exist
+func EnsureParentDir(path string) error {
+	dir := filepath.Dir(path)
+	if dir == "." || dir == "/" {
+		return nil
+	}
+	return EnsureDir(dir)
+}
+
+// AtomicWrite writes data to a file atomically by writing to a temp file first
+func AtomicWrite(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	if err := EnsureDir(dir); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Create temp file in the same directory
+	tmpFile, err := os.CreateTemp(dir, ".pdf-cli-tmp-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	// Clean up temp file on error
+	defer func() {
+		if tmpFile != nil {
+			tmpFile.Close()
+			os.Remove(tmpPath)
+		}
+	}()
+
+	// Write data to temp file
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("failed to write data: %w", err)
+	}
+
+	if err := tmpFile.Sync(); err != nil {
+		return fmt.Errorf("failed to sync file: %w", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+	tmpFile = nil // Prevent defer from closing again
+
+	// Rename temp file to target (atomic on most filesystems)
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("failed to rename temp file: %w", err)
+	}
+
+	return nil
+}
+
+// CopyFile copies a file from src to dst
+func CopyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	if err := EnsureParentDir(dst); err != nil {
+		return err
+	}
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	return dstFile.Sync()
+}
+
+// ValidatePDFFile checks if a file exists and has a .pdf extension
+func ValidatePDFFile(path string) error {
+	if !FileExists(path) {
+		return fmt.Errorf("file not found: %s", path)
+	}
+
+	ext := filepath.Ext(path)
+	if ext != ".pdf" && ext != ".PDF" {
+		return fmt.Errorf("not a PDF file: %s", path)
+	}
+
+	return nil
+}
+
+// ValidatePDFFiles validates multiple PDF files
+func ValidatePDFFiles(paths []string) error {
+	for _, path := range paths {
+		if err := ValidatePDFFile(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GenerateOutputFilename generates an output filename based on the input and a suffix
+func GenerateOutputFilename(input, suffix string) string {
+	ext := filepath.Ext(input)
+	base := input[:len(input)-len(ext)]
+	return base + suffix + ext
+}
+
+// GetFileSize returns the size of a file in bytes
+func GetFileSize(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+// FormatFileSize formats a file size in bytes to a human-readable string
+func FormatFileSize(bytes int64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+	)
+
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}

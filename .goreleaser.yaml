@@ -1,0 +1,102 @@
+# GoReleaser configuration for pdf-cli
+# https://goreleaser.com
+
+version: 2
+
+project_name: pdf-cli
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: pdf
+    main: ./cmd/pdf
+    binary: pdf
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: lgbarn
+    name: pdf-cli
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+brews:
+  - name: pdf-cli
+    repository:
+      owner: lgbarn
+      name: homebrew-tap
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    homepage: "https://github.com/lgbarn/pdf-cli"
+    description: "A fast, single-binary CLI tool for common PDF operations"
+    license: "MIT"
+    skip_upload: auto
+    install: |
+      bin.install "pdf"
+    test: |
+      system "#{bin}/pdf", "--version"
+
+nfpms:
+  - id: packages
+    package_name: pdf-cli
+    vendor: lgbarn
+    homepage: https://github.com/lgbarn/pdf-cli
+    maintainer: lgbarn
+    description: A fast, single-binary CLI tool for common PDF operations
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
