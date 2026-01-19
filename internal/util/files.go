@@ -123,14 +123,46 @@ func ValidatePDFFile(path string) error {
 	return nil
 }
 
-// ValidatePDFFiles validates multiple PDF files
+// ValidatePDFFiles validates multiple PDF files in parallel
 func ValidatePDFFiles(paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+
+	// For small number of files, use sequential validation
+	if len(paths) <= 3 {
+		for _, path := range paths {
+			if err := ValidatePDFFile(path); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// For larger number of files, validate in parallel
+	type result struct {
+		path string
+		err  error
+	}
+
+	results := make(chan result, len(paths))
+
 	for _, path := range paths {
-		if err := ValidatePDFFile(path); err != nil {
-			return err
+		go func(p string) {
+			results <- result{path: p, err: ValidatePDFFile(p)}
+		}(path)
+	}
+
+	// Collect results
+	var firstErr error
+	for range paths {
+		r := <-results
+		if r.err != nil && firstErr == nil {
+			firstErr = r.err
 		}
 	}
-	return nil
+
+	return firstErr
 }
 
 // GenerateOutputFilename generates an output filename based on the input and a suffix
