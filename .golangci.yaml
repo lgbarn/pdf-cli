@@ -1,11 +1,9 @@
-version: "2"
-
 run:
   timeout: 5m
   tests: true
 
 linters:
-  default: none
+  disable-all: true
   enable:
     - govet
     - ineffassign
