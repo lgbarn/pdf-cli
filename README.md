@@ -1,29 +1,73 @@
 # pdf-cli
 
-A fast, single-binary CLI tool for common PDF operations.
+[![CI](https://github.com/lgbarn/pdf-cli/actions/workflows/ci.yaml/badge.svg)](https://github.com/lgbarn/pdf-cli/actions/workflows/ci.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lgbarn/pdf-cli)](https://goreportcard.com/report/github.com/lgbarn/pdf-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/lgbarn/pdf-cli)](https://go.dev/)
 
-## Features
+A fast, lightweight command-line tool for everyday PDF operations. No GUI needed, no complicated setup—just simple commands to merge, split, compress, encrypt, and manipulate PDF files.
 
-- **info** - Display PDF information (page count, metadata, encryption status)
-- **merge** - Combine multiple PDFs into one
-- **split** - Split a PDF into multiple files
-- **extract** - Extract specific pages from a PDF
-- **rotate** - Rotate pages in a PDF
-- **compress** - Optimize and reduce PDF file size
-- **encrypt** - Add password protection to a PDF
-- **decrypt** - Remove password protection from a PDF
-- **text** - Extract text content from a PDF
-- **images** - Extract images from a PDF
-- **meta** - View or modify PDF metadata
-- **watermark** - Add text or image watermarks
+## Table of Contents
+
+- [Why pdf-cli?](#why-pdf-cli)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Commands](#commands)
+- [Usage Examples](#usage-examples)
+- [Global Options](#global-options)
+- [Shell Completion](#shell-completion)
+- [Building from Source](#building-from-source)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Why pdf-cli?
+
+- **Fast**: Single binary with no external dependencies
+- **Simple**: Intuitive commands that do one thing well
+- **Secure**: Supports encrypted PDFs with password protection
+- **Cross-platform**: Works on Linux, macOS, and Windows
+- **Scriptable**: Perfect for automation and batch processing
+
+## Quick Start
+
+```bash
+# Install
+go install github.com/lgbarn/pdf-cli/cmd/pdf@latest
+
+# Merge two PDFs
+pdf merge -o combined.pdf file1.pdf file2.pdf
+
+# Extract pages 1-5 from a PDF
+pdf extract document.pdf -p 1-5 -o pages.pdf
+
+# Compress a large PDF
+pdf compress large.pdf -o smaller.pdf
+
+# Get PDF info
+pdf info document.pdf
+```
 
 ## Installation
 
-### Using Go
+### Prerequisites
+
+- Go 1.24 or later (for installation via `go install`)
+
+### Using Go (Recommended)
 
 ```bash
 go install github.com/lgbarn/pdf-cli/cmd/pdf@latest
 ```
+
+### Pre-built Binaries
+
+Download the latest release for your platform from the [Releases page](https://github.com/lgbarn/pdf-cli/releases).
+
+Available platforms:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- Windows (amd64)
 
 ### From Source
 
@@ -33,201 +77,330 @@ cd pdf-cli
 make build
 ```
 
-### Pre-built Binaries
+## Commands
 
-Download the latest release from the [releases page](https://github.com/lgbarn/pdf-cli/releases).
+| Command | Description |
+|---------|-------------|
+| `info` | Display PDF information (pages, metadata, encryption status) |
+| `merge` | Combine multiple PDFs into a single file |
+| `split` | Split a PDF into individual pages or chunks |
+| `extract` | Extract specific pages into a new PDF |
+| `rotate` | Rotate pages by 90, 180, or 270 degrees |
+| `compress` | Optimize and reduce PDF file size |
+| `encrypt` | Add password protection to a PDF |
+| `decrypt` | Remove password protection from a PDF |
+| `text` | Extract text content from a PDF |
+| `images` | Extract embedded images from a PDF |
+| `meta` | View or modify PDF metadata (title, author, etc.) |
+| `watermark` | Add text or image watermarks |
 
-## Usage
+## Usage Examples
 
-### Display PDF Information
+### Get PDF Information
 
 ```bash
 pdf info document.pdf
 ```
 
-### Merge PDFs
-
-```bash
-pdf merge -o combined.pdf file1.pdf file2.pdf file3.pdf
+Output:
+```
+File:       document.pdf
+Size:       2.45 MB
+Pages:      42
+Version:    1.7
+Title:      Annual Report
+Author:     John Doe
+Encrypted:  No
 ```
 
-### Split PDF into Individual Pages
+### Merge Multiple PDFs
 
 ```bash
+# Merge two files
+pdf merge -o combined.pdf file1.pdf file2.pdf
+
+# Merge all PDFs in a directory
+pdf merge -o combined.pdf *.pdf
+```
+
+### Split a PDF
+
+```bash
+# Split into individual pages (creates page_001.pdf, page_002.pdf, etc.)
 pdf split document.pdf -o output/
-```
 
-### Split PDF into Chunks
-
-```bash
-pdf split document.pdf -n 5 -o chunks/  # 5 pages per file
+# Split into chunks of 5 pages each
+pdf split document.pdf -n 5 -o chunks/
 ```
 
 ### Extract Specific Pages
 
 ```bash
-pdf extract document.pdf -p 1-5,10,15-20 -o selected.pdf
+# Extract pages 1 through 5
+pdf extract document.pdf -p 1-5 -o first-five.pdf
+
+# Extract specific pages and ranges
+pdf extract document.pdf -p 1,3,5,10-15 -o selected.pdf
 ```
 
 ### Rotate Pages
 
 ```bash
+# Rotate all pages 90 degrees clockwise
 pdf rotate document.pdf -a 90 -o rotated.pdf
-pdf rotate document.pdf -a 180 -p 1-5 -o rotated.pdf  # Rotate specific pages
+
+# Rotate only pages 1-5 by 180 degrees
+pdf rotate document.pdf -a 180 -p 1-5 -o rotated.pdf
 ```
 
-### Compress PDF
+### Compress a PDF
 
 ```bash
 pdf compress large.pdf -o smaller.pdf
 ```
 
-### Encrypt PDF
+### Encrypt a PDF
 
 ```bash
-pdf encrypt document.pdf --password secret -o secure.pdf
-pdf encrypt document.pdf --password user123 --owner-password admin456 -o secure.pdf
+# Add password protection
+pdf encrypt document.pdf --password mysecret -o secure.pdf
+
+# Set separate user and owner passwords
+pdf encrypt document.pdf --password userpass --owner-password ownerpass -o secure.pdf
 ```
 
-### Decrypt PDF
+### Decrypt a PDF
 
 ```bash
-pdf decrypt secure.pdf --password secret -o unlocked.pdf
+pdf decrypt secure.pdf --password mysecret -o unlocked.pdf
 ```
 
 ### Extract Text
 
 ```bash
-pdf text document.pdf                    # Print to stdout
-pdf text document.pdf -o content.txt     # Save to file
-pdf text document.pdf -p 1-5 -o ch1.txt  # Specific pages
+# Print text to terminal
+pdf text document.pdf
+
+# Save to a file
+pdf text document.pdf -o content.txt
+
+# Extract text from specific pages
+pdf text document.pdf -p 1-5 -o chapter1.txt
 ```
 
 ### Extract Images
 
 ```bash
+# Extract all images
 pdf images document.pdf -o images/
-pdf images document.pdf -p 1-5 -o images/
+
+# Extract images from specific pages
+pdf images document.pdf -p 1-10 -o images/
 ```
 
-### View/Set Metadata
+### View and Modify Metadata
 
 ```bash
-pdf meta document.pdf                                        # View metadata
-pdf meta document.pdf --title "My Doc" -o updated.pdf        # Set metadata
-pdf meta document.pdf --author "John" --subject "Report" -o updated.pdf
+# View metadata
+pdf meta document.pdf
+
+# Set metadata
+pdf meta document.pdf --title "My Document" --author "Jane Doe" -o updated.pdf
+
+# Set multiple fields
+pdf meta document.pdf \
+  --title "Annual Report" \
+  --author "John Doe" \
+  --subject "2024 Financial Summary" \
+  -o updated.pdf
 ```
 
-### Add Watermark
+### Add Watermarks
 
 ```bash
-pdf watermark document.pdf -t "CONFIDENTIAL" -o marked.pdf   # Text watermark
-pdf watermark document.pdf -i logo.png -o branded.pdf        # Image watermark
-pdf watermark document.pdf -t "DRAFT" -p 1-5 -o draft.pdf    # Specific pages
+# Add text watermark
+pdf watermark document.pdf -t "CONFIDENTIAL" -o marked.pdf
+
+# Add image watermark (logo)
+pdf watermark document.pdf -i logo.png -o branded.pdf
+
+# Watermark specific pages only
+pdf watermark document.pdf -t "DRAFT" -p 1-5 -o draft.pdf
 ```
 
-## Global Flags
+## Global Options
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--verbose` | `-v` | Enable verbose output |
+These options work with all commands:
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--verbose` | `-v` | Show detailed output during operations |
 | `--force` | `-f` | Overwrite existing files without prompting |
+| `--password` | `-P` | Password for encrypted input PDFs |
 | `--help` | `-h` | Show help for any command |
-| `--version` | | Show version information |
+| `--version` | | Display version information |
+
+### Working with Encrypted PDFs
+
+Most commands accept a `--password` flag for reading encrypted PDFs:
+
+```bash
+pdf info secure.pdf --password mysecret
+pdf extract secure.pdf -p 1-5 -o pages.pdf --password mysecret
+```
 
 ## Shell Completion
 
-Generate shell completion scripts:
+Enable tab completion for your shell:
+
+### Bash
 
 ```bash
-# Bash
-pdf completion bash > /etc/bash_completion.d/pdf
+# Add to ~/.bashrc
+echo 'source <(pdf completion bash)' >> ~/.bashrc
 
-# Zsh
-pdf completion zsh > "${fpath[1]}/_pdf"
-
-# Fish
-pdf completion fish > ~/.config/fish/completions/pdf.fish
-
-# PowerShell
-pdf completion powershell > pdf.ps1
+# Or install system-wide
+pdf completion bash | sudo tee /etc/bash_completion.d/pdf > /dev/null
 ```
 
-## Building
+### Zsh
+
+```bash
+# Add to ~/.zshrc
+echo 'source <(pdf completion zsh)' >> ~/.zshrc
+```
+
+### Fish
+
+```bash
+pdf completion fish > ~/.config/fish/completions/pdf.fish
+```
+
+### PowerShell
+
+```powershell
+pdf completion powershell | Out-String | Invoke-Expression
+```
+
+## Building from Source
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24 or later
+- Make (optional, for convenience commands)
 
 ### Build Commands
 
 ```bash
-make build          # Build for current platform
-make build-all      # Build for all platforms
-make test           # Run tests
-make test-coverage  # Run tests with coverage report
-make clean          # Clean build artifacts
+# Clone the repository
+git clone https://github.com/lgbarn/pdf-cli.git
+cd pdf-cli
+
+# Build for your current platform
+make build
+
+# Run tests
+make test
+
+# Run tests with coverage report
+make test-coverage
+
+# Build for all platforms
+make build-all
+
+# Clean build artifacts
+make clean
 ```
 
-## Project Structure
+### Project Structure
 
 ```
 pdf-cli/
-├── cmd/
-│   └── pdf/
-│       └── main.go           # Entry point
+├── cmd/pdf/           # Application entry point
 ├── internal/
-│   ├── cli/
-│   │   ├── cli.go            # Root command setup
-│   │   ├── completion.go     # Shell completion
-│   │   └── flags.go          # Common flags
-│   ├── commands/
-│   │   ├── info.go           # info command
-│   │   ├── merge.go          # merge command
-│   │   ├── split.go          # split command
-│   │   ├── extract.go        # extract command
-│   │   ├── rotate.go         # rotate command
-│   │   ├── compress.go       # compress command
-│   │   ├── encrypt.go        # encrypt command
-│   │   ├── decrypt.go        # decrypt command
-│   │   ├── text.go           # text command
-│   │   ├── images.go         # images command
-│   │   ├── meta.go           # meta command
-│   │   └── watermark.go      # watermark command
-│   ├── pdf/
-│   │   └── pdf.go            # pdfcpu wrapper
-│   └── util/
-│       ├── errors.go         # Error handling
-│       ├── files.go          # File utilities
-│       └── pages.go          # Page range parsing
-├── scripts/
-│   └── build.sh              # Cross-compilation script
-├── Makefile
-├── go.mod
-├── go.sum
-├── .goreleaser.yaml
-├── LICENSE
+│   ├── cli/           # CLI framework and flags
+│   ├── commands/      # Individual command implementations
+│   ├── pdf/           # PDF processing wrapper
+│   └── util/          # Utilities (errors, files, page parsing)
+├── testdata/          # Test PDF files
+├── .github/workflows/ # CI/CD pipelines
+├── Makefile           # Build automation
 └── README.md
 ```
 
-## Dependencies
+## Troubleshooting
 
-- [pdfcpu](https://github.com/pdfcpu/pdfcpu) - PDF processing library
-- [cobra](https://github.com/spf13/cobra) - CLI framework
-- [pflag](https://github.com/spf13/pflag) - POSIX-compliant flags
+### "command not found: pdf"
 
-## License
+Make sure your Go bin directory is in your PATH:
 
-MIT License - see [LICENSE](LICENSE) for details.
+```bash
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+
+Add this line to your `~/.bashrc`, `~/.zshrc`, or equivalent.
+
+### "failed to open file: permission denied"
+
+Check file permissions:
+
+```bash
+ls -la document.pdf
+chmod 644 document.pdf  # Make readable
+```
+
+### "encrypted PDF requires password"
+
+The PDF is password-protected. Use the `--password` flag:
+
+```bash
+pdf info document.pdf --password yourpassword
+```
+
+### "no text extracted" from a PDF
+
+Some PDFs contain scanned images instead of actual text. The `text` command only extracts embedded text, not OCR. For image-based PDFs, you'll need an OCR tool.
+
+### Large PDF processing is slow
+
+For very large PDFs (hundreds of pages), operations may take time. Use `--verbose` to see progress:
+
+```bash
+pdf compress large.pdf -o smaller.pdf --verbose
+```
 
 ## Contributing
 
+Contributions are welcome! Here's how to get started:
+
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run the test suite: `make test`
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to your fork: `git push origin feature/amazing-feature`
+7. Open a Pull Request
+
+Please ensure your code:
+- Passes all existing tests
+- Includes tests for new functionality
+- Follows the existing code style
+- Updates documentation as needed
+
+## Dependencies
+
+This project uses the following open-source libraries:
+
+- [pdfcpu](https://github.com/pdfcpu/pdfcpu) - PDF processing library
+- [ledongthuc/pdf](https://github.com/ledongthuc/pdf) - PDF text extraction
+- [cobra](https://github.com/spf13/cobra) - CLI framework
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
 - [pdfcpu](https://github.com/pdfcpu/pdfcpu) for the excellent PDF processing library
+- [ledongthuc/pdf](https://github.com/ledongthuc/pdf) for reliable text extraction
+- The Go community for great tooling and libraries
