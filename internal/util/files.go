@@ -86,7 +86,7 @@ func CopyFile(src, dst string) error {
 	cleanSrc := filepath.Clean(src)
 	cleanDst := filepath.Clean(dst)
 
-	srcFile, err := os.Open(cleanSrc) // #nosec G304 - path is cleaned
+	srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is cleaned
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
@@ -96,7 +96,7 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	dstFile, err := os.Create(cleanDst) // #nosec G304 - path is cleaned
+	dstFile, err := os.Create(cleanDst) // #nosec G304 -- path is cleaned
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
