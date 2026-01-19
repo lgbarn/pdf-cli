@@ -11,39 +11,54 @@ import (
 
 func init() {
 	cli.AddCommand(decryptCmd)
-	cli.AddOutputFlag(decryptCmd, "Output file path")
+	cli.AddOutputFlag(decryptCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(decryptCmd, "Password for the encrypted PDF (required)")
 	_ = decryptCmd.MarkFlagRequired("password")
 }
 
 var decryptCmd = &cobra.Command{
-	Use:   "decrypt <file.pdf>",
-	Short: "Remove password protection from a PDF",
-	Long: `Remove password protection from an encrypted PDF.
+	Use:   "decrypt <file.pdf> [file2.pdf...]",
+	Short: "Remove password protection from PDF(s)",
+	Long: `Remove password protection from encrypted PDF file(s).
 
-Requires the correct password to decrypt the file.
-The output file will be an unprotected PDF.
+Requires the correct password to decrypt the files.
+The output files will be unprotected PDFs.
+
+Supports batch processing of multiple files. When processing
+multiple files, output files are named with '_decrypted' suffix.
 
 Examples:
   pdf decrypt secure.pdf --password secret -o unlocked.pdf
-  pdf decrypt protected.pdf --password mypassword`,
-	Args: cobra.ExactArgs(1),
+  pdf decrypt protected.pdf --password mypassword
+  pdf decrypt *.pdf --password secret        # Batch decrypt
+  pdf decrypt doc1.pdf doc2.pdf --password s # Multiple files`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: runDecrypt,
 }
 
 func runDecrypt(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
 	password := cli.GetPassword(cmd)
-
-	if err := util.ValidatePDFFile(inputFile); err != nil {
-		return err
-	}
+	output := cli.GetOutput(cmd)
 
 	if password == "" {
 		return fmt.Errorf("password is required for decryption")
 	}
 
-	output := outputOrDefault(cli.GetOutput(cmd), inputFile, "_decrypted")
+	if err := validateBatchOutput(args, output, "_decrypted"); err != nil {
+		return err
+	}
+
+	return processBatch(args, func(inputFile string) error {
+		return decryptFile(inputFile, output, password)
+	})
+}
+
+func decryptFile(inputFile, explicitOutput, password string) error {
+	if err := util.ValidatePDFFile(inputFile); err != nil {
+		return err
+	}
+
+	output := outputOrDefault(explicitOutput, inputFile, "_decrypted")
 
 	if err := checkOutputFile(output); err != nil {
 		return err

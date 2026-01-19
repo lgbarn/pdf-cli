@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
@@ -47,4 +48,25 @@ func outputOrDefault(output, inputFile, suffix string) string {
 		return output
 	}
 	return util.GenerateOutputFilename(inputFile, suffix)
+}
+
+// validateBatchOutput checks if -o flag is used with multiple files.
+// Returns an error if so, since -o is only allowed with single file operations.
+func validateBatchOutput(files []string, output, suffix string) error {
+	if len(files) > 1 && output != "" {
+		return fmt.Errorf("cannot use -o with multiple files; output files will be named with '%s' suffix", suffix)
+	}
+	return nil
+}
+
+// processBatch processes multiple files with the given processor function.
+// Each file is processed independently, and all errors are collected and joined.
+func processBatch(files []string, processor func(file string) error) error {
+	var errs []error
+	for _, file := range files {
+		if err := processor(file); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", file, err))
+		}
+	}
+	return errors.Join(errs...)
 }

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ledongthuc/pdf"
 )
 
 // testdataDir returns the path to the testdata directory
@@ -521,5 +523,531 @@ func TestAddWatermark(t *testing.T) {
 	// Verify output exists
 	if _, err := os.Stat(output); os.IsNotExist(err) {
 		t.Error("AddWatermark() did not create output file")
+	}
+}
+
+func TestAddWatermarkWithPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "watermarked.pdf")
+	err = AddWatermark(pdfFile, output, "DRAFT", []int{1}, "")
+	if err != nil {
+		t.Fatalf("AddWatermark() with pages error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("AddWatermark() with pages did not create output file")
+	}
+}
+
+func TestAddImageWatermark(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "image_watermarked.pdf")
+	err = AddImageWatermark(pdfFile, output, testImage, nil, "")
+	if err != nil {
+		t.Fatalf("AddImageWatermark() error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("AddImageWatermark() did not create output file")
+	}
+}
+
+func TestAddImageWatermarkWithPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "image_watermarked.pdf")
+	err = AddImageWatermark(pdfFile, output, testImage, []int{1}, "")
+	if err != nil {
+		t.Fatalf("AddImageWatermark() with pages error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("AddImageWatermark() with pages did not create output file")
+	}
+}
+
+func TestAddImageWatermarkNonExistent(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "watermarked.pdf")
+	err = AddImageWatermark(pdfFile, output, "/nonexistent/image.png", nil, "")
+	if err == nil {
+		t.Error("AddImageWatermark() expected error for non-existent image")
+	}
+}
+
+func TestSetMetadata(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "metadata.pdf")
+	meta := &Metadata{
+		Title:    "Test Title",
+		Author:   "Test Author",
+		Subject:  "Test Subject",
+		Keywords: "test, keywords",
+	}
+
+	err = SetMetadata(pdfFile, output, meta, "")
+	if err != nil {
+		t.Fatalf("SetMetadata() error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("SetMetadata() did not create output file")
+	}
+}
+
+func TestSetMetadataPartial(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "metadata.pdf")
+	meta := &Metadata{
+		Title: "Only Title",
+	}
+
+	err = SetMetadata(pdfFile, output, meta, "")
+	if err != nil {
+		t.Fatalf("SetMetadata() with partial metadata error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("SetMetadata() did not create output file")
+	}
+}
+
+func TestSetMetadataEmpty(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "metadata.pdf")
+	meta := &Metadata{}
+
+	// Empty metadata should still work
+	err = SetMetadata(pdfFile, output, meta, "")
+	if err != nil {
+		t.Fatalf("SetMetadata() with empty metadata error = %v", err)
+	}
+}
+
+func TestValidateToBuffer(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	data, err := os.ReadFile(pdfFile)
+	if err != nil {
+		t.Fatalf("Failed to read sample PDF: %v", err)
+	}
+
+	err = ValidateToBuffer(data)
+	if err != nil {
+		t.Errorf("ValidateToBuffer() error = %v", err)
+	}
+}
+
+func TestValidateToBufferInvalid(t *testing.T) {
+	// Invalid PDF data
+	invalidData := []byte("This is not a valid PDF")
+	err := ValidateToBuffer(invalidData)
+	if err == nil {
+		t.Error("ValidateToBuffer() expected error for invalid data")
+	}
+}
+
+func TestValidateToBufferEmpty(t *testing.T) {
+	err := ValidateToBuffer([]byte{})
+	if err == nil {
+		t.Error("ValidateToBuffer() expected error for empty data")
+	}
+}
+
+func TestExtractPagesSequentialDirect(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		// Some simple PDFs may not be parseable by this library
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	pages := []int{1}
+	text, err := extractPagesSequential(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesSequential() error = %v", err)
+	}
+
+	// Just verify it returns without error, text might be empty
+	_ = text
+}
+
+func TestExtractPagesSequentialMultiple(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	// Request only valid pages
+	pages := []int{1}
+	if totalPages >= 2 {
+		pages = []int{1, 2}
+	}
+
+	text, err := extractPagesSequential(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesSequential() multiple pages error = %v", err)
+	}
+	_ = text
+}
+
+func TestExtractPagesSequentialOutOfRange(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	// Request out-of-range pages - should be skipped, not error
+	pages := []int{9999}
+
+	text, err := extractPagesSequential(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesSequential() out of range error = %v", err)
+	}
+
+	// Should return empty for out-of-range pages
+	if text != "" {
+		t.Log("Warning: extractPagesSequential returned non-empty for out-of-range page")
+	}
+}
+
+func TestExtractPagesParallelDirect(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	pages := []int{1}
+	text, err := extractPagesParallel(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesParallel() error = %v", err)
+	}
+	_ = text
+}
+
+func TestExtractPagesParallelMultiple(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	// Request only valid pages
+	pages := []int{1}
+	if totalPages >= 2 {
+		pages = []int{1, 2}
+	}
+
+	text, err := extractPagesParallel(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesParallel() multiple pages error = %v", err)
+	}
+	_ = text
+}
+
+func TestExtractPagesParallelOutOfRange(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	// Request out-of-range pages - should return empty, not error
+	pages := []int{9999}
+
+	text, err := extractPagesParallel(r, pages, totalPages, false)
+	if err != nil {
+		t.Fatalf("extractPagesParallel() out of range error = %v", err)
+	}
+
+	// Should return empty for out-of-range pages
+	if text != "" {
+		t.Log("Warning: extractPagesParallel returned non-empty for out-of-range page")
+	}
+}
+
+func TestRotateWithPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "rotated.pdf")
+	err = Rotate(pdfFile, output, 90, []int{1}, "")
+	if err != nil {
+		t.Fatalf("Rotate() with pages error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("Rotate() with pages did not create output file")
+	}
+}
+
+func TestExtractImagesNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = ExtractImages("/nonexistent/file.pdf", tmpDir, nil, "")
+	if err == nil {
+		t.Error("ExtractImages() expected error for non-existent file")
+	}
+}
+
+func TestMergeEmpty(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+
+	// MergeWithProgress now returns an error for empty input
+	err = Merge([]string{}, output, "")
+	if err == nil {
+		t.Error("Merge() expected error for empty input list")
+	}
+}
+
+func TestSplitNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = Split("/nonexistent/file.pdf", tmpDir, "")
+	if err == nil {
+		t.Error("Split() expected error for non-existent file")
+	}
+}
+
+func TestCompressNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "compressed.pdf")
+	err = Compress("/nonexistent/file.pdf", output, "")
+	if err == nil {
+		t.Error("Compress() expected error for non-existent file")
+	}
+}
+
+func TestEncryptNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "encrypted.pdf")
+	err = Encrypt("/nonexistent/file.pdf", output, "password", "")
+	if err == nil {
+		t.Error("Encrypt() expected error for non-existent file")
+	}
+}
+
+func TestDecryptNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "decrypted.pdf")
+	err = Decrypt("/nonexistent/file.pdf", output, "password")
+	if err == nil {
+		t.Error("Decrypt() expected error for non-existent file")
+	}
+}
+
+func TestExtractTextNonExistent(t *testing.T) {
+	_, err := ExtractText("/nonexistent/file.pdf", nil, "")
+	if err == nil {
+		t.Error("ExtractText() expected error for non-existent file")
+	}
+}
+
+func TestSplitByPageCount(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = SplitByPageCount(pdfFile, tmpDir, 2, "")
+	if err != nil {
+		t.Fatalf("SplitByPageCount() error = %v", err)
+	}
+
+	// Verify at least one file was created
+	files, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatalf("ReadDir() error = %v", err)
+	}
+
+	pdfCount := 0
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".pdf") {
+			pdfCount++
+		}
+	}
+
+	if pdfCount == 0 {
+		t.Error("SplitByPageCount() did not create any PDF files")
 	}
 }

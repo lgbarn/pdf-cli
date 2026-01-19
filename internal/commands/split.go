@@ -58,14 +58,7 @@ func runSplit(cmd *cobra.Command, args []string) error {
 
 	cli.PrintVerbose("Splitting %s into %s (%d pages per file)", inputFile, outputDir, pagesPerFile)
 
-	var err error
-	if pagesPerFile == 1 {
-		err = pdf.Split(inputFile, outputDir, password)
-	} else {
-		err = pdf.SplitByPageCount(inputFile, outputDir, pagesPerFile, password)
-	}
-
-	if err != nil {
+	if err := pdf.SplitWithProgress(inputFile, outputDir, pagesPerFile, password, cli.Progress()); err != nil {
 		return util.WrapError("splitting file", inputFile, err)
 	}
 
