@@ -1,0 +1,57 @@
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+        exclude: '^testdata/'
+      - id: check-merge-conflict
+
+  # Go formatting, linting, and building via local hooks
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go fmt
+        entry: bash -c 'GO111MODULE=on go fmt ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-vet
+        name: go vet
+        entry: bash -c 'GO111MODULE=on go vet ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-mod-tidy
+        name: go mod tidy
+        entry: bash -c 'GO111MODULE=on go mod tidy'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-build
+        name: go build
+        entry: bash -c 'GO111MODULE=on go build ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-test
+        name: go test
+        entry: bash -c 'GO111MODULE=on go test ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash -c 'GO111MODULE=on golangci-lint run --timeout=5m'
+        language: system
+        types: [go]
+        pass_filenames: false
