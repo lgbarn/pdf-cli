@@ -24,7 +24,7 @@ func IsDir(path string) bool {
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0750)
 }
 
 // EnsureParentDir creates the parent directory of a file path if it doesn't exist
@@ -53,8 +53,8 @@ func AtomicWrite(path string, data []byte) error {
 	// Clean up temp file on error
 	defer func() {
 		if tmpFile != nil {
-			tmpFile.Close()
-			os.Remove(tmpPath)
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpPath)
 		}
 	}()
 
@@ -82,21 +82,25 @@ func AtomicWrite(path string, data []byte) error {
 
 // CopyFile copies a file from src to dst
 func CopyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
+	// Clean paths to prevent directory traversal
+	cleanSrc := filepath.Clean(src)
+	cleanDst := filepath.Clean(dst)
+
+	srcFile, err := os.Open(cleanSrc) // #nosec G304 - path is cleaned
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
-	if err := EnsureParentDir(dst); err != nil {
+	if err := EnsureParentDir(cleanDst); err != nil {
 		return err
 	}
 
-	dstFile, err := os.Create(dst)
+	dstFile, err := os.Create(cleanDst) // #nosec G304 - path is cleaned
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)

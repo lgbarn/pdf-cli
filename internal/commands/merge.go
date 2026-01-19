@@ -13,7 +13,7 @@ func init() {
 	cli.AddCommand(mergeCmd)
 	cli.AddOutputFlag(mergeCmd, "Output file path (required)")
 	cli.AddPasswordFlag(mergeCmd, "Password for encrypted input PDFs")
-	mergeCmd.MarkFlagRequired("output")
+	_ = mergeCmd.MarkFlagRequired("output")
 }
 
 var mergeCmd = &cobra.Command{

@@ -13,7 +13,7 @@ func init() {
 	cli.AddCommand(decryptCmd)
 	cli.AddOutputFlag(decryptCmd, "Output file path")
 	cli.AddPasswordFlag(decryptCmd, "Password for the encrypted PDF (required)")
-	decryptCmd.MarkFlagRequired("password")
+	_ = decryptCmd.MarkFlagRequired("password")
 }
 
 var decryptCmd = &cobra.Command{

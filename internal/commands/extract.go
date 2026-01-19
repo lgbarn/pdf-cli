@@ -14,7 +14,7 @@ func init() {
 	cli.AddOutputFlag(extractCmd, "Output file path")
 	cli.AddPagesFlag(extractCmd, "Pages to extract (e.g., 1-5,7,10-12)")
 	cli.AddPasswordFlag(extractCmd, "Password for encrypted PDFs")
-	extractCmd.MarkFlagRequired("pages")
+	_ = extractCmd.MarkFlagRequired("pages")
 }
 
 var extractCmd = &cobra.Command{
