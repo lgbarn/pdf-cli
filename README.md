@@ -23,7 +23,7 @@ A fast, lightweight command-line tool for everyday PDF operations. No GUI needed
 
 ## Why pdf-cli?
 
-- **Fast**: Single binary with no external dependencies
+- **Fast**: Single binary with no external dependencies, parallel processing for large operations
 - **Simple**: Intuitive commands that do one thing well
 - **Secure**: Supports encrypted PDFs with password protection
 - **Cross-platform**: Works on Linux, macOS, and Windows
@@ -368,6 +368,12 @@ For very large PDFs (hundreds of pages), operations may take time. Use `--verbos
 ```bash
 pdf compress large.pdf -o smaller.pdf --verbose
 ```
+
+Note: pdf-cli automatically uses parallel processing for:
+- File validation when merging more than 3 files
+- Text extraction when processing more than 5 pages
+
+This significantly improves performance for batch operations.
 
 ## Contributing
 
