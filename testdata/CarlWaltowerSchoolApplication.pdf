@@ -1,0 +1,5138 @@
+%PDF-1.0
+1 0 obj
+<<
+/Type /Catalog
+/Pages 3 0 R
+/Outlines 2 0 R
+/PageMode /UseOutlines
+/PageLayout /OneColumn
+>>
+endobj
+%IsSnapshot is true: False
+%ShowSuperUserPagesOnSubmission: False
+%%x jobPagesSQL: select Category, AdditionalTitle, Years, Location, id, 'Yes' As OpenStatus, DateLastSubmitted from AppJobCodes a  inner join JP_OpenPositions b on a.JobCode = b.id  where IsNull(SelectionActive, '') = 'True' and (IsCurrentlyOpenInternal = 1 OR IsCurrentlyOpenExternal = 1) and AppNo = 117574 order by OpenStatus DESC, category, additionaltitle, location
+%% ** Session/Perm Info ** 
+%% JobCode: 
+%% Transaction: 39152142
+%% CatPerms: 
+%% JobIDPerms: 
+%% Session Standard? 
+%% Session Userlevel? 
+%% Session RoutingsOnly? 
+%% Session.SessionID? 302507119
+%% jobPagesSQL: select id, Category, Title from JP_ReqStatus where (IsCurrentlyOpenInternal = 1 OR IsCurrentlyOpenExternal = 1) and id in (select Cast(jobcode as VARCHAR) as JobCode from AppJobCodes where SelectionActive = 'True' AND appno = 117574)
+%% jobPagesSQL: select distinct Type, Specialty from AppJobPools where SelectionActive = 'True' AND appno = 117574
+%% jcprsSQL: select distinct Page from __System_TraitFields AS SetupTraitFields where Page in (select 'JobID' + cast(id as varchar) from JP_ReqStatus where (IsCurrentlyOpenInternal = 1 OR IsCurrentlyOpenExternal = 1) and id in (select jobcode from AppJobCodes where SelectionActive = 'True' AND appno = 117574))
+%% PagesSQL: select id,PageOrder,Title,PrintLocation,Parameters,Condition from __System_Pages where 1=2  or id in(select PageId from SetupPageAssignments where AssignmentType = 'JobID' and AssignedTo in ('51928','0') and LangId in ('eng')  AND  OnExternal = 1 )  or id in(select PageId from SetupPageAssignments where AssignmentType = 'PoolCategory' and AssignedTo in ('Student Nutrition','0') and LangId in ('eng')  AND  OnExternal = 1  AND (District IS NULL) )  or id in(select PageId from SetupPageAssignments where AssignmentType = 'PoolPosition' and AssignedTo in ('Student Nutrition : Sub, Stdt Nutr','0') and LangId in ('eng')  AND  OnExternal = 1  AND (District IS NULL) )  order by PageOrder
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '131' group by sf.id         )      ) b on a.id = b.TraitID where Page = '131' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspBase Information (New)
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '127' group by sf.id         )      ) b on a.id = b.TraitID where Page = '127' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspPre-Reference Page (NEW)
+%% ConditionSQL:SELECT 1 WHERE EXISTS(SELECT TOP 1 1 from AppTraits where (117574 in (select AppNo from AppTraits where TraitID = 7040 and Value = 'Yes')
+ and 117574 in (select AppNo from Application where StartedFrom = 'Transfer')) or 117574 not in (select AppNo from Application where StartedFrom = 'Transfer'))% execute file: /OLACommon/printing/appParts/12referencesRel.asp
+%% Location, Title:/OLACommon/printing/appParts/12referencesRel.aspReferences
+% execute file: /OLACommon/printing/appParts/5experience2.asp
+%Gettings Parms now
+%Done Gettings Parms
+%% Location, Title:/OLACommon/printing/appParts/5experience2.aspExperience
+%% ConditionSQL:SELECT 1 WHERE EXISTS(SELECT TOP 1 1 from AppTraits where (117574 in (select AppNo from AppTraits where TraitID = 7040 and Value = 'Yes')
+ and 117574 in (select AppNo from Application where StartedFrom = 'Transfer')) or 117574 not in (select AppNo from Application where StartedFrom = 'Transfer'))% execute file: /OLACommon/printing/appParts/6educationWithDates.asp
+%% Location, Title:/OLACommon/printing/appParts/6educationWithDates.aspEducation
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : CanViewSupportCert
+%% No permission for this user
+%HidePagePrint: False
+%OnlySuperUsersCanView: True
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '65' group by sf.id         )      ) b on a.id = b.TraitID where Page = '65' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspCertifications of Support Applicants
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '10' group by sf.id         )      ) b on a.id = b.TraitID where Page = '10' order by SortOrder 
+%Start of Traits Page
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspStatement [Non-Certified]
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '46' group by sf.id         )      ) b on a.id = b.TraitID where Page = '46' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspLanguage Skills Proficiency
+% execute file: /OLACommon/printing/appParts/13recruitmentEfforts.asp
+%% Location, Title:/OLACommon/printing/appParts/13recruitmentEfforts.aspReferral Source
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: True
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '129' group by sf.id         )      ) b on a.id = b.TraitID where Page = '129' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspAPPLICANT DISCLOSURES (NEW)
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: True
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '130' group by sf.id         )      ) b on a.id = b.TraitID where Page = '130' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspCriminal Record Information (CRI) (NEW)
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '25' group by sf.id         )      ) b on a.id = b.TraitID where Page = '25' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspRetirement Status
+%% Location, Title:EEO Form
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : CanViewVeteransPreference
+%% No permission for this user
+%HidePagePrint: False
+%OnlySuperUsersCanView: True
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '32' group by sf.id         )      ) b on a.id = b.TraitID where Page = '32' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspVeterans Preference
+%% ConditionSQL:SELECT 1 WHERE EXISTS(
+SELECT TOP 1 1 FROM AppTraits WHERE TraitID = 737 AND [Value] = 'Yes' AND AppNo = 117574)%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '39' group by sf.id         )      ) b on a.id = b.TraitID where Page = '39' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspPublic Records Consent
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%Changing Page Font: 10
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '50' group by sf.id         )      ) b on a.id = b.TraitID where Page = '50' order by SortOrder 
+%Start of Traits Page
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspDistrict Compliance and Notice of Accommodations
+%  invoke Main88TraitsSkills: /OLACommon/printing/appParts/88traits-skills.asp
+%Gettings Parms
+%% SuperUser? 
+%% CustomPermission : 
+%HidePagePrint: False
+%OnlySuperUsersCanView: False
+%OLA SuperUser Cookie: 
+%OLA HRAdmin Cookie: 
+%request transaction: 39152142
+%Session CanViewSuperUserPages: 
+%% Not Hidden! 
+%AppTraitSQL: CacheView '__System_TraitFields', 3600; select * from __System_TraitFields_Cached a left join (     select TraitID, Value, ExtendedValue from AppTraits where id in ( 	      select min(at.id) as FirstAnswerID from __System_TraitFields_Cached sf left join (select * from AppTraits where AppTraits.appno = 117574) at on sf.id = at.TraitID where Page = '38' group by sf.id         )      ) b on a.id = b.TraitID where Page = '38' order by SortOrder 
+%Start of Traits Page
+%% MultiLineText is starting...
+%% No Center
+%% MultiLineText is done...
+%End of Trait Page
+%EndTableColumns
+%% Location, Title:/OLACommon/printing/appParts/88traits-skills.aspSignature Page
+
+14 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 16 0 R 15 0 R ]
+/Annots 17 0 R>>
+endobj
+15 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 1 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:58 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Personal Data  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 701.8 Tm
+/Helvetica-Bold 10 Tf
+12 TL
+(Name:  ) '
+/Times-Roman 12 Tf
+14.4 TL
+1 0 0 1 141.4 701.8 Tm
+(Mr.  ) '
+1 0 0 1 253.8 701.8 Tm
+(Carl  ) '
+1 0 0 1 366.2 701.8 Tm
+1 0 0 1 478.6 701.8 Tm
+(Waltower  ) '
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 141.4 684.4 Tm
+(\(Title\)  ) '
+1 0 0 1 253.8 684.4 Tm
+(\(First\)  ) '
+1 0 0 1 366.2 684.4 Tm
+(\(Middle Initial\)  ) '
+1 0 0 1 478.6 684.4 Tm
+(\(Last\)  ) '
+1 0 0 1 29 674.8 Tm
+1 0 0 1 160.47 671.8 Tm
+(Other name\(s\) under which transcripts, certificates, and former applications may be listed:  ) '
+1 0 0 1 29 662.2 Tm
+1 0 0 1 25 662.2 Tm
+1 0 0 1 29 659.2 Tm
+/Helvetica-Bold 10 Tf
+12 TL
+(Other:  ) '
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 141.4 659.2 Tm
+1 0 0 1 253.8 659.2 Tm
+1 0 0 1 366.2 659.2 Tm
+1 0 0 1 478.6 659.2 Tm
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 141.4 647.2 Tm
+(\(Title\)  ) '
+1 0 0 1 253.8 647.2 Tm
+(\(First\)  ) '
+1 0 0 1 366.2 647.2 Tm
+(\(Middle Initial\)  ) '
+1 0 0 1 478.6 647.2 Tm
+(\(Last\)  ) '
+1 0 0 1 29 637.6 Tm
+1 0 0 1 29 637.6 Tm
+/Helvetica-Bold 10 Tf
+12 TL
+(Email Address:  ) '
+1 0 0 1 169.5 637.6 Tm
+/Times-Roman 10 Tf
+12 TL
+(cwaltower62@gmail.com  ) '
+1 0 0 1 29 625.6 Tm
+1 0 0 1 25 619.6 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Postal Address  ) '
+1 0 0 1 29 605.2 Tm
+1 0 0 1 29 619.2 Tm
+1 0 0 1 25 613.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 601.2 Tm
+1 0 0 1 29 601.2 Tm
+/Helvetica-Bold 10 Tf
+12 TL
+(Address  ) '
+1 0 0 1 29 589.2 Tm
+1 0 0 1 29 589.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(Number & Street:  ) '
+1 0 0 1 169.5 589.2 Tm
+(2514 Potter St  ) '
+1 0 0 1 29 577.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(Apt. Number:  ) '
+1 0 0 1 169.5 577.2 Tm
+1 0 0 1 29 565.2 Tm
+(City:  ) '
+1 0 0 1 169.5 565.2 Tm
+(Tampa  ) '
+1 0 0 1 29 553.2 Tm
+(State/Province:  ) '
+1 0 0 1 169.5 553.2 Tm
+(FL  ) '
+1 0 0 1 29 541.2 Tm
+(Zip/Postal Code:  ) '
+1 0 0 1 169.5 541.2 Tm
+(33605  ) '
+1 0 0 1 29 529.2 Tm
+(Country:  ) '
+1 0 0 1 169.5 529.2 Tm
+(United States of America  ) '
+1 0 0 1 29 517.2 Tm
+(Daytime Phone:  ) '
+1 0 0 1 169.5 517.2 Tm
+(\(813\) 7120311  ) '
+1 0 0 1 29 505.2 Tm
+(Home/Cell Phone:  ) '
+1 0 0 1 169.5 505.2 Tm
+(\(813\) 5169989  ) '
+1 0 0 1 29 493.2 Tm
+1 0 0 1 25 487.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Employment Desired  ) '
+1 0 0 1 29 472.8 Tm
+1 0 0 1 29 486.8 Tm
+1 0 0 1 25 480.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 468.8 Tm
+1 0 0 1 29 468.8 Tm
+/Helvetica 12 Tf
+14.4 TL
+(Open Vacancy Desired:  ) '
+1 0 0 1 422.4 468.8 Tm
+/Helvetica-Bold 8 Tf
+9.6 TL
+1 0 0 1 422.4 464.8 Tm
+(Date Last )'
+(Submitted  ) '
+1 0 0 1 506.7 468.8 Tm
+/Helvetica-Bold 8 Tf
+9.6 TL
+1 0 0 1 506.7 464.8 Tm
+(Experience in )'
+(Similar Positions  ) '
+1 0 0 1 29 445.6 Tm
+1 0 0 1 29 445.6 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 445.6 Tm
+(JobID: 51928  ) '
+1 0 0 1 113.3 445.6 Tm
+()'
+() Tj
+/Times-Bold 10 Tf
+12 TL
+(Student Nutrition:) Tj
+/Times-Roman 10 Tf
+12 TL
+( Sub, Stdt Nutr ) Tj
+( at STUDENT NUTRITION ) Tj
+T*
+(SUBSTITUTES  ) Tj
+1 0 0 1 422.4 445.6 Tm
+(8/10/2021  ) '
+1 0 0 1 506.7 445.6 Tm
+(years  ) '
+1 0 0 1 29 421.6 Tm
+1 0 0 1 29 409.6 Tm
+1 0 0 1 29 409.6 Tm
+/Helvetica 12 Tf
+14.4 TL
+(Position Desired:  ) '
+1 0 0 1 506.7 409.6 Tm
+/Helvetica-Bold 8 Tf
+9.6 TL
+1 0 0 1 506.7 405.6 Tm
+(Experience in )'
+(Similar Positions  ) '
+1 0 0 1 29 386.4 Tm
+1 0 0 1 29 388.4 Tm
+1 0 0 1 29 388.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 388.4 Tm
+/Times-Bold 10 Tf
+12 TL
+(Student Nutrition  ) '
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 376.4 Tm
+( 1.   Sub, Stdt Nutr  ) '
+1 0 0 1 506.7 376.4 Tm
+(-  ) '
+1 0 0 1 29 352.4 Tm
+1 0 0 1 29 340.4 Tm
+1 0 0 1 29 340.4 Tm
+1 0 0 1 25 334.4 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Base Information \(New\)  ) '
+1 0 0 1 29 320 Tm
+1 0 0 1 29 334 Tm
+1 0 0 1 25 328 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 316 Tm
+1 0 0 1 29 314 Tm
+1 0 0 1 29 314 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 314 Tm
+()'
+(*  Are you currently authorized \(legally able\) to work in the United States? ) Tj
+1 0 0 1 29 302 Tm
+1 0 0 1 29 311 Tm
+1 0 0 1 422.4 314 Tm
+0 0 0 rg
+(Yes  ) '
+0 0 0 rg
+1 0 0 1 29 299 Tm
+()'
+(*  Are you a citizen or permanent resident of the United States? ) Tj
+1 0 0 1 29 287 Tm
+1 0 0 1 29 296 Tm
+1 0 0 1 422.4 299 Tm
+0 0 0 rg
+(Yes  ) '
+0 0 0 rg
+1 0 0 1 29 284 Tm
+()'
+(*  Do you require sponsorship to work in the United States? \() Tj
+(Note:) Tj
+( HCPS does not sponsor\) ) Tj
+1 0 0 1 29 272 Tm
+1 0 0 1 29 281 Tm
+1 0 0 1 422.4 284 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 269 Tm
+()'
+(I have work authorization which has an expiration date \(enter date\): ) Tj
+1 0 0 1 29 257 Tm
+1 0 0 1 29 266 Tm
+1 0 0 1 422.4 269 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 254 Tm
+()'
+(If you currently have work authorization, upload a copy of the front and back of the work authorization card. *Please be aware that ) Tj
+T*
+(we may request to have you bring the card to our office. ) Tj
+1 0 0 1 422.4 254 Tm
+1 0 0 1 29 230 Tm
+()'
+(*  Have you ever worked for Hillsborough County Public School District? ) Tj
+1 0 0 1 29 218 Tm
+T*
+(\(If yes, experience must also be listed in the Work Experience Section of this application. ) Tj
+T*
+(Note: Charter School employees are not considered employees of HCPS\) ) Tj
+1 0 0 1 29 194 Tm
+1 0 0 1 29 203 Tm
+1 0 0 1 422.4 230 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 191 Tm
+()'
+(     If yes, what was the time period? \(From: month/year To: month/year\) ) Tj
+1 0 0 1 29 179 Tm
+1 0 0 1 29 188 Tm
+1 0 0 1 422.4 191 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 176 Tm
+()'
+(     If yes, what was your Lawson \(employee\) number? ) Tj
+1 0 0 1 29 164 Tm
+1 0 0 1 29 173 Tm
+1 0 0 1 422.4 176 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 161 Tm
+()'
+(     If yes, in what position did you work when you were employed at HCPS? ) Tj
+1 0 0 1 422.4 161 Tm
+1 0 0 1 29 149 Tm
+()'
+(          HCPS Substitute Teacher \(up until 2013\) ) Tj
+1 0 0 1 29 137 Tm
+1 0 0 1 29 146 Tm
+1 0 0 1 422.4 149 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 134 Tm
+()'
+(          Kelly Educational Services Substitute Teacher \(2013 or after\) ) Tj
+1 0 0 1 29 122 Tm
+1 0 0 1 29 131 Tm
+1 0 0 1 422.4 134 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 119 Tm
+()'
+(          Other position \(enter the position title\) ) Tj
+1 0 0 1 29 107 Tm
+1 0 0 1 29 116 Tm
+1 0 0 1 422.4 119 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 92 Tm
+ET
+endstream
+endobj
+16 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+1.2 w
+25 602.2 m
+587 602.2 l
+S
+1.2 w
+25 469.8 m
+587 469.8 l
+S
+1.2 w
+25 317 m
+587 317 l
+S
+.75 .75 .75 RG
+0.002 w
+415 313 m
+587 313 l
+S
+0.002 w
+415 313 m
+415 298 l
+S
+0.002 w
+587 313 m
+587 298 l
+S
+0.002 w
+415 298 m
+587 298 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 298 m
+587 298 l
+S
+0.002 w
+415 298 m
+415 283 l
+S
+0.002 w
+587 298 m
+587 283 l
+S
+0.002 w
+415 283 m
+587 283 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 283 m
+587 283 l
+S
+0.002 w
+415 283 m
+415 268 l
+S
+0.002 w
+587 283 m
+587 268 l
+S
+0.002 w
+415 268 m
+587 268 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 268 m
+587 268 l
+S
+0.002 w
+415 268 m
+415 253 l
+S
+0.002 w
+587 268 m
+587 253 l
+S
+0.002 w
+415 253 m
+587 253 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 229 m
+587 229 l
+S
+0.002 w
+415 229 m
+415 190 l
+S
+0.002 w
+587 229 m
+587 190 l
+S
+0.002 w
+415 190 m
+587 190 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 190 m
+587 190 l
+S
+0.002 w
+415 190 m
+415 175 l
+S
+0.002 w
+587 190 m
+587 175 l
+S
+0.002 w
+415 175 m
+587 175 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 175 m
+587 175 l
+S
+0.002 w
+415 175 m
+415 160 l
+S
+0.002 w
+587 175 m
+587 160 l
+S
+0.002 w
+415 160 m
+587 160 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 148 m
+587 148 l
+S
+0.002 w
+415 148 m
+415 133 l
+S
+0.002 w
+587 148 m
+587 133 l
+S
+0.002 w
+415 133 m
+587 133 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 133 m
+587 133 l
+S
+0.002 w
+415 133 m
+415 118 l
+S
+0.002 w
+587 133 m
+587 118 l
+S
+0.002 w
+415 118 m
+587 118 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 118 m
+587 118 l
+S
+0.002 w
+415 118 m
+415 103 l
+S
+0.002 w
+587 118 m
+587 103 l
+S
+0.002 w
+415 103 m
+587 103 l
+S
+0 0 0 RG
+endstream
+endobj
+
+17 0 obj
+[ ]
+endobj
+
+100000 0 obj <<
+/Parent 2 0 R
+/Dest [14 0 R /XYZ null 792 null]
+/Title (-- Waltower, Carl --)
+/Next 100001 0 R
+>>
+endobj
+100001 0 obj <<
+/Parent 2 0 R
+/Dest [14 0 R /XYZ null 726.2 null]
+/Title (Personal Data)
+/Prev 100000 0 R
+/Next 100002 0 R
+>>
+endobj
+100002 0 obj <<
+/Parent 2 0 R
+/Dest [14 0 R /XYZ null 625.6 null]
+/Title (Postal Address)
+/Prev 100001 0 R
+/Next 100003 0 R
+>>
+endobj
+100003 0 obj <<
+/Parent 2 0 R
+/Dest [14 0 R /XYZ null 493.2 null]
+/Title (Employment Desired)
+/Prev 100002 0 R
+/Next 100004 0 R
+>>
+endobj
+100004 0 obj <<
+/Parent 2 0 R
+/Dest [14 0 R /XYZ null 340.4 null]
+/Title (Base Information \(New\))
+/Prev 100003 0 R
+/Next 100005 0 R
+>>
+endobj
+
+18 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 20 0 R 19 0 R ]
+/Annots 21 0 R>>
+endobj
+19 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 2 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:58 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Base Information \(New\) continued  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+()'
+(*  Are you a family member of a current Hillsborough County employee? ) Tj
+1 0 0 1 29 687.8 Tm
+1 0 0 1 29 696.8 Tm
+1 0 0 1 422.4 699.8 Tm
+0 0 0 rg
+(Yes  ) '
+0 0 0 rg
+1 0 0 1 29 684.8 Tm
+()'
+(     If yes, what is the name of the relative and your relationship to the person? ) Tj
+1 0 0 1 29 672.8 Tm
+1 0 0 1 29 681.8 Tm
+1 0 0 1 422.4 684.8 Tm
+0 0 0 rg
+(Carla Waltower  ) '
+0 0 0 rg
+1 0 0 1 29 669.8 Tm
+()'
+(*  ) Tj
+(When can you begin working? \(mm/yyyy\)) Tj
+1 0 0 1 29 657.8 Tm
+1 0 0 1 29 666.8 Tm
+1 0 0 1 422.4 669.8 Tm
+0 0 0 rg
+(08/2021  ) '
+0 0 0 rg
+1 0 0 1 29 642.8 Tm
+1 0 0 1 29 630.8 Tm
+1 0 0 1 29 630.8 Tm
+1 0 0 1 25 624.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Pre-Reference Page \(NEW\)  ) '
+1 0 0 1 29 610.4 Tm
+1 0 0 1 29 624.4 Tm
+1 0 0 1 25 618.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 606.4 Tm
+1 0 0 1 29 604.4 Tm
+1 0 0 1 29 604.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 604.4 Tm
+()'
+() Tj
+(Waiver of Liability for Named References) Tj
+1 0 0 1 422.4 604.4 Tm
+1 0 0 1 29 592.4 Tm
+()'
+(I, Carl Waltower, indemnify and hold harmless any named reference on my application and its company/organization from and ) Tj
+T*
+(against any and all liability, penalties, losses, damages, costs and expenses, demands, causes of action, claims or judgments arising from ) Tj
+T*
+(any reference information given by the assigned reference.  I understand that a reference is a reflection of my past employment and ) Tj
+T*
+(agree that a current or former employer has the right to his or her opinion of my performance, and whether they would consider me ) Tj
+T*
+(for rehire either as an opinion, or as a matter of company policy. ) Tj
+1 0 0 1 422.4 592.4 Tm
+1 0 0 1 422.4 527.4 Tm
+1 0 0 1 29 515.4 Tm
+()'
+(Please type full legal name then click Digitally Sign: ) Tj
+1 0 0 1 422.4 515.4 Tm
+1 0 0 1 422.4 511.4 Tm
+1 0 0 1 29 499.4 Tm
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 29 495.4 Tm
+1 0 0 1 29 495.4 Tm
+1 0 0 1 29 489.4 Tm
+()'
+() Tj
+/Helvetica-Bold 10 Tf
+12 TL
+( X) Tj
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 51 495.4 Tm
+()'
+(Signed: ) Tj
+/Helvetica-Bold 10 Tf
+12 TL
+(Carl Waltower) Tj
+/Helvetica 10 Tf
+12 TL
+() Tj
+1 0 0 1 51 483.4 Tm
+T*
+() Tj
+/Helvetica 6 Tf
+7.2 TL
+(Stamped: ) Tj
+/Helvetica-Bold 6 Tf
+7.2 TL
+(8/10/2021 6:36:01 PM; 198.143.57.11; Applicant - #117574 - Carl Waltower; ) Tj
+/Helvetica 6 Tf
+7.2 TL
+() Tj
+/Helvetica 10 Tf
+12 TL
+0 0 0 rg
+1 0 0 1 51 479.4 Tm
+1 0 0 1 29 467.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 463.4 Tm
+1 0 0 1 29 451.4 Tm
+()'
+(Dated: ) Tj
+1 0 0 1 29 439.4 Tm
+1 0 0 1 29 448.4 Tm
+1 0 0 1 422.4 451.4 Tm
+0 0 0 rg
+(08/10/2021  ) '
+0 0 0 rg
+1 0 0 1 29 424.4 Tm
+1 0 0 1 25 418.4 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Professional References  ) '
+1 0 0 1 29 404 Tm
+1 0 0 1 29 418 Tm
+1 0 0 1 25 412 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 400 Tm
+1 0 0 1 29 398 Tm
+1 0 0 1 29 398 Tm
+1 0 0 1 29 386 Tm
+1 0 0 1 29 386 Tm
+/Times-Bold 10 Tf
+12 TL
+1 0 0 1 310 386 Tm
+(Reference 1 of 2  ) '
+1 0 0 1 29 374 Tm
+(Name:  ) '
+1 0 0 1 310 374 Tm
+/Times-Roman 10 Tf
+12 TL
+(Lonnie Alexander  ) '
+1 0 0 1 29 362 Tm
+/Times-Bold 10 Tf
+12 TL
+(School/Org:  ) '
+1 0 0 1 310 362 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 350 Tm
+/Times-Bold 10 Tf
+12 TL
+(Current Position:  ) '
+1 0 0 1 310 350 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 338 Tm
+/Times-Bold 10 Tf
+12 TL
+(Cell Phone:  ) '
+1 0 0 1 310 338 Tm
+/Times-Roman 10 Tf
+12 TL
+(813-731-7235  ) '
+1 0 0 1 29 326 Tm
+/Times-Bold 10 Tf
+12 TL
+(Work Phone:  ) '
+1 0 0 1 310 326 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 314 Tm
+/Times-Bold 10 Tf
+12 TL
+(Mailing Address:  ) '
+1 0 0 1 310 314 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 302 Tm
+/Times-Bold 10 Tf
+12 TL
+(Email:  ) '
+1 0 0 1 310 302 Tm
+/Times-Roman 10 Tf
+12 TL
+(falexander2@verizon.net  ) '
+1 0 0 1 29 290 Tm
+/Times-Bold 10 Tf
+12 TL
+(Relationship to Candidate:  ) '
+1 0 0 1 310 290 Tm
+/Times-Roman 10 Tf
+12 TL
+(Coworker  ) '
+1 0 0 1 29 278 Tm
+/Times-Bold 10 Tf
+12 TL
+(Dates of Employment \(MM/YYYY to MM/YYYY\)  ) '
+1 0 0 1 310 278 Tm
+/Times-Roman 10 Tf
+12 TL
+(01/1978 to 12/2008  ) '
+1 0 0 1 29 266 Tm
+1 0 0 1 29 262 Tm
+1 0 0 1 25 256 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Experience  ) '
+1 0 0 1 29 241.6 Tm
+1 0 0 1 29 255.6 Tm
+1 0 0 1 25 249.6 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 237.6 Tm
+(, )'
+( Please list employment, including any/all gaps in employment.¬† Please begin with the Present Date. )'
+(
+- For Instructional positions, provide 5 most recent years \(Present date back to 2016\) )'
+(
+- For Support positions, provide 3 most recent years¬†\(Present date back to 2018\) )'
+(
+- For Administrative positions, provide 10 most recent years¬†\(Present date back to 2011\) )'
+(
+¬† )'
+(
+If not working but attending school, "in school" must be listed as if it was work experience with the corresponding dates. )'
+(
+ )'
+(
+Fill in any/all gaps in employment with a reason and dates. ¬†Gaps include any non-employment such as: )'
+(
+- unemployment \(‚Äúnot working‚Äù\) )'
+(
+- stay-at-home-parent )'
+(
+- volunteer work )'
+(
+- in school )'
+(
+- retired )'
+(
+¬† )'
+1 0 0 1 29 45.6 Tm
+1 0 0 1 29 43.6 Tm
+1 0 0 1 29 43.6 Tm
+ET
+endstream
+endobj
+20 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+.75 .75 .75 RG
+0.002 w
+415 698.8 m
+587 698.8 l
+S
+0.002 w
+415 698.8 m
+415 683.8 l
+S
+0.002 w
+587 698.8 m
+587 683.8 l
+S
+0.002 w
+415 683.8 m
+587 683.8 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 683.8 m
+587 683.8 l
+S
+0.002 w
+415 683.8 m
+415 668.8 l
+S
+0.002 w
+587 683.8 m
+587 668.8 l
+S
+0.002 w
+415 668.8 m
+587 668.8 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 668.8 m
+587 668.8 l
+S
+0.002 w
+415 668.8 m
+415 653.8 l
+S
+0.002 w
+587 668.8 m
+587 653.8 l
+S
+0.002 w
+415 653.8 m
+587 653.8 l
+S
+0 0 0 RG
+1.2 w
+25 607.4 m
+587 607.4 l
+S
+0.01 w
+25 522.4 m
+587 522.4 l
+S
+0.2 w
+25 495.4 m
+587 495.4 l
+S
+0.2 w
+25 465.733333333333 m
+587 465.733333333333 l
+S
+0.2 w
+25 495.4 m
+25 465.733333333333 l
+S
+0.2 w
+45 495.4 m
+45 465.733333333333 l
+S
+0.2 w
+47 495.4 m
+47 465.733333333333 l
+S
+0.2 w
+587 495.4 m
+587 465.733333333333 l
+S
+0.2 w
+587 495.4 m
+587 465.733333333333 l
+S
+.75 .75 .75 RG
+0.002 w
+415 450.4 m
+587 450.4 l
+S
+0.002 w
+415 450.4 m
+415 435.4 l
+S
+0.002 w
+587 450.4 m
+587 435.4 l
+S
+0.002 w
+415 435.4 m
+587 435.4 l
+S
+0 0 0 RG
+1.2 w
+25 401 m
+587 401 l
+S
+0.2 w
+25 386 m
+587 386 l
+S
+0.2 w
+25 372.333333333333 m
+587 372.333333333333 l
+S
+0.2 w
+25 360.333333333333 m
+587 360.333333333333 l
+S
+0.2 w
+25 348.333333333333 m
+587 348.333333333333 l
+S
+0.2 w
+25 336.333333333333 m
+587 336.333333333333 l
+S
+0.2 w
+25 324.333333333333 m
+587 324.333333333333 l
+S
+0.2 w
+25 312.333333333333 m
+587 312.333333333333 l
+S
+0.2 w
+25 300.333333333333 m
+587 300.333333333333 l
+S
+0.2 w
+25 288.333333333333 m
+587 288.333333333333 l
+S
+0.2 w
+25 276.333333333333 m
+587 276.333333333333 l
+S
+0.2 w
+25 264.333333333333 m
+587 264.333333333333 l
+S
+0.2 w
+25 386 m
+25 264.333333333333 l
+S
+0.2 w
+306 386 m
+306 264.333333333333 l
+S
+0.2 w
+587 386 m
+587 264.333333333333 l
+S
+1.2 w
+25 238.6 m
+587 238.6 l
+S
+endstream
+endobj
+
+21 0 obj
+[ ]
+endobj
+
+100005 0 obj <<
+/Parent 2 0 R
+/Dest [18 0 R /XYZ null 726.2 null]
+/Title (Base Information \(New\) continued)
+/Prev 100004 0 R
+/Next 100006 0 R
+>>
+endobj
+100006 0 obj <<
+/Parent 2 0 R
+/Dest [18 0 R /XYZ null 630.8 null]
+/Title (Pre-Reference Page \(NEW\))
+/Prev 100005 0 R
+/Next 100007 0 R
+>>
+endobj
+100007 0 obj <<
+/Parent 2 0 R
+/Dest [18 0 R /XYZ null 424.4 null]
+/Title (Professional References)
+/Prev 100006 0 R
+/Next 100008 0 R
+>>
+endobj
+100008 0 obj <<
+/Parent 2 0 R
+/Dest [18 0 R /XYZ null 262 null]
+/Title (Experience)
+/Prev 100007 0 R
+/Next 100009 0 R
+>>
+endobj
+
+22 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 24 0 R 23 0 R ]
+/Annots 25 0 R>>
+endobj
+23 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 3 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Experience Continued  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+/Times-Bold 10 Tf
+12 TL
+(Current or Most Recent Position  ) '
+1 0 0 1 216.33 699.8 Tm
+(Employer Contact Information  ) '
+1 0 0 1 403.67 699.8 Tm
+(Supervisor/Reference Contact )'
+(Information )'
+1 0 0 1 29 675.8 Tm
+1 0 0 1 29 674.3 Tm
+1 0 0 1 29 674.3 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 674.3 Tm
+(Ice Cream BBQ  ) '
+(Owner and Operator  ) '
+1 0 0 1 216.33 674.3 Tm
+(3514 Potter )'
+(Tampa, Fl  33605 )'
+(813-712-0311  ) '
+1 0 0 1 403.67 674.3 Tm
+1 0 0 1 29 638.3 Tm
+1 0 0 1 29 650.3 Tm
+1 0 0 1 29 638.3 Tm
+1 0 0 1 29 636.3 Tm
+1 0 0 1 29 636.3 Tm
+1 0 0 1 29 636.3 Tm
+/Times-Bold 10 Tf
+12 TL
+(Date From - Date )'
+(To:  ) '
+1 0 0 1 122.67 636.3 Tm
+/Times-Roman 10 Tf
+12 TL
+(08/2010 - 08/2021  ) '
+(\(Total Yrs: 50+\)  ) '
+1 0 0 1 216.33 636.3 Tm
+/Times-Bold 10 Tf
+12 TL
+(Full or Part Time:  ) '
+1 0 0 1 310 636.3 Tm
+/Times-Roman 10 Tf
+12 TL
+(Full  ) '
+1 0 0 1 29 612.3 Tm
+1 0 0 1 29 610.6 Tm
+1 0 0 1 29 610.6 Tm
+/Times-Bold 10 Tf
+12 TL
+(Reason for )'
+(Leaving:  ) '
+1 0 0 1 122.66 610.6 Tm
+/Times-Roman 10 Tf
+12 TL
+(Still Working  ) '
+1 0 0 1 29 586.6 Tm
+/Times-Bold 10 Tf
+12 TL
+(May we contact )'
+(this employer? If )'
+(you respond "no," )'
+(you must upload )'
+(your most recent )'
+(annual )'
+(\(summative\) )'
+(performance eval.  ) '
+1 0 0 1 122.66 586.6 Tm
+/Times-Roman 10 Tf
+12 TL
+(Yes  ) '
+1 0 0 1 29 490.6 Tm
+/Times-Bold 10 Tf
+12 TL
+(Responsibilities  ) '
+1 0 0 1 122.66 490.6 Tm
+/Times-Roman 10 Tf
+12 TL
+(Owner Operator of Food Truck Business.  ) '
+1 0 0 1 29 478.6 Tm
+1 0 0 1 29 478.6 Tm
+1 0 0 1 29 490.6 Tm
+1 0 0 1 29 478.6 Tm
+1 0 0 1 29 478.6 Tm
+1 0 0 1 29 470.6 Tm
+1 0 0 1 29 458.6 Tm
+1 0 0 1 25 452.6 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Education  ) '
+1 0 0 1 29 438.2 Tm
+1 0 0 1 29 452.2 Tm
+1 0 0 1 25 446.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 434.2 Tm
+(Please tell us about your educational background beginning with the most recent.  ) '
+1 0 0 1 29 410.2 Tm
+1 0 0 1 29 405.2 Tm
+1 0 0 1 29 405.2 Tm
+/Times-Bold 10 Tf
+12 TL
+(High School Attended:  ) '
+1 0 0 1 169.5 405.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(Chamberlain  ) '
+1 0 0 1 29 393.2 Tm
+/Times-Bold 10 Tf
+12 TL
+(Graduation Status:  ) '
+1 0 0 1 169.5 393.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(H.S. Diploma  ) '
+1 0 0 1 29 381.2 Tm
+/Times-Bold 10 Tf
+12 TL
+(HS Grad/GED/HSED Date:  ) '
+1 0 0 1 169.5 381.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(06/1977  ) '
+1 0 0 1 29 369.2 Tm
+1 0 0 1 29 357.2 Tm
+1 0 0 1 29 357.2 Tm
+/Times-Bold 10 Tf
+12 TL
+(Highest Degree Attained:  ) '
+1 0 0 1 169.5 357.2 Tm
+/Times-Roman 10 Tf
+12 TL
+(None  ) '
+1 0 0 1 29 345.2 Tm
+1 0 0 1 29 333.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+1 0 0 1 150.34 333.2 Tm
+(Colleges, Universities and Technical Schools Attended:  ) '
+1 0 0 1 29 318.8 Tm
+1 0 0 1 25 318.8 Tm
+/Times-Roman 10 Tf
+12 TL
+(  No education was entered.  ) '
+1 0 0 1 29 294.8 Tm
+1 0 0 1 29 282.8 Tm
+/Times-Bold 10 Tf
+12 TL
+(List honors, awards or distinctions you have earned:  ) '
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 258.8 Tm
+1 0 0 1 29 246.8 Tm
+1 0 0 1 29 246.8 Tm
+1 0 0 1 25 240.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Certifications of Support Applicants  ) '
+1 0 0 1 29 226.4 Tm
+1 0 0 1 29 240.4 Tm
+1 0 0 1 25 234.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 222.4 Tm
+1 0 0 1 29 220.4 Tm
+1 0 0 1 29 220.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 220.4 Tm
+()'
+() Tj
+(DRIVER LICENSE) Tj
+1 0 0 1 422.4 220.4 Tm
+1 0 0 1 29 208.4 Tm
+()'
+(Driver license number: ) Tj
+1 0 0 1 29 196.4 Tm
+1 0 0 1 29 205.4 Tm
+1 0 0 1 422.4 208.4 Tm
+0 0 0 rg
+(W436-120-57-461-0  ) '
+0 0 0 rg
+1 0 0 1 29 193.4 Tm
+()'
+(State of Issuance: ) Tj
+1 0 0 1 29 181.4 Tm
+1 0 0 1 29 190.4 Tm
+1 0 0 1 422.4 193.4 Tm
+0 0 0 rg
+(5/14/201919  ) '
+0 0 0 rg
+1 0 0 1 29 178.4 Tm
+()'
+(Driver's License Expiration Date: ) Tj
+1 0 0 1 29 166.4 Tm
+1 0 0 1 29 175.4 Tm
+1 0 0 1 422.4 178.4 Tm
+0 0 0 rg
+(12/21/2027  ) '
+0 0 0 rg
+1 0 0 1 29 163.4 Tm
+()'
+() Tj
+(Please select the class of your license:) Tj
+1 0 0 1 422.4 163.4 Tm
+1 0 0 1 29 151.4 Tm
+()'
+() Tj
+(Name/Type of License/GVWR \(Gross Vehicle Weight Rating\):  ) Tj
+1 0 0 1 29 139.4 Tm
+1 0 0 1 29 148.4 Tm
+1 0 0 1 422.4 151.4 Tm
+(Class E: Regular Drivers License  ) '
+1 0 0 1 29 124.4 Tm
+ET
+endstream
+endobj
+24 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+0.4 w
+25 699.8 m
+587 699.8 l
+S
+0.4 w
+25 674.133333333333 m
+587 674.133333333333 l
+S
+0.4 w
+25 699.8 m
+25 674.133333333333 l
+S
+0.4 w
+212.333333333333 699.8 m
+212.333333333333 674.133333333333 l
+S
+0.4 w
+399.666666666667 699.8 m
+399.666666666667 674.133333333333 l
+S
+0.4 w
+587 699.8 m
+587 674.133333333333 l
+S
+0.4 w
+25 674.3 m
+587 674.3 l
+S
+0.2 w
+25 674.3 m
+587 674.3 l
+S
+0.2 w
+25 636.633333333333 m
+587 636.633333333333 l
+S
+0.2 w
+25 674.3 m
+25 636.633333333333 l
+S
+0.2 w
+212.333333333333 674.3 m
+212.333333333333 636.633333333333 l
+S
+0.2 w
+399.666666666667 674.3 m
+399.666666666667 636.633333333333 l
+S
+0.2 w
+587 674.3 m
+587 636.633333333333 l
+S
+0.4 w
+25 636.633333333333 m
+587 636.633333333333 l
+S
+0.2 w
+25 636.3 m
+587 636.3 l
+S
+0.2 w
+25 610.633333333333 m
+587 610.633333333333 l
+S
+0.2 w
+25 636.3 m
+25 610.633333333333 l
+S
+0.2 w
+118.666666666667 636.3 m
+118.666666666667 610.633333333333 l
+S
+0.2 w
+212.333333333333 636.3 m
+212.333333333333 610.633333333333 l
+S
+0.2 w
+306 636.3 m
+306 610.633333333333 l
+S
+0.2 w
+399.666666666667 636.3 m
+399.666666666667 610.633333333333 l
+S
+0.2 w
+493.333333333333 636.3 m
+493.333333333333 610.633333333333 l
+S
+0.2 w
+587 636.3 m
+587 610.633333333333 l
+S
+0.2 w
+25 610.6 m
+586.99438 610.6 l
+S
+0.2 w
+25 584.933333333333 m
+586.99438 584.933333333333 l
+S
+0.2 w
+25 488.933333333333 m
+586.99438 488.933333333333 l
+S
+0.2 w
+25 476.933333333333 m
+586.99438 476.933333333333 l
+S
+0.2 w
+25 610.6 m
+25 476.933333333333 l
+S
+0.2 w
+118.66292 610.6 m
+118.66292 476.933333333333 l
+S
+0.2 w
+586.99438 610.6 m
+586.99438 476.933333333333 l
+S
+0.4 w
+25 476.933333333333 m
+587 476.933333333333 l
+S
+0.4 w
+25 674.3 m
+25 476.933333333333 l
+S
+0.4 w
+587 674.3 m
+587 476.933333333333 l
+S
+1.2 w
+25 435.2 m
+587 435.2 l
+S
+1.2 w
+25 223.4 m
+587 223.4 l
+S
+.75 .75 .75 RG
+0.002 w
+415 207.4 m
+587 207.4 l
+S
+0.002 w
+415 207.4 m
+415 192.4 l
+S
+0.002 w
+587 207.4 m
+587 192.4 l
+S
+0.002 w
+415 192.4 m
+587 192.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 192.4 m
+587 192.4 l
+S
+0.002 w
+415 192.4 m
+415 177.4 l
+S
+0.002 w
+587 192.4 m
+587 177.4 l
+S
+0.002 w
+415 177.4 m
+587 177.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 177.4 m
+587 177.4 l
+S
+0.002 w
+415 177.4 m
+415 162.4 l
+S
+0.002 w
+587 177.4 m
+587 162.4 l
+S
+0.002 w
+415 162.4 m
+587 162.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 150.4 m
+587 150.4 l
+S
+0.002 w
+415 150.4 m
+415 135.4 l
+S
+0.002 w
+587 150.4 m
+587 135.4 l
+S
+0.002 w
+415 135.4 m
+587 135.4 l
+S
+0 0 0 RG
+endstream
+endobj
+
+25 0 obj
+[ ]
+endobj
+
+100009 0 obj <<
+/Parent 2 0 R
+/Dest [22 0 R /XYZ null 726.2 null]
+/Title (Experience Continued)
+/Prev 100008 0 R
+/Next 100010 0 R
+>>
+endobj
+100010 0 obj <<
+/Parent 2 0 R
+/Dest [22 0 R /XYZ null 458.6 null]
+/Title (Education)
+/Prev 100009 0 R
+/Next 100011 0 R
+>>
+endobj
+100011 0 obj <<
+/Parent 2 0 R
+/Dest [22 0 R /XYZ null 246.8 null]
+/Title (Certifications of Support Applicants)
+/Prev 100010 0 R
+/Next 100012 0 R
+>>
+endobj
+
+26 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 28 0 R 27 0 R ]
+/Annots 29 0 R>>
+endobj
+27 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 4 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Statement  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 699.8 Tm
+()'
+(Tip: Use your word processor to copy and paste in your answers. Copy your answers from the word processor and then hit CTRL+V ) Tj
+T*
+(for PC or OpenApple+V for Mac to paste. ) Tj
+1 0 0 1 422.4 699.8 Tm
+1 0 0 1 29 675.8 Tm
+1 0 0 1 29 663.8 Tm
+()'
+(1. Please explain how your past personal and professional experiences make you a quality candidate for the position for which you are ) Tj
+T*
+(applying. Provide specific examples of experience, duties, and responsibilities. ) Tj
+1 0 0 1 29 639.8 Tm
+1 0 0 1 29 634.8 Tm
+1 0 0 1 29 634.8 Tm
+(I have food experience for 50+ years working in various positions including food prep, cooking, meal planning and catering events. I )'
+(also Food Truck business.  ) '
+1 0 0 1 29 610.8 Tm
+1 0 0 1 29 610.8 Tm
+1 0 0 1 29 615.8 Tm
+1 0 0 1 422.4 615.8 Tm
+1 0 0 1 29 591.8 Tm
+1 0 0 1 29 579.8 Tm
+1 0 0 1 29 579.8 Tm
+1 0 0 1 25 573.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Language Skills Proficiency  ) '
+1 0 0 1 29 559.4 Tm
+1 0 0 1 29 573.4 Tm
+1 0 0 1 25 567.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 555.4 Tm
+1 0 0 1 29 553.4 Tm
+1 0 0 1 29 553.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 553.4 Tm
+1 0 0 1 29 541.4 Tm
+1 0 0 1 29 550.4 Tm
+1 0 0 1 422.4 553.4 Tm
+1 0 0 1 29 538.4 Tm
+()'
+(*  Do you speak English? ) Tj
+1 0 0 1 29 526.4 Tm
+1 0 0 1 29 535.4 Tm
+1 0 0 1 422.4 538.4 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 523.4 Tm
+()'
+(Please indicate your skill level below of speaking and writing English. ) Tj
+1 0 0 1 422.4 523.4 Tm
+1 0 0 1 29 511.4 Tm
+()'
+(Oral/ Speaking Skills ) Tj
+1 0 0 1 29 499.4 Tm
+1 0 0 1 29 508.4 Tm
+1 0 0 1 422.4 511.4 Tm
+1 0 0 1 29 496.4 Tm
+()'
+(Writing Skills ) Tj
+1 0 0 1 29 484.4 Tm
+1 0 0 1 29 493.4 Tm
+1 0 0 1 422.4 496.4 Tm
+1 0 0 1 29 481.4 Tm
+()'
+(*  Do you speak a language other than English? ) Tj
+1 0 0 1 29 469.4 Tm
+1 0 0 1 29 478.4 Tm
+1 0 0 1 422.4 481.4 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 466.4 Tm
+()'
+(If yes, what other language do you speak? ) Tj
+1 0 0 1 29 454.4 Tm
+1 0 0 1 29 463.4 Tm
+1 0 0 1 422.4 466.4 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 451.4 Tm
+()'
+(Please indicate your skill level below with speaking and writing the other language. ) Tj
+1 0 0 1 422.4 451.4 Tm
+1 0 0 1 29 439.4 Tm
+()'
+(Oral/ Speaking Skills ) Tj
+1 0 0 1 29 427.4 Tm
+1 0 0 1 29 436.4 Tm
+1 0 0 1 422.4 439.4 Tm
+1 0 0 1 29 424.4 Tm
+()'
+(Writing Skills ) Tj
+1 0 0 1 29 412.4 Tm
+1 0 0 1 29 421.4 Tm
+1 0 0 1 422.4 424.4 Tm
+1 0 0 1 29 409.4 Tm
+()'
+(If applying for Teaching positions, are you interested in Dual Language teaching ) Tj
+T*
+(opportunities? ) Tj
+1 0 0 1 29 385.4 Tm
+1 0 0 1 29 394.4 Tm
+1 0 0 1 422.4 409.4 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 370.4 Tm
+1 0 0 1 29 358.4 Tm
+1 0 0 1 25 352.4 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Referrals  ) '
+1 0 0 1 29 338 Tm
+1 0 0 1 29 352 Tm
+1 0 0 1 25 346 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 334 Tm
+/Times-Bold 10 Tf
+12 TL
+(How did you hear about employment with us?  ) '
+/Times-Roman 10 Tf
+12 TL
+(  No method given.  ) '
+1 0 0 1 29 298 Tm
+1 0 0 1 29 286 Tm
+1 0 0 1 29 286 Tm
+1 0 0 1 25 280 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(APPLICANT DISCLOSURES \(NEW\)  ) '
+1 0 0 1 29 265.6 Tm
+1 0 0 1 29 279.6 Tm
+1 0 0 1 25 273.6 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 261.6 Tm
+1 0 0 1 29 259.6 Tm
+1 0 0 1 29 259.6 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 247.6 Tm
+1 0 0 1 25 241.6 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Certificate License Actions \(CLA\)  ) '
+1 0 0 1 29 227.2 Tm
+1 0 0 1 29 241.2 Tm
+1 0 0 1 25 235.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 223.2 Tm
+1 0 0 1 29 233.2 Tm
+1 0 0 1 29 233.2 Tm
+1 0 0 1 29 221.2 Tm
+()'
+(*  1. Have you ever been denied tenure or any professional services contract? ) Tj
+1 0 0 1 29 209.2 Tm
+1 0 0 1 29 218.2 Tm
+1 0 0 1 422.4 221.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 206.2 Tm
+()'
+(*  2. Have you ever failed to be rehired, non-renewed, non-renominated or non-reappointed? ) Tj
+1 0 0 1 29 194.2 Tm
+1 0 0 1 29 203.2 Tm
+1 0 0 1 422.4 206.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 191.2 Tm
+()'
+(*  3. Have you ever had a teaching certificate or teaching license revoked or suspended? ) Tj
+1 0 0 1 29 179.2 Tm
+1 0 0 1 29 188.2 Tm
+1 0 0 1 422.4 191.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 176.2 Tm
+()'
+(*  4. Have you ever been asked to resign a position? ) Tj
+1 0 0 1 29 164.2 Tm
+1 0 0 1 29 173.2 Tm
+1 0 0 1 422.4 176.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 161.2 Tm
+()'
+(*  5. Have you ever been disciplined resulting in a suspension with or without pay? ) Tj
+1 0 0 1 29 149.2 Tm
+1 0 0 1 29 158.2 Tm
+1 0 0 1 422.4 161.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 146.2 Tm
+()'
+(*  6. Have you ever resigned or retired to avoid termination? ) Tj
+1 0 0 1 29 134.2 Tm
+1 0 0 1 29 143.2 Tm
+1 0 0 1 422.4 146.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 131.2 Tm
+()'
+(*  7. Have you ever been the subject of an investigation or any other disciplinary action?) Tj
+1 0 0 1 29 119.2 Tm
+T*
+(This would include a reprimand, being placed on probation, and/or suspension. ) Tj
+1 0 0 1 29 107.2 Tm
+1 0 0 1 29 116.2 Tm
+1 0 0 1 422.4 131.2 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 92.2 Tm
+ET
+endstream
+endobj
+28 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+.75 .75 .75 RG
+0.2 w
+25 634.8 m
+587 634.8 l
+S
+0.2 w
+25 609.133333333333 m
+587 609.133333333333 l
+S
+0.2 w
+25 634.8 m
+25 609.133333333333 l
+S
+0.2 w
+587 634.8 m
+587 609.133333333333 l
+S
+0 0 0 RG
+1.2 w
+25 556.4 m
+587 556.4 l
+S
+.75 .75 .75 RG
+0.002 w
+415 537.4 m
+587 537.4 l
+S
+0.002 w
+415 537.4 m
+415 522.4 l
+S
+0.002 w
+587 537.4 m
+587 522.4 l
+S
+0.002 w
+415 522.4 m
+587 522.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 510.4 m
+587 510.4 l
+S
+0.002 w
+415 510.4 m
+415 495.4 l
+S
+0.002 w
+587 510.4 m
+587 495.4 l
+S
+0.002 w
+415 495.4 m
+587 495.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 495.4 m
+587 495.4 l
+S
+0.002 w
+415 495.4 m
+415 480.4 l
+S
+0.002 w
+587 495.4 m
+587 480.4 l
+S
+0.002 w
+415 480.4 m
+587 480.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 480.4 m
+587 480.4 l
+S
+0.002 w
+415 480.4 m
+415 465.4 l
+S
+0.002 w
+587 480.4 m
+587 465.4 l
+S
+0.002 w
+415 465.4 m
+587 465.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 465.4 m
+587 465.4 l
+S
+0.002 w
+415 465.4 m
+415 450.4 l
+S
+0.002 w
+587 465.4 m
+587 450.4 l
+S
+0.002 w
+415 450.4 m
+587 450.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 438.4 m
+587 438.4 l
+S
+0.002 w
+415 438.4 m
+415 423.4 l
+S
+0.002 w
+587 438.4 m
+587 423.4 l
+S
+0.002 w
+415 423.4 m
+587 423.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 423.4 m
+587 423.4 l
+S
+0.002 w
+415 423.4 m
+415 408.4 l
+S
+0.002 w
+587 423.4 m
+587 408.4 l
+S
+0.002 w
+415 408.4 m
+587 408.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 408.4 m
+587 408.4 l
+S
+0.002 w
+415 408.4 m
+415 381.4 l
+S
+0.002 w
+587 408.4 m
+587 381.4 l
+S
+0.002 w
+415 381.4 m
+587 381.4 l
+S
+0 0 0 RG
+1.2 w
+25 335 m
+587 335 l
+S
+1.2 w
+25 262.6 m
+587 262.6 l
+S
+1.2 w
+25 224.2 m
+587 224.2 l
+S
+.75 .75 .75 RG
+0.002 w
+415 220.2 m
+587 220.2 l
+S
+0.002 w
+415 220.2 m
+415 205.2 l
+S
+0.002 w
+587 220.2 m
+587 205.2 l
+S
+0.002 w
+415 205.2 m
+587 205.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 205.2 m
+587 205.2 l
+S
+0.002 w
+415 205.2 m
+415 190.2 l
+S
+0.002 w
+587 205.2 m
+587 190.2 l
+S
+0.002 w
+415 190.2 m
+587 190.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 190.2 m
+587 190.2 l
+S
+0.002 w
+415 190.2 m
+415 175.2 l
+S
+0.002 w
+587 190.2 m
+587 175.2 l
+S
+0.002 w
+415 175.2 m
+587 175.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 175.2 m
+587 175.2 l
+S
+0.002 w
+415 175.2 m
+415 160.2 l
+S
+0.002 w
+587 175.2 m
+587 160.2 l
+S
+0.002 w
+415 160.2 m
+587 160.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 160.2 m
+587 160.2 l
+S
+0.002 w
+415 160.2 m
+415 145.2 l
+S
+0.002 w
+587 160.2 m
+587 145.2 l
+S
+0.002 w
+415 145.2 m
+587 145.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 145.2 m
+587 145.2 l
+S
+0.002 w
+415 145.2 m
+415 130.2 l
+S
+0.002 w
+587 145.2 m
+587 130.2 l
+S
+0.002 w
+415 130.2 m
+587 130.2 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 130.2 m
+587 130.2 l
+S
+0.002 w
+415 130.2 m
+415 103.2 l
+S
+0.002 w
+587 130.2 m
+587 103.2 l
+S
+0.002 w
+415 103.2 m
+587 103.2 l
+S
+0 0 0 RG
+endstream
+endobj
+
+29 0 obj
+[ ]
+endobj
+
+100012 0 obj <<
+/Parent 2 0 R
+/Dest [26 0 R /XYZ null 726.2 null]
+/Title (Statement )
+/Prev 100011 0 R
+/Next 100013 0 R
+>>
+endobj
+100013 0 obj <<
+/Parent 2 0 R
+/Dest [26 0 R /XYZ null 579.8 null]
+/Title (Language Skills Proficiency)
+/Prev 100012 0 R
+/Next 100014 0 R
+>>
+endobj
+100014 0 obj <<
+/Parent 2 0 R
+/Dest [26 0 R /XYZ null 358.4 null]
+/Title (Referrals)
+/Prev 100013 0 R
+/Next 100015 0 R
+>>
+endobj
+100015 0 obj <<
+/Parent 2 0 R
+/Dest [26 0 R /XYZ null 286 null]
+/Title (APPLICANT DISCLOSURES \(NEW\))
+/Prev 100014 0 R
+/Next 100016 0 R
+>>
+endobj
+100016 0 obj <<
+/Parent 2 0 R
+/Dest [26 0 R /XYZ null 247.6 null]
+/Title (Certificate License Actions \(CLA\))
+/Prev 100015 0 R
+/Next 100017 0 R
+>>
+endobj
+
+30 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 32 0 R 31 0 R ]
+/Annots 33 0 R>>
+endobj
+31 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 5 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Certificate License Actions \(CLA\) continued  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+()'
+(*  8. Have you ever been terminated from employment? ) Tj
+1 0 0 1 29 687.8 Tm
+T*
+() Tj
+(Note:) Tj
+( A lay-off is an involuntary separation from employment and must be disclosed as a ) Tj
+T*
+(termination. ) Tj
+1 0 0 1 29 663.8 Tm
+1 0 0 1 29 672.8 Tm
+1 0 0 1 422.4 699.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 660.8 Tm
+()'
+(*  9. Are you presently or have you ) Tj
+() Tj
+(ever) Tj
+() Tj
+( been under investigation by the Florida Department ) Tj
+T*
+(of Education, sanctioned by the Education Practices Commission, or investigated or sanctioned ) Tj
+T*
+(by another state department of education, professional licensure or certification board? If yes, ) Tj
+T*
+(you must provide documentation regarding your case, including closure documents. ) Tj
+1 0 0 1 29 612.8 Tm
+1 0 0 1 29 621.8 Tm
+1 0 0 1 422.4 660.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 609.8 Tm
+1 0 0 1 422.4 609.8 Tm
+1 0 0 1 29 597.8 Tm
+()'
+(If ) Tj
+() Tj
+(any) Tj
+() Tj
+( of the above answers are 'yes,' please explain the circumstances below. Be sure to include the information for all four fields for ) Tj
+() Tj
+T*
+(each) Tj
+( occurrence \(Date, City and State, Where Occurred, and the Action Taken/Outcome\). Failure to fully complete this information ) Tj
+T*
+(will unnecessarily delay your application. ) Tj
+(Be sure to complete all four fields for each occurrence:) Tj
+( ) Tj
+1 0 0 1 29 561.8 Tm
+T*
+() Tj
+1 0 0 1 29 549.8 Tm
+T*
+1 0 0 1 422.4 597.8 Tm
+1 0 0 1 29 525.8 Tm
+1 0 0 1 29 525.8 Tm
+%%% Max Depth = 680
+1 0 0 1 29 525.8 Tm
+0 0 0 rg
+(Date  ) '
+0 0 0 rg
+1 0 0 1 169.5 525.8 Tm
+0 0 0 rg
+(City & State  ) '
+0 0 0 rg
+1 0 0 1 310 525.8 Tm
+0 0 0 rg
+(Company, School District, )'
+(State Dept., State Govt., or )'
+(Licensing Agency )'
+0 0 0 rg
+1 0 0 1 450.5 525.8 Tm
+0 0 0 rg
+(Action Taken/Outcome  ) '
+0 0 0 rg
+1 0 0 1 29 489.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 169.5 489.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 310 489.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 450.5 489.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 477.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 169.5 477.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 310 477.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 450.5 477.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 465.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 169.5 465.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 310 465.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 450.5 465.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 453.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 169.5 453.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 310 453.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 450.5 453.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 441.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 169.5 441.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 310 441.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 450.5 441.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 429.8 Tm
+1 0 0 1 29 417.8 Tm
+1 0 0 1 29 412.8 Tm
+1 0 0 1 29 400.8 Tm
+()'
+(*  Can you perform all the essential job function\(s\) of the position\(s\) for which you are ) Tj
+T*
+(applying, with or without reasonable accommodation?) Tj
+1 0 0 1 29 376.8 Tm
+T*
+(To review job descriptions, copy and past this link into a separate browser window: ) Tj
+T*
+(https://www2.sdhc.k12.fl.us/jobdescrs/ ) Tj
+1 0 0 1 29 352.8 Tm
+1 0 0 1 29 361.8 Tm
+1 0 0 1 422.4 400.8 Tm
+0 0 0 rg
+(Yes  ) '
+0 0 0 rg
+1 0 0 1 422.4 344.8 Tm
+1 0 0 1 29 320.8 Tm
+1 0 0 1 29 308.8 Tm
+1 0 0 1 29 308.8 Tm
+1 0 0 1 25 302.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Criminal Record Information \(CRI\) \(NEW\)  ) '
+1 0 0 1 29 288.4 Tm
+1 0 0 1 29 302.4 Tm
+1 0 0 1 25 296.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 284.4 Tm
+1 0 0 1 29 282.4 Tm
+1 0 0 1 29 282.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 282.4 Tm
+()'
+() Tj
+(Under provisions in Florida Statutes 943.0585 and 943.059, the entire arrest record is revealed to school districts by the Florida ) Tj
+T*
+(Department of Law Enforcement and the FBI when fingerprints are supplied, including SEALED RECORDS and or EXPUNGED ) Tj
+T*
+(RECORDS. Therefore, you are ) Tj
+(required) Tj
+( to reveal such information on this application. Please note: Applicants are obligated to include ) Tj
+T*
+(SEALED AND EXPUNGED records ) Tj
+(even those earned as a minor) Tj
+(. Failure to disclose any criminal history, regardless of age when it ) Tj
+T*
+(occurred, will result in the rejection of your application.) Tj
+1 0 0 1 422.4 282.4 Tm
+1 0 0 1 29 222.4 Tm
+()'
+(Click here to learn about the criteria Hillsborough County Public Schools uses to review ) Tj
+T*
+(applications: ) Tj
+1 0 0 1 29 198.4 Tm
+1 0 0 1 29 207.4 Tm
+1 0 0 1 422.4 222.4 Tm
+1 0 0 1 29 195.4 Tm
+()'
+(Click here to view Florida Statutes on hiring: ) Tj
+1 0 0 1 29 183.4 Tm
+1 0 0 1 29 192.4 Tm
+1 0 0 1 422.4 195.4 Tm
+1 0 0 1 29 180.4 Tm
+()'
+() Tj
+1 0 0 1 29 168.4 Tm
+T*
+() Tj
+(All applicants MUST complete this page.) Tj
+1 0 0 1 422.4 180.4 Tm
+1 0 0 1 422.4 151.4 Tm
+1 0 0 1 29 139.4 Tm
+()'
+(*  Are you currently on probation or currently under any imposed requirements for charges ) Tj
+T*
+(other than a minor traffic violation \(DUI is NOT considered a ) Tj
+() Tj
+(minor) Tj
+() Tj
+( traffic violation\). ) Tj
+1 0 0 1 29 115.4 Tm
+1 0 0 1 29 124.4 Tm
+1 0 0 1 422.4 139.4 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 112.4 Tm
+()'
+(*  Is there any criminal charge now pending against you other than a minor traffic violation ) Tj
+T*
+(\(DUI is not considered a minor traffic violation and must be disclosed\)? ) Tj
+1 0 0 1 29 88.4 Tm
+1 0 0 1 29 97.4 Tm
+1 0 0 1 422.4 112.4 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 73.4 Tm
+ET
+endstream
+endobj
+32 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+.75 .75 .75 RG
+0.002 w
+415 698.8 m
+587 698.8 l
+S
+0.002 w
+415 698.8 m
+415 659.8 l
+S
+0.002 w
+587 698.8 m
+587 659.8 l
+S
+0.002 w
+415 659.8 m
+587 659.8 l
+S
+0 0 0 RG
+0.2 w
+169.61 648.3 m
+187.27 648.3 l
+S
+.75 .75 .75 RG
+0.002 w
+415 659.8 m
+587 659.8 l
+S
+0.002 w
+415 659.8 m
+415 608.8 l
+S
+0.002 w
+587 659.8 m
+587 608.8 l
+S
+0.002 w
+415 608.8 m
+587 608.8 l
+S
+0 0 0 RG
+0.01 w
+25 407.8 m
+587 407.8 l
+S
+.75 .75 .75 RG
+0.002 w
+415 399.8 m
+587 399.8 l
+S
+0.002 w
+415 399.8 m
+415 348.8 l
+S
+0.002 w
+587 399.8 m
+587 348.8 l
+S
+0.002 w
+415 348.8 m
+587 348.8 l
+S
+0 0 0 RG
+0.01 w
+25 339.8 m
+587 339.8 l
+S
+1.2 w
+25 285.4 m
+587 285.4 l
+S
+0.2 w
+154.16 245.9 m
+188.69 245.9 l
+S
+0.2 w
+179.5 233.9 m
+296.25 233.9 l
+S
+.75 .75 .75 RG
+0.002 w
+415 221.4 m
+587 221.4 l
+S
+0.002 w
+415 221.4 m
+415 194.4 l
+S
+0.002 w
+587 221.4 m
+587 194.4 l
+S
+0.002 w
+415 194.4 m
+587 194.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 194.4 m
+587 194.4 l
+S
+0.002 w
+415 194.4 m
+415 179.4 l
+S
+0.002 w
+587 194.4 m
+587 179.4 l
+S
+0.002 w
+415 179.4 m
+587 179.4 l
+S
+0 0 0 RG
+0.01 w
+25 146.4 m
+587 146.4 l
+S
+.75 .75 .75 RG
+0.002 w
+415 138.4 m
+587 138.4 l
+S
+0.002 w
+415 138.4 m
+415 111.4 l
+S
+0.002 w
+587 138.4 m
+587 111.4 l
+S
+0.002 w
+415 111.4 m
+587 111.4 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 111.4 m
+587 111.4 l
+S
+0.002 w
+415 111.4 m
+415 84.4 l
+S
+0.002 w
+587 111.4 m
+587 84.4 l
+S
+0.002 w
+415 84.4 m
+587 84.4 l
+S
+0 0 0 RG
+endstream
+endobj
+
+33 0 obj
+[ ]
+endobj
+
+100017 0 obj <<
+/Parent 2 0 R
+/Dest [30 0 R /XYZ null 726.2 null]
+/Title (Certificate License Actions \(CLA\) continued)
+/Prev 100016 0 R
+/Next 100018 0 R
+>>
+endobj
+100018 0 obj <<
+/Parent 2 0 R
+/Dest [30 0 R /XYZ null 308.8 null]
+/Title (Criminal Record Information \(CRI\) \(NEW\))
+/Prev 100017 0 R
+/Next 100019 0 R
+>>
+endobj
+
+34 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 36 0 R 35 0 R ]
+/Annots 37 0 R>>
+endobj
+35 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 6 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Criminal Record Information \(CRI\) \(NEW\) continued  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+()'
+(*  Have you ) Tj
+() Tj
+(EVER) Tj
+() Tj
+( been arrested or charged for a criminal offense other than a minor traffic ) Tj
+T*
+(violation? ) Tj
+(Note:) Tj
+( DUIs and criminal traffic offenses are NOT ) Tj
+() Tj
+(minor) Tj
+() Tj
+( traffic violations and must ) Tj
+T*
+(be disclosed. ) Tj
+1 0 0 1 29 663.8 Tm
+1 0 0 1 29 672.8 Tm
+1 0 0 1 422.4 699.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 660.8 Tm
+()'
+(*  Have you ever had any filing or finding of child abuse filed in your name or an alias? ) Tj
+1 0 0 1 29 648.8 Tm
+1 0 0 1 29 657.8 Tm
+1 0 0 1 422.4 660.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 645.8 Tm
+()'
+(*  Does your name appear on any Sex Offender Database in any state or country? ) Tj
+1 0 0 1 29 633.8 Tm
+1 0 0 1 29 642.8 Tm
+1 0 0 1 422.4 645.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 630.8 Tm
+()'
+() Tj
+(If you have responded 'Yes' to any of the above, you must ) Tj
+(fully) Tj
+( complete the table below with ) Tj
+T*
+(the required information with a date, location, nature of the charge, and a disposition for each ) Tj
+T*
+(charge. DO NOT FAIL TO DISCLOSE no matter how minor, be sure to complete all fields for ) Tj
+T*
+(each occurrence. If you need more space, please use the attached spreadsheet:) Tj
+1 0 0 1 29 582.8 Tm
+1 0 0 1 29 591.8 Tm
+1 0 0 1 422.4 630.8 Tm
+1 0 0 1 29 567.8 Tm
+1 0 0 1 29 567.8 Tm
+%%% Max Depth = 680
+1 0 0 1 29 567.8 Tm
+0 0 0 rg
+(Date of the )'
+(Occurrence  ) '
+0 0 0 rg
+1 0 0 1 109.29 567.8 Tm
+0 0 0 rg
+(City of the )'
+(Occurrence  ) '
+0 0 0 rg
+1 0 0 1 189.57 567.8 Tm
+0 0 0 rg
+(State of the )'
+(Occurrence  ) '
+0 0 0 rg
+1 0 0 1 269.86 567.8 Tm
+0 0 0 rg
+(Nature of )'
+(Charge\(s\)/ )'
+(Explanation of )'
+(Events )'
+(*Use as much )'
+(space as you )'
+(need.  ) '
+0 0 0 rg
+1 0 0 1 350.14 567.8 Tm
+0 0 0 rg
+(Deposition of )'
+(Charge\(s\): state )'
+(if a felony or )'
+(misdemeanor  ) '
+0 0 0 rg
+1 0 0 1 430.43 567.8 Tm
+0 0 0 rg
+(Check if the )'
+(record is sealed.  ) '
+0 0 0 rg
+1 0 0 1 510.71 567.8 Tm
+0 0 0 rg
+(Check if the )'
+(record is )'
+(expunged.  ) '
+0 0 0 rg
+1 0 0 1 29 483.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 483.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 483.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 483.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 483.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 483.8 Tm
+1 0 0 1 442.43 483.8 Tm
+1 0 0 1 510.71 483.8 Tm
+1 0 0 1 522.71 483.8 Tm
+1 0 0 1 29 471.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 471.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 471.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 471.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 471.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 471.8 Tm
+1 0 0 1 442.43 471.8 Tm
+1 0 0 1 510.71 471.8 Tm
+1 0 0 1 522.71 471.8 Tm
+1 0 0 1 29 459.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 459.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 459.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 459.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 459.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 459.8 Tm
+1 0 0 1 442.43 459.8 Tm
+1 0 0 1 510.71 459.8 Tm
+1 0 0 1 522.71 459.8 Tm
+1 0 0 1 29 447.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 447.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 447.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 447.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 447.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 447.8 Tm
+1 0 0 1 442.43 447.8 Tm
+1 0 0 1 510.71 447.8 Tm
+1 0 0 1 522.71 447.8 Tm
+1 0 0 1 29 435.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 435.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 435.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 435.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 435.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 435.8 Tm
+1 0 0 1 442.43 435.8 Tm
+1 0 0 1 510.71 435.8 Tm
+1 0 0 1 522.71 435.8 Tm
+1 0 0 1 29 423.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 109.29 423.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 189.57 423.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 269.86 423.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 350.14 423.8 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 430.43 423.8 Tm
+1 0 0 1 442.43 423.8 Tm
+1 0 0 1 510.71 423.8 Tm
+1 0 0 1 522.71 423.8 Tm
+1 0 0 1 29 411.8 Tm
+1 0 0 1 29 399.8 Tm
+1 0 0 1 29 399.8 Tm
+()'
+() Tj
+(REQUIRED:) Tj
+( If you have made a disclosure, please upload ANY records associated with the disclosure \(sealed/expunged, nolle prosse, ) Tj
+T*
+(orders to dismiss, adjudication withheld, or ANY other documents related to your disclosure\). This will aid HCPS in clearing the ) Tj
+T*
+(application quicker.) Tj
+1 0 0 1 29 363.8 Tm
+T*
+1 0 0 1 422.4 399.8 Tm
+1 0 0 1 29 351.8 Tm
+()'
+() Tj
+/Times-Roman 6 Tf
+7.2 TL
+(Please Note: A conviction will not necessarily bar you from employment. Facts, such as date of occurrence and rehabilitation will be considered. This information will be used only for job-related purposes and only to the ) Tj
+T*
+(extent permitted by applicable law.) Tj
+/Times-Roman 10 Tf
+12 TL
+0 0 0 rg
+1 0 0 1 422.4 351.8 Tm
+1 0 0 1 422.4 327.6 Tm
+1 0 0 1 29 303.6 Tm
+1 0 0 1 25 297.6 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Applicant's Acknowledgment and Agreement  ) '
+1 0 0 1 29 283.2 Tm
+1 0 0 1 29 297.2 Tm
+1 0 0 1 25 291.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 279.2 Tm
+1 0 0 1 29 289.2 Tm
+1 0 0 1 29 289.2 Tm
+1 0 0 1 29 277.2 Tm
+()'
+(By checking the box below, applicant authorizes the school district to conduct an investigation of candidate pursuant to The School ) Tj
+T*
+(Code to determine whether the applicant has been convicted of any criminal or drug offenses as set forth in such statute, and, upon ) Tj
+T*
+(request, agrees to execute an investigation authorization form as a condition for candidate's employment. The School Code also ) Tj
+T*
+(stipulates that the School District perform a check on the Statewide Sex Offender Database. A candidate for employment may not be ) Tj
+T*
+(employed unless such investigations have been initiated.) Tj
+1 0 0 1 29 217.2 Tm
+T*
+() Tj
+1 0 0 1 29 205.2 Tm
+T*
+(I certify that the information given by me in this application is true in all respects, and I agree that if the information given is found to ) Tj
+T*
+(be false in any way, it shall be considered sufficient cause for denial of employment or discharge. I authorize the use of any ) Tj
+T*
+(information in the application to verify my statement, and I authorize past employers, all references and any other person to answer all ) Tj
+T*
+(questions asked concerning my ability, character, reputation, and previous employment record. I release all such persons from any ) Tj
+T*
+(liability or damages on account of having furnished such information. ) Tj
+1 0 0 1 422.4 277.2 Tm
+1 0 0 1 29 145.2 Tm
+()'
+() Tj
+1 0 0 1 29 133.2 Tm
+T*
+(I,Carl Waltower , agree that the above information is true and accurate.  I understand that failure to disclose any or all criminal ) Tj
+T*
+(history/arrests, ) Tj
+() Tj
+(regardless of age) Tj
+() Tj
+( when it occurred, will result in the rejection of my application. ) Tj
+1 0 0 1 422.4 145.2 Tm
+1 0 0 1 422.4 141.2 Tm
+1 0 0 1 29 109.2 Tm
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 29 105.2 Tm
+1 0 0 1 29 105.2 Tm
+1 0 0 1 29 99.2 Tm
+()'
+() Tj
+/Helvetica-Bold 10 Tf
+12 TL
+( X) Tj
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 51 105.2 Tm
+()'
+(Signed: ) Tj
+/Helvetica-Bold 10 Tf
+12 TL
+(Carl Waltower) Tj
+/Helvetica 10 Tf
+12 TL
+() Tj
+1 0 0 1 51 93.2 Tm
+T*
+() Tj
+/Helvetica 6 Tf
+7.2 TL
+(Stamped: ) Tj
+/Helvetica-Bold 6 Tf
+7.2 TL
+(8/10/2021 6:52:29 PM; 198.143.57.11; Applicant - #117574 - Carl Waltower; ) Tj
+/Helvetica 6 Tf
+7.2 TL
+() Tj
+/Helvetica 10 Tf
+12 TL
+0 0 0 rg
+1 0 0 1 51 89.2 Tm
+1 0 0 1 29 77.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 73.2 Tm
+1 0 0 1 29 49.2 Tm
+ET
+endstream
+endobj
+36 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+0.2 w
+75.2 687.3 m
+101.93 687.3 l
+S
+.75 .75 .75 RG
+0.002 w
+415 698.8 m
+587 698.8 l
+S
+0.002 w
+415 698.8 m
+415 659.8 l
+S
+0.002 w
+587 698.8 m
+587 659.8 l
+S
+0.002 w
+415 659.8 m
+587 659.8 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 659.8 m
+587 659.8 l
+S
+0.002 w
+415 659.8 m
+415 644.8 l
+S
+0.002 w
+587 659.8 m
+587 644.8 l
+S
+0.002 w
+415 644.8 m
+587 644.8 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 644.8 m
+587 644.8 l
+S
+0.002 w
+415 644.8 m
+415 629.8 l
+S
+0.002 w
+587 644.8 m
+587 629.8 l
+S
+0.002 w
+415 629.8 m
+587 629.8 l
+S
+0 0 0 RG
+0.2 w
+260.17 618.3 m
+280.12 618.3 l
+S
+.75 .75 .75 RG
+0.002 w
+415 629.8 m
+587 629.8 l
+S
+0.002 w
+415 629.8 m
+415 578.8 l
+S
+0.002 w
+587 629.8 m
+587 578.8 l
+S
+0.002 w
+415 578.8 m
+587 578.8 l
+S
+0 0 0 RG
+0.2 w
+429.428571428571 471.8 m
+429.428571428571 480.8 l
+S
+0.2 w
+429.428571428571 480.8 m
+438.428571428571 480.8 l
+S
+0.2 w
+438.428571428571 480.8 m
+438.428571428571 471.8 l
+S
+0.2 w
+438.428571428571 471.8 m
+429.428571428571 471.8 l
+S
+0.2 w
+509.714285714286 471.8 m
+509.714285714286 480.8 l
+S
+0.2 w
+509.714285714286 480.8 m
+518.714285714286 480.8 l
+S
+0.2 w
+518.714285714286 480.8 m
+518.714285714286 471.8 l
+S
+0.2 w
+518.714285714286 471.8 m
+509.714285714286 471.8 l
+S
+0.2 w
+429.428571428571 459.8 m
+429.428571428571 468.8 l
+S
+0.2 w
+429.428571428571 468.8 m
+438.428571428571 468.8 l
+S
+0.2 w
+438.428571428571 468.8 m
+438.428571428571 459.8 l
+S
+0.2 w
+438.428571428571 459.8 m
+429.428571428571 459.8 l
+S
+0.2 w
+509.714285714286 459.8 m
+509.714285714286 468.8 l
+S
+0.2 w
+509.714285714286 468.8 m
+518.714285714286 468.8 l
+S
+0.2 w
+518.714285714286 468.8 m
+518.714285714286 459.8 l
+S
+0.2 w
+518.714285714286 459.8 m
+509.714285714286 459.8 l
+S
+0.2 w
+429.428571428571 447.8 m
+429.428571428571 456.8 l
+S
+0.2 w
+429.428571428571 456.8 m
+438.428571428571 456.8 l
+S
+0.2 w
+438.428571428571 456.8 m
+438.428571428571 447.8 l
+S
+0.2 w
+438.428571428571 447.8 m
+429.428571428571 447.8 l
+S
+0.2 w
+509.714285714286 447.8 m
+509.714285714286 456.8 l
+S
+0.2 w
+509.714285714286 456.8 m
+518.714285714286 456.8 l
+S
+0.2 w
+518.714285714286 456.8 m
+518.714285714286 447.8 l
+S
+0.2 w
+518.714285714286 447.8 m
+509.714285714286 447.8 l
+S
+0.2 w
+429.428571428571 435.8 m
+429.428571428571 444.8 l
+S
+0.2 w
+429.428571428571 444.8 m
+438.428571428571 444.8 l
+S
+0.2 w
+438.428571428571 444.8 m
+438.428571428571 435.8 l
+S
+0.2 w
+438.428571428571 435.8 m
+429.428571428571 435.8 l
+S
+0.2 w
+509.714285714286 435.8 m
+509.714285714286 444.8 l
+S
+0.2 w
+509.714285714286 444.8 m
+518.714285714286 444.8 l
+S
+0.2 w
+518.714285714286 444.8 m
+518.714285714286 435.8 l
+S
+0.2 w
+518.714285714286 435.8 m
+509.714285714286 435.8 l
+S
+0.2 w
+429.428571428571 423.8 m
+429.428571428571 432.8 l
+S
+0.2 w
+429.428571428571 432.8 m
+438.428571428571 432.8 l
+S
+0.2 w
+438.428571428571 432.8 m
+438.428571428571 423.8 l
+S
+0.2 w
+438.428571428571 423.8 m
+429.428571428571 423.8 l
+S
+0.2 w
+509.714285714286 423.8 m
+509.714285714286 432.8 l
+S
+0.2 w
+509.714285714286 432.8 m
+518.714285714286 432.8 l
+S
+0.2 w
+518.714285714286 432.8 m
+518.714285714286 423.8 l
+S
+0.2 w
+518.714285714286 423.8 m
+509.714285714286 423.8 l
+S
+0.2 w
+429.428571428571 411.8 m
+429.428571428571 420.8 l
+S
+0.2 w
+429.428571428571 420.8 m
+438.428571428571 420.8 l
+S
+0.2 w
+438.428571428571 420.8 m
+438.428571428571 411.8 l
+S
+0.2 w
+438.428571428571 411.8 m
+429.428571428571 411.8 l
+S
+0.2 w
+509.714285714286 411.8 m
+509.714285714286 420.8 l
+S
+0.2 w
+509.714285714286 420.8 m
+518.714285714286 420.8 l
+S
+0.2 w
+518.714285714286 420.8 m
+518.714285714286 411.8 l
+S
+0.2 w
+518.714285714286 411.8 m
+509.714285714286 411.8 l
+S
+0.01 w
+25 322.6 m
+587 322.6 l
+S
+1.2 w
+25 280.2 m
+587 280.2 l
+S
+0.2 w
+87.34 108.7 m
+155.5 108.7 l
+S
+0.2 w
+25 105.2 m
+587 105.2 l
+S
+0.2 w
+25 75.5333333333334 m
+587 75.5333333333334 l
+S
+0.2 w
+25 105.2 m
+25 75.5333333333334 l
+S
+0.2 w
+45 105.2 m
+45 75.5333333333334 l
+S
+0.2 w
+47 105.2 m
+47 75.5333333333334 l
+S
+0.2 w
+587 105.2 m
+587 75.5333333333334 l
+S
+0.2 w
+587 105.2 m
+587 75.5333333333334 l
+S
+endstream
+endobj
+
+37 0 obj
+[ ]
+endobj
+
+100019 0 obj <<
+/Parent 2 0 R
+/Dest [34 0 R /XYZ null 726.2 null]
+/Title (Criminal Record Information \(CRI\) \(NEW\) continued)
+/Prev 100018 0 R
+/Next 100020 0 R
+>>
+endobj
+100020 0 obj <<
+/Parent 2 0 R
+/Dest [34 0 R /XYZ null 303.6 null]
+/Title (Applicant's Acknowledgment and Agreement)
+/Prev 100019 0 R
+/Next 100021 0 R
+>>
+endobj
+
+38 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 40 0 R 39 0 R ]
+/Annots 41 0 R>>
+endobj
+39 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 7 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Applicant's Acknowledgment and Agreement continued  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 422.4 699.8 Tm
+1 0 0 1 29 675.8 Tm
+1 0 0 1 25 669.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Equal Opportunity Employer  ) '
+1 0 0 1 29 655.4 Tm
+1 0 0 1 29 669.4 Tm
+1 0 0 1 25 663.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 651.4 Tm
+1 0 0 1 29 661.4 Tm
+1 0 0 1 29 661.4 Tm
+1 0 0 1 29 649.4 Tm
+()'
+(Hillsborough County Public Schools is an Equal Opportunity Employer. Hillsborough County Public Schools ensures equal ) Tj
+T*
+(employment opportunities regardless of race, creed, gender, color, national origin, religion, age, sexual orientation or disability. ) Tj
+T*
+(Hillsborough County Public Schools has a policy of active recruitment of qualified minority teachers and non-certified employees. ) Tj
+T*
+(Any individual needing assistance in making application for any opening should contact the Department of Human Resources. ) Tj
+1 0 0 1 422.4 649.4 Tm
+1 0 0 1 29 589.4 Tm
+1 0 0 1 29 577.4 Tm
+1 0 0 1 29 577.4 Tm
+1 0 0 1 25 571.4 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Retirement Status  ) '
+1 0 0 1 29 557 Tm
+1 0 0 1 29 571 Tm
+1 0 0 1 25 565 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 553 Tm
+1 0 0 1 29 551 Tm
+1 0 0 1 29 551 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 551 Tm
+()'
+(*  Monthly Pension:  Are you receiving a monthly pension from the Florida Retirement System ) Tj
+T*
+(\(FRS\)? ) Tj
+1 0 0 1 29 527 Tm
+1 0 0 1 29 536 Tm
+1 0 0 1 422.4 551 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 524 Tm
+()'
+(*  Investment Plan:  Have you EVER received an Investment Plan distribution payment from ) Tj
+T*
+(the Florida Retirement System \(FRS\)? ) Tj
+1 0 0 1 29 500 Tm
+1 0 0 1 29 509 Tm
+1 0 0 1 422.4 524 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 497 Tm
+()'
+(*  Other Retirement payments:  Are you CURRENTLY receiving any pension or retirement ) Tj
+T*
+(payout from ANY previous employers? \(NON-FRS only\) ) Tj
+1 0 0 1 29 473 Tm
+1 0 0 1 29 482 Tm
+1 0 0 1 422.4 497 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 470 Tm
+1 0 0 1 29 458 Tm
+()'
+(If yes, from what system are you currently receiving a pension or investment distribution payment? ) Tj
+1 0 0 1 29 446 Tm
+1 0 0 1 29 441 Tm
+1 0 0 1 29 441 Tm
+1 0 0 1 29 429 Tm
+1 0 0 1 29 429 Tm
+1 0 0 1 29 434 Tm
+1 0 0 1 422.4 434 Tm
+1 0 0 1 29 422 Tm
+()'
+(*  Have you EVER retired from or received an Investment Plan distribution from another ) Tj
+T*
+(school district? ) Tj
+1 0 0 1 29 398 Tm
+1 0 0 1 29 407 Tm
+1 0 0 1 422.4 422 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 29 395 Tm
+()'
+(If yes, what is the name of the district? ) Tj
+1 0 0 1 29 383 Tm
+1 0 0 1 29 392 Tm
+1 0 0 1 422.4 395 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 380 Tm
+()'
+(If yes, what is the name of the retirement plan \(ie: DROP, investment, etc.\)? ) Tj
+1 0 0 1 29 368 Tm
+1 0 0 1 29 377 Tm
+1 0 0 1 422.4 380 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 365 Tm
+()'
+(If yes, what is the date of your retirement? ) Tj
+1 0 0 1 29 353 Tm
+1 0 0 1 29 362 Tm
+1 0 0 1 422.4 365 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 350 Tm
+()'
+(How many TOTAL years of public school-based administrative experience, public school ) Tj
+T*
+(teaching experience, or public school paraprofessional/support experience do you have? ) Tj
+1 0 0 1 29 326 Tm
+1 0 0 1 29 335 Tm
+1 0 0 1 422.4 350 Tm
+0 0 0 rg
+0 0 0 rg
+1 0 0 1 29 323 Tm
+()'
+(*All Florida Retirement System \(FRS\) and out of state public school system retirees newly hired or rehired after retirement will be ) Tj
+T*
+(eligible for all verifiable public, private and charter school years of effective teaching experience up to a maximum of seven years of ) Tj
+T*
+(experience credit upon hire/rehire \(17.3.6\).) Tj
+1 0 0 1 29 287 Tm
+T*
+1 0 0 1 422.4 323 Tm
+1 0 0 1 29 263 Tm
+ET
+endstream
+endobj
+40 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+1.2 w
+25 652.4 m
+587 652.4 l
+S
+1.2 w
+25 554 m
+587 554 l
+S
+.75 .75 .75 RG
+0.002 w
+415 550 m
+587 550 l
+S
+0.002 w
+415 550 m
+415 523 l
+S
+0.002 w
+587 550 m
+587 523 l
+S
+0.002 w
+415 523 m
+587 523 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 523 m
+587 523 l
+S
+0.002 w
+415 523 m
+415 496 l
+S
+0.002 w
+587 523 m
+587 496 l
+S
+0.002 w
+415 496 m
+587 496 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 496 m
+587 496 l
+S
+0.002 w
+415 496 m
+415 469 l
+S
+0.002 w
+587 496 m
+587 469 l
+S
+0.002 w
+415 469 m
+587 469 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.2 w
+25 441 m
+587 441 l
+S
+0.2 w
+25 427.333333333333 m
+587 427.333333333333 l
+S
+0.2 w
+25 441 m
+25 427.333333333333 l
+S
+0.2 w
+587 441 m
+587 427.333333333333 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 421 m
+587 421 l
+S
+0.002 w
+415 421 m
+415 394 l
+S
+0.002 w
+587 421 m
+587 394 l
+S
+0.002 w
+415 394 m
+587 394 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 394 m
+587 394 l
+S
+0.002 w
+415 394 m
+415 379 l
+S
+0.002 w
+587 394 m
+587 379 l
+S
+0.002 w
+415 379 m
+587 379 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 379 m
+587 379 l
+S
+0.002 w
+415 379 m
+415 364 l
+S
+0.002 w
+587 379 m
+587 364 l
+S
+0.002 w
+415 364 m
+587 364 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 364 m
+587 364 l
+S
+0.002 w
+415 364 m
+415 349 l
+S
+0.002 w
+587 364 m
+587 349 l
+S
+0.002 w
+415 349 m
+587 349 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 349 m
+587 349 l
+S
+0.002 w
+415 349 m
+415 322 l
+S
+0.002 w
+587 349 m
+587 322 l
+S
+0.002 w
+415 322 m
+587 322 l
+S
+0 0 0 RG
+endstream
+endobj
+
+41 0 obj
+[ ]
+endobj
+
+100021 0 obj <<
+/Parent 2 0 R
+/Dest [38 0 R /XYZ null 726.2 null]
+/Title (Applicant's Acknowledgment and Agreement continued)
+/Prev 100020 0 R
+/Next 100022 0 R
+>>
+endobj
+100022 0 obj <<
+/Parent 2 0 R
+/Dest [38 0 R /XYZ null 675.8 null]
+/Title (Equal Opportunity Employer)
+/Prev 100021 0 R
+/Next 100023 0 R
+>>
+endobj
+100023 0 obj <<
+/Parent 2 0 R
+/Dest [38 0 R /XYZ null 577.4 null]
+/Title (Retirement Status)
+/Prev 100022 0 R
+/Next 100024 0 R
+>>
+endobj
+
+42 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 44 0 R 43 0 R ]
+/Annots 45 0 R>>
+endobj
+43 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 8 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 29 726.2 Tm
+1 0 0 1 25 720.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Veterans Preference  ) '
+1 0 0 1 29 705.8 Tm
+1 0 0 1 29 719.8 Tm
+1 0 0 1 25 713.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 701.8 Tm
+1 0 0 1 29 699.8 Tm
+1 0 0 1 29 699.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 699.8 Tm
+()'
+(*  Are you a veteran? Select the answer that best describes your service.) Tj
+1 0 0 1 29 687.8 Tm
+T*
+1 0 0 1 29 675.8 Tm
+1 0 0 1 29 684.8 Tm
+1 0 0 1 422.4 699.8 Tm
+(No  ) '
+1 0 0 1 29 672.8 Tm
+()'
+(*  Do you wish to claim your veteran's status? ) Tj
+1 0 0 1 29 660.8 Tm
+1 0 0 1 29 669.8 Tm
+1 0 0 1 422.4 672.8 Tm
+0 0 0 rg
+(No  ) '
+0 0 0 rg
+1 0 0 1 422.4 652.8 Tm
+1 0 0 1 29 640.8 Tm
+()'
+(NOTE: If you elect to advise your veteran's status, you are required to include proper documentation \(a copy of discharge document - ) Tj
+T*
+(Form DD214 or equivalent certification from the VA\) establishing your right to claim the preference. This documentation must be ) Tj
+T*
+(provided on or before the posting deadline. You can upload an electronic copy of your DD214 in this online application. ) Tj
+1 0 0 1 422.4 640.8 Tm
+1 0 0 1 29 592.8 Tm
+ET
+endstream
+endobj
+44 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 702.8 m
+587 702.8 l
+S
+.75 .75 .75 RG
+0.002 w
+415 698.8 m
+587 698.8 l
+S
+0.002 w
+415 698.8 m
+415 671.8 l
+S
+0.002 w
+587 698.8 m
+587 671.8 l
+S
+0.002 w
+415 671.8 m
+587 671.8 l
+S
+0 0 0 RG
+.75 .75 .75 RG
+0.002 w
+415 671.8 m
+587 671.8 l
+S
+0.002 w
+415 671.8 m
+415 656.8 l
+S
+0.002 w
+587 671.8 m
+587 656.8 l
+S
+0.002 w
+415 656.8 m
+587 656.8 l
+S
+0 0 0 RG
+0.01 w
+25 647.8 m
+587 647.8 l
+S
+endstream
+endobj
+
+45 0 obj
+[ ]
+endobj
+
+100024 0 obj <<
+/Parent 2 0 R
+/Dest [42 0 R /XYZ null 726.2 null]
+/Title (Veterans Preference)
+/Prev 100023 0 R
+/Next 100025 0 R
+>>
+endobj
+
+46 0 obj
+<<
+/Type /Page
+/Parent 3 0 R
+/Contents [ 48 0 R 47 0 R ]
+/Annots 49 0 R>>
+endobj
+47 0 obj
+<< /Length 0 >>
+stream
+BT
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 767 Tm
+/Helvetica-Bold 14 Tf
+16.8 TL
+1 0 0 1 107.67 767 Tm
+(Hillsborough County Public Schools Online Application     ) '
+1 0 0 1 29 750.2 Tm
+1 0 0 1 25 750.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 750.2 Tm
+(Waltower, Carl   ) '
+1 0 0 1 450.5 750.2 Tm
+(Date Submitted: 8/10/2021  ) '
+1 0 0 1 250 40 Tm
+(Page 9 of  9)'
+/Times-Roman 8 Tf
+9.6 TL
+1 0 0 1 30 37 Tm
+(Generated at 8/10/2021 6:56:59 PM Central)'
+1 0 0 1 29 738.2 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 726.2 Tm
+1 0 0 1 29 714.2 Tm
+1 0 0 1 29 714.2 Tm
+1 0 0 1 25 708.2 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Public Records Consent  ) '
+1 0 0 1 29 693.8 Tm
+1 0 0 1 29 707.8 Tm
+1 0 0 1 25 701.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 689.8 Tm
+1 0 0 1 29 687.8 Tm
+1 0 0 1 29 687.8 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 687.8 Tm
+()'
+(If you're unsure of what this page is referring to, please follow the link below:) Tj
+1 0 0 1 29 675.8 Tm
+T*
+() Tj
+1 0 0 1 29 663.8 Tm
+T*
+() Tj
+0 0 1 rg
+(What are public records?) Tj
+%linking to href https://www2.sdhc.k12.fl.us/employment/WhatsThis.asp#PUBLIC
+0 0 0 rg
+() Tj
+1 0 0 1 29 651.8 Tm
+T*
+1 0 0 1 422.4 687.8 Tm
+1 0 0 1 29 639.8 Tm
+()'
+(*  I give permission to release my public record information. ) Tj
+1 0 0 1 29 627.8 Tm
+1 0 0 1 29 636.8 Tm
+1 0 0 1 422.4 639.8 Tm
+0 0 0 rg
+(Yes  ) '
+0 0 0 rg
+1 0 0 1 29 624.8 Tm
+()'
+() Tj
+() Tj
+() Tj
+() Tj
+1 0 0 1 29 612.8 Tm
+T*
+1 0 0 1 422.4 624.8 Tm
+1 0 0 1 29 588.8 Tm
+1 0 0 1 29 576.8 Tm
+1 0 0 1 29 576.8 Tm
+1 0 0 1 25 570.8 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(District Compliance and Notice of Accommodations  ) '
+1 0 0 1 29 556.4 Tm
+1 0 0 1 29 570.4 Tm
+1 0 0 1 25 564.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 552.4 Tm
+1 0 0 1 29 550.4 Tm
+1 0 0 1 29 550.4 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 550.4 Tm
+()'
+(The School District of Hillsborough County does not discriminate nor tolerate harassment on the basis of race, color, ethnicity, national ) Tj
+T*
+(origin, religion, gender, gender identity, sexual orientation, age, disability, marital status, genetic information or pregnancy in its ) Tj
+T*
+(educational programs, services or activities, or in its hiring or employment practices; and it will take immediate action to eliminate ) Tj
+T*
+(such harassment, prevent its recurrence, and address its effects. The district also provides equal access to its facilities to the Boy Scouts ) Tj
+T*
+(and other patriotic youth groups, as required by the Boy Scouts of America Equal Access Act.) Tj
+1 0 0 1 29 490.4 Tm
+T*
+() Tj
+1 0 0 1 29 478.4 Tm
+T*
+(The district accords preference in selection, retention, and promotion procedures to certain veterans and spouses of veterans who are ) Tj
+T*
+(Florida residents.) Tj
+1 0 0 1 29 454.4 Tm
+T*
+() Tj
+1 0 0 1 29 442.4 Tm
+T*
+(The following person has been designated to handle inquiries regarding non-discrimination policies: Dr. Pansy Houghton, Executive ) Tj
+T*
+(Officer, Compliance. 813-272-4000; pansy.houghton@sdhc.k12.fl.us; Office of the Chief of Staff, 901 E. Kennedy Blvd., Tampa, Florida ) Tj
+T*
+(33602. An alternate point of contact for complaints of discrimination or harassment may be directed to the Office of Professional ) Tj
+T*
+(Standards at 813-840-7128.) Tj
+1 0 0 1 29 394.4 Tm
+T*
+() Tj
+1 0 0 1 29 382.4 Tm
+T*
+(As required by Section 668.6076, Florida Statutes, you are hereby notified that: Under Florida law, e-mail addresses are public records. ) Tj
+T*
+(If you do not want your e-mail address released in response to a public records request, do not send electronic mail to this entity. ) Tj
+T*
+(Instead, contact this office by phone or in writing. History.--s. 1, ch. 2006-232. ) Tj
+1 0 0 1 422.4 550.4 Tm
+1 0 0 1 29 346.4 Tm
+()'
+() Tj
+1 0 0 1 29 334.4 Tm
+T*
+() Tj
+(Notice of Reasonable Accommodations) Tj
+() Tj
+1 0 0 1 29 322.4 Tm
+T*
+(Reasonable accommodations are available for persons with disabilities to complete the application and/or interview process. ) Tj
+T*
+(Applicants/individuals with disabilities requesting accommodations under the Americans with Disabilities Act \(ADA\) may contact ) Tj
+T*
+(the District&rsquo;s ADA Office at 813-840-7139 for assistance. ) Tj
+1 0 0 1 422.4 346.4 Tm
+1 0 0 1 29 286.4 Tm
+1 0 0 1 422.4 286.4 Tm
+1 0 0 1 29 262.4 Tm
+1 0 0 1 29 250.4 Tm
+1 0 0 1 29 250.4 Tm
+1 0 0 1 25 244.4 Tm
+/Helvetica-Bold 12 Tf
+14.4 TL
+(Signature Page  ) '
+1 0 0 1 29 230 Tm
+1 0 0 1 29 244 Tm
+1 0 0 1 25 238 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 226 Tm
+1 0 0 1 29 224 Tm
+1 0 0 1 29 224 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 224 Tm
+()'
+(I, Carl Waltower, certify that the information provided on this application is true and accurate. ) Tj
+1 0 0 1 422.4 224 Tm
+1 0 0 1 422.4 220 Tm
+1 0 0 1 29 208 Tm
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 29 204 Tm
+1 0 0 1 29 204 Tm
+1 0 0 1 29 198 Tm
+()'
+() Tj
+/Helvetica-Bold 10 Tf
+12 TL
+( X) Tj
+/Helvetica 10 Tf
+12 TL
+1 0 0 1 51 204 Tm
+()'
+(Signed: ) Tj
+/Helvetica-Bold 10 Tf
+12 TL
+(Carl Waltower) Tj
+/Helvetica 10 Tf
+12 TL
+() Tj
+1 0 0 1 51 192 Tm
+T*
+() Tj
+/Helvetica 6 Tf
+7.2 TL
+(Stamped: ) Tj
+/Helvetica-Bold 6 Tf
+7.2 TL
+(8/10/2021 6:53:59 PM; 198.143.57.11; Applicant - #117574 - Carl Waltower; ) Tj
+/Helvetica 6 Tf
+7.2 TL
+() Tj
+/Helvetica 10 Tf
+12 TL
+0 0 0 rg
+1 0 0 1 51 188 Tm
+1 0 0 1 29 176 Tm
+/Times-Roman 10 Tf
+12 TL
+1 0 0 1 29 172 Tm
+1 0 0 1 29 160 Tm
+()'
+(*  Date ) Tj
+1 0 0 1 29 148 Tm
+1 0 0 1 29 157 Tm
+1 0 0 1 422.4 160 Tm
+0 0 0 rg
+(08/10/2021  ) '
+0 0 0 rg
+1 0 0 1 29 133 Tm
+ET
+endstream
+endobj
+48 0 obj
+<< /Length 0 >>
+stream
+0.2 w
+25 750.2 m
+587 750.2 l
+S
+1 w
+25 736.2 m
+587 736.2 l
+S
+1.2 w
+25 690.8 m
+587 690.8 l
+S
+.75 .75 .75 RG
+0.002 w
+415 638.8 m
+587 638.8 l
+S
+0.002 w
+415 638.8 m
+415 623.8 l
+S
+0.002 w
+587 638.8 m
+587 623.8 l
+S
+0.002 w
+415 623.8 m
+587 623.8 l
+S
+0 0 0 RG
+1.2 w
+25 553.4 m
+587 553.4 l
+S
+0.2 w
+25 321.9 m
+185.08 321.9 l
+S
+1.2 w
+25 227 m
+587 227 l
+S
+0.2 w
+25 204 m
+587 204 l
+S
+0.2 w
+25 174.333333333333 m
+587 174.333333333333 l
+S
+0.2 w
+25 204 m
+25 174.333333333333 l
+S
+0.2 w
+45 204 m
+45 174.333333333333 l
+S
+0.2 w
+47 204 m
+47 174.333333333333 l
+S
+0.2 w
+587 204 m
+587 174.333333333333 l
+S
+0.2 w
+587 204 m
+587 174.333333333333 l
+S
+.75 .75 .75 RG
+0.002 w
+415 159 m
+587 159 l
+S
+0.002 w
+415 159 m
+415 144 l
+S
+0.002 w
+587 159 m
+587 144 l
+S
+0.002 w
+415 144 m
+587 144 l
+S
+0 0 0 RG
+endstream
+endobj
+
+49 0 obj
+[ 200000 0 R ]
+endobj
+
+100025 0 obj <<
+/Parent 2 0 R
+/Dest [46 0 R /XYZ null 714.2 null]
+/Title (Public Records Consent)
+/Prev 100024 0 R
+/Next 100026 0 R
+>>
+endobj
+100026 0 obj <<
+/Parent 2 0 R
+/Dest [46 0 R /XYZ null 576.8 null]
+/Title (District Compliance and Notice of Accommodations)
+/Prev 100025 0 R
+/Next 100027 0 R
+>>
+endobj
+100027 0 obj <<
+/Parent 2 0 R
+/Dest [46 0 R /XYZ null 250.4 null]
+/Title (Signature Page)
+/Prev 100026 0 R
+/Next 100028 0 R
+>>
+endobj
+200000 0 obj <<
+/Subtype /Link
+/Rect [ 25 651.8 136.46 663.8 ]
+/A << /S /URI /URI (https://www2.sdhc.k12.fl.us/employment/WhatsThis.asp#PUBLIC) /NewWindow true >>
+/Border [0 0 0]
+>>
+endobj
+%%PAGES%%36
+%%PAGELINKS%%14 0 R 18 0 R 22 0 R 26 0 R 30 0 R 34 0 R 38 0 R 42 0 R 46 0 R  EOL
+100028 0 obj <<
+/Parent 2 0 R
+/Title (---)
+/Prev 100027 0 R
+>>
+endobj
+2 0 obj
+<<
+/Type /Outlines
+/Count 29
+/First 100000 0 R
+/Last 100028 0 R
+>>
+endobj
+3 0 obj
+<<
+/Type /Pages
+/Count 9
+/Kids [14 0 R 18 0 R 22 0 R 26 0 R 30 0 R 34 0 R 38 0 R 42 0 R 46 0 R  ]
+/Resources 
+<< 
+/Font 
+<<
+/Times-Roman 4 0 R
+/Times-Bold 5 0 R
+/Helvetica 6 0 R
+/Helvetica-Bold 7 0 R
+/Barcode39 8 0 R
+>> 
+/ProcSet [/PDF/Text/ImageB/ImageC/ImageI] >>
+/MediaBox [0 0 612 792]
+>>
+endobj
+4 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/Name /Times-Roman
+/BaseFont /Times-Roman
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/Name /Times-Bold
+/BaseFont /Times-Bold
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/Name /Helvetica
+/BaseFont /Helvetica
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/Name /Helvetica-Bold
+/BaseFont /Helvetica-Bold
+>>
+endobj
+8 0 obj
+<</Type/Font/Subtype/TrueType/Name/Barcode39/BaseFont/BCDEEE+Free3of9/Encoding/WinAnsiEncoding/FontDescriptor 10 0 R/FirstChar 32/LastChar 90/Widths 9 0 R>>
+endobj
+9 0 obj
+[ 383 0 0 0 0 0 0 0 0 0 383 0 0 0 0 0 383 383 383 383 383 383 383 383 383 383 0 0 0 0 0 0 0 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383 383] 
+endobj
+10 0 obj
+<</Type/FontDescriptor/FontName/BCDEEE+Free3of9/Flags 32/ItalicAngle 0/Ascent 752/Descent 0/CapHeight 752/AvgWidth 383/MaxWidth 357/FontWeight 400/XHeight 250/StemV 38/FontBBox[ 0 0 357 752] /FontFile2 11 0 R>>
+endobj
+11 0 obj
+<</Metadata 12 0 R/Filter/FlateDecode/Length 1218/Length1 4356>>
+stream
+xú≠X_hEˇff˜í‘£=πZO)x%AÇ-i“[ï°	≠iMJ¸C!]ìÕmË]Ó∏ª∂Iı·ûe•¡áÇ‡K≈˙ÍÎ=©àpà'MEA0o*Tƒ“‰¸Êœm&{z{uéŸ˘æô›ﬂ~ˇgÁÄ ¿(É‰Èô£«ﬁ_ˇ‡w 2å≥SÛY;OéìY‰k»üKgVÔì3oP zƒuÏÖƒ•ªßqÌ+Ï/∏8—ˇ+„¸oÿá‹liÖ≈ê≤ÇóÛô‹º˝˙©©óˆûÁ|÷^…√ÛÆ˜#ü\∂≥Œ7˙◊pΩÇÔHÊs≈ Ö-ˆ«.+∂cÂwñÊˆΩÙ7@?ËÌÊáœÚënDå]¯úúaO„≈¢lD`Ö˝`6û6#kjµuh=]\,Ò!	sR%I¨“ˇ”®“b?⁄êà—ÄWq‹ãf£AâÜ‡9áwaÆ^r~&ø˙Í?’¨_ˇÆ…í∑"¿Ωì|<eY»¸£ÊΩùyœ„å¥zÖœ˜¡c∞‚r=éù®ŒÈ{ñUÒºÌ≤e—	œs9Í}ÿ›€†R(LÈÜemU,Àïp.L\[Ÿà÷ôîçlzﬁ÷œ#k¥[¥CöÜæåÎñ≈ıD°8j•#öDãd#ßƒvŸÛËô†lF˛}0ŸòÜHJŸ∏›æ@w‘ZÆ3ûﬁiA6—|àπùê"ˆj;>“íÙ+∑¬U√°1M[ÅzëÑ≤¬!ueA]K“5©Êv¢ïp¥{]ı8)∑KâáJ˜3BI'Ù≠>¢_πÂ8îtÔW=ˆ∏_8ÆÃ≤ûÛ?«dX⁄ØèÑ–w] ∆ù⁄àÂ^‚8ÆÈ´‚∏Œz)Õß≠?ï>ïÓQÎÙz‚«IIÑW¥]úta7øJ5‚dB°ˆwª¸∫S◊Ö_{≈”≥Ç◊ßj{mYwQ¬ÇY±Ÿ/÷]Vƒ⁄™Mß∫mGn˘È/lô∑BÊXM‰´®wΩÏÒ ^BÌã!ÒÇYAÙ¨ k=DJS^îı≥C^tQÔÇy°> )/¸HŸ…ãê5@ØNqï<Ó$`À∞3C‘:ûcyænªm±;À	ç?Áπ≈Kz#k√~ŸÈ1rOsØÏΩŸÕ˜BT¶UÖ{!Ùw"lÆuUÿÍ¸ùÿ6~wv0˘Å]ìÂdÎÌ;ljpw|(ÀU_OÌ¿∞E!'`>Çu∏C9L¶…*πNnì?ËìÙM”´Ù&›`åf3Ï
+˚å}À˛2û2&◊∏j|m¸löÊs∆ºb^7oãﬂüëÚáË1¯∆?°¯ßÇ≤(ö¢QE3mﬁ–hÔà+:¢Õ˜!ı?A{ÜM‡ \S4≈3’E3ò¿”Ø§xñ)⁄Ñâ*Î?yM—}0◊NÊÚ´Ö•¥[ör.O;Èãª0ÎäKπÂ‰ÿ»ËËŸÇΩ‡dÌ¬8	9»√*`	“‡B	Om_b√s‹8ºà‘{∏öÑ7¿∆µﬁ·¿e‰ﬂ¬1Û»è 7ât«i•(8G±/·uÔ|iIHaœ°ì¯ñOzWlº«Å,é∏‡Ø∑sk4˘ﬁ4\ƒª8“qò2Q∂⁄õÎ6Çß“±.üo‹ïwåÀˇ:∑ˇ “˛‚õendstream
+endobj
+12 0 obj
+<</Type/Metadata/Subtype/XML/Length 1463>>
+stream
+<?xpacket begin="√Ø¬ª¬ø" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="3.1-701">
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description rdf:about=""  xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+</rdf:Description>
+<rdf:Description rdf:about=""  xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/">
+<xmpRights:Marked>True</xmpRights:Marked></rdf:Description>
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+</rdf:RDF></x:xmpmeta><?xpacket end="w"?>
+endstream
+endobj
+trailer
+<<
+/Root 1 0 R
+>>
+%%EOF

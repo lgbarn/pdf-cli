@@ -188,10 +188,22 @@ func extractTextPrimary(input string, pages []int) (string, error) {
 	copy(sortedPages, pages)
 	sort.Ints(sortedPages)
 
-	var result strings.Builder
 	totalPages := r.NumPage()
 
-	for _, pageNum := range sortedPages {
+	// For small number of pages, extract sequentially
+	if len(sortedPages) <= 5 {
+		return extractPagesSequential(r, sortedPages, totalPages)
+	}
+
+	// For larger number of pages, extract in parallel
+	return extractPagesParallel(r, sortedPages, totalPages)
+}
+
+// extractPagesSequential extracts text from pages sequentially
+func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int) (string, error) {
+	var result strings.Builder
+
+	for _, pageNum := range pages {
 		if pageNum < 1 || pageNum > totalPages {
 			continue
 		}
@@ -207,6 +219,57 @@ func extractTextPrimary(input string, pages []int) (string, error) {
 			result.WriteString("\n")
 		}
 		result.WriteString(text)
+	}
+
+	return result.String(), nil
+}
+
+// extractPagesParallel extracts text from pages in parallel
+func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int) (string, error) {
+	type pageResult struct {
+		pageNum int
+		text    string
+	}
+
+	results := make(chan pageResult, len(pages))
+
+	for _, pageNum := range pages {
+		go func(pn int) {
+			if pn < 1 || pn > totalPages {
+				results <- pageResult{pageNum: pn, text: ""}
+				return
+			}
+			p := r.Page(pn)
+			if p.V.IsNull() {
+				results <- pageResult{pageNum: pn, text: ""}
+				return
+			}
+			text, err := p.GetPlainText(nil)
+			if err != nil {
+				results <- pageResult{pageNum: pn, text: ""}
+				return
+			}
+			results <- pageResult{pageNum: pn, text: text}
+		}(pageNum)
+	}
+
+	// Collect results into a map
+	pageTexts := make(map[int]string)
+	for range pages {
+		r := <-results
+		pageTexts[r.pageNum] = r.text
+	}
+
+	// Build result in page order
+	var result strings.Builder
+	for _, pageNum := range pages {
+		text := pageTexts[pageNum]
+		if text != "" {
+			if result.Len() > 0 {
+				result.WriteString("\n")
+			}
+			result.WriteString(text)
+		}
 	}
 
 	return result.String(), nil
