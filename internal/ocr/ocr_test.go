@@ -51,30 +51,18 @@ func TestPrimaryLanguage(t *testing.T) {
 }
 
 func TestIsImageFile(t *testing.T) {
-	tests := []struct {
-		path string
-		want bool
-	}{
-		{"image.png", true},
-		{"image.PNG", true},
-		{"photo.jpg", true},
-		{"photo.jpeg", true},
-		{"photo.JPEG", true},
-		{"scan.tif", true},
-		{"scan.tiff", true},
-		{"scan.TIFF", true},
-		{"document.pdf", false},
-		{"file.txt", false},
-		{"noext", false},
-		{"/path/to/image.png", true},
-		{"/path/to/file.doc", false},
+	imageFiles := []string{"image.png", "image.PNG", "photo.jpg", "photo.jpeg", "photo.JPEG", "scan.tif", "scan.tiff", "scan.TIFF", "/path/to/image.png"}
+	nonImageFiles := []string{"document.pdf", "file.txt", "noext", "/path/to/file.doc"}
+
+	for _, path := range imageFiles {
+		if !util.IsImageFile(path) {
+			t.Errorf("IsImageFile(%q) = false, want true", path)
+		}
 	}
-	for _, tt := range tests {
-		t.Run(tt.path, func(t *testing.T) {
-			if got := util.IsImageFile(tt.path); got != tt.want {
-				t.Errorf("isImageFile(%q) = %v, want %v", tt.path, got, tt.want)
-			}
-		})
+	for _, path := range nonImageFiles {
+		if util.IsImageFile(path) {
+			t.Errorf("IsImageFile(%q) = true, want false", path)
+		}
 	}
 }
 
@@ -99,5 +87,42 @@ func TestJoinNonEmpty(t *testing.T) {
 				t.Errorf("joinNonEmpty() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEnsureTessdataDir(t *testing.T) {
+	engine, err := NewEngineWithOptions(EngineOptions{
+		BackendType: BackendWASM, // WASM should always be available
+		Lang:        "eng",
+	})
+	if err != nil {
+		t.Logf("NewEngineWithOptions error: %v (may be expected)", err)
+		return
+	}
+	defer engine.Close()
+
+	// Call EnsureTessdata - it may download data or just verify existing
+	// This test just verifies it doesn't panic
+	err = engine.EnsureTessdata()
+	if err != nil {
+		t.Logf("EnsureTessdata error: %v (may be expected if no network)", err)
+	}
+}
+
+func TestEngineOptionsWithDataDir(t *testing.T) {
+	opts := EngineOptions{
+		BackendType: BackendWASM,
+		Lang:        "eng",
+		DataDir:     "/custom/path",
+	}
+	engine, err := NewEngineWithOptions(opts)
+	if err != nil {
+		t.Logf("NewEngineWithOptions error: %v", err)
+		return
+	}
+	defer engine.Close()
+
+	if engine.dataDir != "/custom/path" {
+		t.Errorf("engine.dataDir = %q, want %q", engine.dataDir, "/custom/path")
 	}
 }

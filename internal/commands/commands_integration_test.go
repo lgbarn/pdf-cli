@@ -111,69 +111,28 @@ func TestCompressCommand_ForceOverwrite(t *testing.T) {
 	}
 }
 
-func TestRotateCommand_90Degrees(t *testing.T) {
-	resetFlags(t)
+func TestRotateCommand_ValidAngles(t *testing.T) {
 	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
 		t.Skip("sample.pdf not found in testdata")
 	}
 
-	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	for _, angle := range []string{"90", "180", "270"} {
+		t.Run(angle+"_degrees", func(t *testing.T) {
+			resetFlags(t)
+			tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+			if err != nil {
+				t.Fatalf("Failed to create temp dir: %v", err)
+			}
+			defer os.RemoveAll(tmpDir)
 
-	output := filepath.Join(tmpDir, "rotated.pdf")
-	if err := executeCommand("rotate", samplePDF(), "-a", "90", "-o", output); err != nil {
-		t.Fatalf("rotate command failed: %v", err)
-	}
-
-	if _, err := os.Stat(output); os.IsNotExist(err) {
-		t.Error("rotate did not create output file")
-	}
-}
-
-func TestRotateCommand_180Degrees(t *testing.T) {
-	resetFlags(t)
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	output := filepath.Join(tmpDir, "rotated.pdf")
-	if err := executeCommand("rotate", samplePDF(), "-a", "180", "-o", output); err != nil {
-		t.Fatalf("rotate command failed: %v", err)
-	}
-
-	if _, err := os.Stat(output); os.IsNotExist(err) {
-		t.Error("rotate did not create output file")
-	}
-}
-
-func TestRotateCommand_270Degrees(t *testing.T) {
-	resetFlags(t)
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	output := filepath.Join(tmpDir, "rotated.pdf")
-	if err := executeCommand("rotate", samplePDF(), "-a", "270", "-o", output); err != nil {
-		t.Fatalf("rotate command failed: %v", err)
-	}
-
-	if _, err := os.Stat(output); os.IsNotExist(err) {
-		t.Error("rotate did not create output file")
+			output := filepath.Join(tmpDir, "rotated.pdf")
+			if err := executeCommand("rotate", samplePDF(), "-a", angle, "-o", output); err != nil {
+				t.Fatalf("rotate command failed: %v", err)
+			}
+			if _, err := os.Stat(output); os.IsNotExist(err) {
+				t.Error("rotate did not create output file")
+			}
+		})
 	}
 }
 
@@ -557,4 +516,341 @@ func TestMetaCommand(t *testing.T) {
 	if err := executeCommand("meta", samplePDF()); err != nil {
 		t.Fatalf("meta command failed: %v", err)
 	}
+}
+
+func TestReorderCommand(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "reordered.pdf")
+	if err := executeCommand("reorder", samplePDF(), "-s", "3,2,1", "-o", output); err != nil {
+		t.Fatalf("reorder command failed: %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("reorder did not create output file")
+	}
+}
+
+func TestReorderCommand_InvalidSequence(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "reordered.pdf")
+	err = executeCommand("reorder", samplePDF(), "-s", "abc", "-o", output)
+	if err == nil {
+		t.Error("reorder with invalid sequence should fail")
+	}
+}
+
+func TestReorderCommand_OutOfRangeSequence(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "reordered.pdf")
+	err = executeCommand("reorder", samplePDF(), "-s", "1,2,100", "-o", output)
+	if err == nil {
+		t.Error("reorder with out-of-range sequence should fail")
+	}
+}
+
+func TestPdfaValidateCommand(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Just verify it runs without panicking - validation may return errors
+	// since sample.pdf may not be PDF/A compliant
+	_ = executeCommand("pdfa", "validate", samplePDF())
+}
+
+func TestPdfaValidateCommand_WithLevel(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Just verify it runs - may report non-compliance
+	_ = executeCommand("pdfa", "validate", samplePDF(), "--level", "1b")
+}
+
+func TestPdfaConvertCommand(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "pdfa.pdf")
+	// This may fail or succeed depending on PDF/A support
+	_ = executeCommand("pdfa", "convert", samplePDF(), "-o", output)
+}
+
+func TestInfoCommand_WithFormat(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	if err := executeCommand("info", samplePDF(), "--format", "json"); err != nil {
+		t.Fatalf("info command with json format failed: %v", err)
+	}
+}
+
+func TestInfoCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Test batch processing by passing multiple files
+	if err := executeCommand("info", samplePDF(), samplePDF()); err != nil {
+		t.Fatalf("info command with multiple files failed: %v", err)
+	}
+}
+
+func TestMetaCommand_WithFormat(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	if err := executeCommand("meta", samplePDF(), "--format", "json"); err != nil {
+		t.Fatalf("meta command with json format failed: %v", err)
+	}
+}
+
+func TestMetaCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Test batch processing by passing multiple files
+	if err := executeCommand("meta", samplePDF(), samplePDF()); err != nil {
+		t.Fatalf("meta command with multiple files failed: %v", err)
+	}
+}
+
+func TestMetaCommand_SetTitle(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sample to temp so we can modify it
+	tmpPDF := filepath.Join(tmpDir, "test.pdf")
+	input, _ := os.ReadFile(samplePDF())
+	os.WriteFile(tmpPDF, input, 0644)
+
+	// Set metadata
+	if err := executeCommand("meta", tmpPDF, "--title", "Test Title"); err != nil {
+		t.Fatalf("meta set command failed: %v", err)
+	}
+}
+
+func TestCompressCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sample.pdf twice
+	pdf1 := filepath.Join(tmpDir, "test1.pdf")
+	pdf2 := filepath.Join(tmpDir, "test2.pdf")
+	input, _ := os.ReadFile(samplePDF())
+	os.WriteFile(pdf1, input, 0644)
+	os.WriteFile(pdf2, input, 0644)
+
+	// Batch compress
+	if err := executeCommand("compress", pdf1, pdf2); err != nil {
+		t.Fatalf("compress command with multiple files failed: %v", err)
+	}
+}
+
+func TestRotateCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sample.pdf twice
+	pdf1 := filepath.Join(tmpDir, "test1.pdf")
+	pdf2 := filepath.Join(tmpDir, "test2.pdf")
+	input, _ := os.ReadFile(samplePDF())
+	os.WriteFile(pdf1, input, 0644)
+	os.WriteFile(pdf2, input, 0644)
+
+	// Batch rotate
+	if err := executeCommand("rotate", pdf1, pdf2, "-a", "90"); err != nil {
+		t.Fatalf("rotate command with multiple files failed: %v", err)
+	}
+}
+
+func TestEncryptCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sample.pdf twice
+	pdf1 := filepath.Join(tmpDir, "test1.pdf")
+	pdf2 := filepath.Join(tmpDir, "test2.pdf")
+	input, _ := os.ReadFile(samplePDF())
+	os.WriteFile(pdf1, input, 0644)
+	os.WriteFile(pdf2, input, 0644)
+
+	// Batch encrypt
+	if err := executeCommand("encrypt", pdf1, pdf2, "--password", "secret"); err != nil {
+		t.Fatalf("encrypt command with multiple files failed: %v", err)
+	}
+}
+
+func TestDecryptCommand_MultipleFiles(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sample.pdf twice and encrypt them
+	pdf1 := filepath.Join(tmpDir, "test1.pdf")
+	pdf2 := filepath.Join(tmpDir, "test2.pdf")
+	input, _ := os.ReadFile(samplePDF())
+	os.WriteFile(pdf1, input, 0644)
+	os.WriteFile(pdf2, input, 0644)
+
+	// First encrypt both
+	executeCommand("encrypt", pdf1, "--password", "secret")
+	resetFlags(t)
+	executeCommand("encrypt", pdf2, "--password", "secret")
+	resetFlags(t)
+
+	// Batch decrypt
+	encrypted1 := filepath.Join(tmpDir, "test1_encrypted.pdf")
+	encrypted2 := filepath.Join(tmpDir, "test2_encrypted.pdf")
+	if _, err := os.Stat(encrypted1); err == nil {
+		_ = executeCommand("decrypt", encrypted1, encrypted2, "--password", "secret")
+	}
+}
+
+func TestExtractCommand_MultiplePages(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "extracted.pdf")
+	if err := executeCommand("extract", samplePDF(), "-p", "1,2", "-o", output); err != nil {
+		t.Fatalf("extract command failed: %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("extract did not create output file")
+	}
+}
+
+func TestCommands_NonExistentFile(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"info", []string{"info", "/nonexistent/file.pdf"}},
+		{"text", []string{"text", "/nonexistent/file.pdf"}},
+		{"compress", []string{"compress", "/nonexistent/file.pdf"}},
+		{"rotate", []string{"rotate", "/nonexistent/file.pdf", "-a", "90"}},
+		{"extract", []string{"extract", "/nonexistent/file.pdf", "-p", "1"}},
+		{"decrypt", []string{"decrypt", "/nonexistent/file.pdf", "--password", "test"}},
+		{"meta", []string{"meta", "/nonexistent/file.pdf"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetFlags(t)
+			if err := executeCommand(tt.args...); err == nil {
+				t.Errorf("%s with non-existent file should fail", tt.name)
+			}
+		})
+	}
+}
+
+func TestMergeCommand_SingleFile(t *testing.T) {
+	resetFlags(t)
+	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+	_ = executeCommand("merge", "-o", output, samplePDF())
 }

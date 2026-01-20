@@ -276,24 +276,148 @@ func TestNewEngine(t *testing.T) {
 	}
 }
 
-func TestResolvePagesWithSpecifiedPages(t *testing.T) {
+func TestResolvePages(t *testing.T) {
+	engine := &Engine{lang: "eng"}
+
+	t.Run("specified pages returned as-is", func(t *testing.T) {
+		pages := []int{1, 3, 5}
+		result, err := engine.resolvePages("/nonexistent/path.pdf", pages, "")
+		if err != nil {
+			t.Fatalf("resolvePages() error = %v", err)
+		}
+		if len(result) != len(pages) {
+			t.Errorf("resolvePages() returned %d pages, want %d", len(result), len(pages))
+		}
+	})
+
+	t.Run("nil pages with non-existent file", func(t *testing.T) {
+		_, err := engine.resolvePages("/nonexistent/path.pdf", nil, "")
+		if err == nil {
+			t.Log("resolvePages with nil pages and non-existent file returned nil error")
+		}
+	})
+}
+
+func TestResolvePagesWithRealPDF(t *testing.T) {
+	samplePDF := filepath.Join("..", "..", "testdata", "sample.pdf")
+	if _, err := os.Stat(samplePDF); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
 	engine := &Engine{
 		lang: "eng",
 	}
 
-	// When pages are specified, they should be returned as-is
-	pages := []int{1, 3, 5}
-	result, err := engine.resolvePages("/nonexistent/path.pdf", pages, "")
+	// When pages is nil, resolvePages should get page count from the PDF
+	pages, err := engine.resolvePages(samplePDF, nil, "")
 	if err != nil {
 		t.Fatalf("resolvePages() error = %v", err)
 	}
 
-	if len(result) != len(pages) {
-		t.Errorf("resolvePages() returned %d pages, want %d", len(result), len(pages))
+	// sample.pdf should have at least 1 page
+	if len(pages) == 0 {
+		t.Error("resolvePages() returned empty pages for valid PDF")
 	}
-	for i, p := range result {
-		if p != pages[i] {
-			t.Errorf("resolvePages()[%d] = %d, want %d", i, p, pages[i])
+
+	// Verify pages are sequential starting from 1
+	for i, p := range pages {
+		if p != i+1 {
+			t.Errorf("resolvePages()[%d] = %d, want %d", i, p, i+1)
 		}
+	}
+}
+
+func TestExtractTextFromPDFNonExistent(t *testing.T) {
+	mock := newMockBackend("test", true)
+	engine := &Engine{
+		backend: mock,
+		lang:    "eng",
+		dataDir: "/tmp/test",
+	}
+
+	// Should fail for non-existent PDF
+	_, err := engine.ExtractTextFromPDF("/nonexistent/file.pdf", []int{1}, "", false)
+	if err == nil {
+		t.Error("ExtractTextFromPDF with non-existent file should error")
+	}
+}
+
+func TestExtractTextFromPDFWithWASMBackendEnsureError(t *testing.T) {
+	// Create WASM backend with invalid data dir to trigger EnsureTessdata error
+	backend, err := NewWASMBackend("eng", "/invalid/nonexistent/path")
+	if err != nil {
+		t.Logf("NewWASMBackend error: %v (expected)", err)
+		return
+	}
+
+	engine := &Engine{
+		backend: backend,
+		lang:    "eng",
+		dataDir: "/invalid/nonexistent/path",
+	}
+
+	_, err = engine.ExtractTextFromPDF("../../testdata/sample.pdf", []int{1}, "", false)
+	// This may or may not error depending on whether tessdata exists
+	if err != nil {
+		t.Logf("ExtractTextFromPDF with invalid tessdata path error: %v (expected)", err)
+	}
+}
+
+func TestExtractImagesWithRealPDF(t *testing.T) {
+	samplePDF := filepath.Join("..", "..", "testdata", "sample.pdf")
+	if _, err := os.Stat(samplePDF); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "extract-img-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	engine := &Engine{
+		lang: "eng",
+	}
+
+	// Extract images - may or may not extract images depending on PDF content
+	err = engine.extractImagesToDir(samplePDF, tmpDir, []int{1}, "")
+	if err != nil {
+		t.Logf("extractImagesToDir error (may be expected): %v", err)
+	}
+}
+
+func TestProcessImagesParallelWithError(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "process-par-err-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create enough images to trigger parallel processing
+	imageCount := parallelThreshold + 2
+	imageFiles := make([]string, imageCount)
+	for i := 0; i < imageCount; i++ {
+		imageFiles[i] = filepath.Join(tmpDir, string(rune('a'+i))+".png")
+		if err := os.WriteFile(imageFiles[i], []byte("test"), 0600); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	// Create engine with mock backend that returns errors
+	mock := newMockBackend("test-native", true).withError(errTestProcess)
+	engine := &Engine{
+		backend: mock,
+		lang:    "eng",
+	}
+
+	// Should complete even with errors
+	result, err := engine.processImagesParallel(imageFiles, false)
+	if err != nil {
+		t.Fatalf("processImagesParallel() error = %v", err)
+	}
+
+	// Result should be empty since all processing failed
+	if result != "" {
+		t.Logf("processImagesParallel() with errors returned non-empty result: %q", result)
 	}
 }

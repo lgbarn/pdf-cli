@@ -8,93 +8,39 @@ import (
 
 func TestParsePageRanges(t *testing.T) {
 	tests := []struct {
-		name    string
 		input   string
 		want    []PageRange
 		wantErr bool
 	}{
-		{
-			name:  "empty input",
-			input: "",
-			want:  nil,
-		},
-		{
-			name:  "single page",
-			input: "1",
-			want:  []PageRange{{Start: 1, End: 1}},
-		},
-		{
-			name:  "multiple single pages",
-			input: "1,3,5",
-			want: []PageRange{
-				{Start: 1, End: 1},
-				{Start: 3, End: 3},
-				{Start: 5, End: 5},
-			},
-		},
-		{
-			name:  "single range",
-			input: "1-5",
-			want:  []PageRange{{Start: 1, End: 5}},
-		},
-		{
-			name:  "multiple ranges",
-			input: "1-3,7-10",
-			want: []PageRange{
-				{Start: 1, End: 3},
-				{Start: 7, End: 10},
-			},
-		},
-		{
-			name:  "mixed pages and ranges",
-			input: "1-3,5,7-10,15",
-			want: []PageRange{
-				{Start: 1, End: 3},
-				{Start: 5, End: 5},
-				{Start: 7, End: 10},
-				{Start: 15, End: 15},
-			},
-		},
-		{
-			name:  "with spaces",
-			input: "1 - 3, 5, 7 - 10",
-			want: []PageRange{
-				{Start: 1, End: 3},
-				{Start: 5, End: 5},
-				{Start: 7, End: 10},
-			},
-		},
-		{
-			name:    "invalid page number",
-			input:   "abc",
-			wantErr: true,
-		},
-		{
-			name:    "invalid range",
-			input:   "5-3",
-			wantErr: true,
-		},
-		{
-			name:    "zero page",
-			input:   "0",
-			wantErr: true,
-		},
-		{
-			name:    "negative page",
-			input:   "-1",
-			wantErr: true,
-		},
+		{"", nil, false},
+		{"1", []PageRange{{1, 1}}, false},
+		{"1,3,5", []PageRange{{1, 1}, {3, 3}, {5, 5}}, false},
+		{"1-5", []PageRange{{1, 5}}, false},
+		{"1-3,7-10", []PageRange{{1, 3}, {7, 10}}, false},
+		{"1-3,5,7-10,15", []PageRange{{1, 3}, {5, 5}, {7, 10}, {15, 15}}, false},
+		{"1 - 3, 5, 7 - 10", []PageRange{{1, 3}, {5, 5}, {7, 10}}, false},
+		{"01", []PageRange{{1, 1}}, false},
+		{"01-05", []PageRange{{1, 5}}, false},
+		{"001,002,003", []PageRange{{1, 1}, {2, 2}, {3, 3}}, false},
+		{"100", []PageRange{{100, 100}}, false},
+		{"100-200", []PageRange{{100, 200}}, false},
+		{"1,,2", []PageRange{{1, 1}, {2, 2}}, false},
+		{",1,2,", []PageRange{{1, 1}, {2, 2}}, false},
+		{"abc", nil, true},
+		{"5-3", nil, true},
+		{"0", nil, true},
+		{"-1", nil, true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.input, func(t *testing.T) {
 			got, err := ParsePageRanges(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParsePageRanges() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParsePageRanges() = %v, want %v", got, tt.want)
+				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -102,141 +48,69 @@ func TestParsePageRanges(t *testing.T) {
 
 func TestExpandPageRanges(t *testing.T) {
 	tests := []struct {
-		name   string
 		ranges []PageRange
 		want   []int
 	}{
-		{
-			name:   "empty input",
-			ranges: nil,
-			want:   nil,
-		},
-		{
-			name:   "single page",
-			ranges: []PageRange{{Start: 1, End: 1}},
-			want:   []int{1},
-		},
-		{
-			name:   "single range",
-			ranges: []PageRange{{Start: 1, End: 5}},
-			want:   []int{1, 2, 3, 4, 5},
-		},
-		{
-			name: "multiple ranges",
-			ranges: []PageRange{
-				{Start: 1, End: 3},
-				{Start: 7, End: 9},
-			},
-			want: []int{1, 2, 3, 7, 8, 9},
-		},
-		{
-			name: "overlapping ranges",
-			ranges: []PageRange{
-				{Start: 1, End: 5},
-				{Start: 3, End: 7},
-			},
-			want: []int{1, 2, 3, 4, 5, 6, 7},
-		},
+		{nil, nil},
+		{[]PageRange{{1, 1}}, []int{1}},
+		{[]PageRange{{1, 5}}, []int{1, 2, 3, 4, 5}},
+		{[]PageRange{{1, 3}, {7, 9}}, []int{1, 2, 3, 7, 8, 9}},
+		{[]PageRange{{1, 5}, {3, 7}}, []int{1, 2, 3, 4, 5, 6, 7}},
+		{[]PageRange{{1, 3}, {2, 4}}, []int{1, 2, 3, 4}},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ExpandPageRanges(tt.ranges)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ExpandPageRanges() = %v, want %v", got, tt.want)
-			}
-		})
+		got := ExpandPageRanges(tt.ranges)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("ExpandPageRanges(%v) = %v, want %v", tt.ranges, got, tt.want)
+		}
 	}
 }
 
 func TestValidatePageNumbers(t *testing.T) {
 	tests := []struct {
-		name       string
 		pages      []int
 		totalPages int
 		wantErr    bool
 	}{
-		{
-			name:       "valid pages",
-			pages:      []int{1, 2, 3},
-			totalPages: 10,
-			wantErr:    false,
-		},
-		{
-			name:       "page out of range",
-			pages:      []int{1, 11},
-			totalPages: 10,
-			wantErr:    true,
-		},
-		{
-			name:       "zero page",
-			pages:      []int{0, 1},
-			totalPages: 10,
-			wantErr:    true,
-		},
-		{
-			name:       "empty pages",
-			pages:      []int{},
-			totalPages: 10,
-			wantErr:    false,
-		},
+		{[]int{1, 2, 3}, 10, false},
+		{[]int{}, 10, false},
+		{[]int{1}, 1, false},
+		{[]int{100}, 100, false},
+		{[]int{1, 11}, 10, true},
+		{[]int{0, 1}, 10, true},
+		{[]int{101}, 100, true},
+		{[]int{-1}, 10, true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidatePageNumbers(tt.pages, tt.totalPages)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePageNumbers() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+		if err := ValidatePageNumbers(tt.pages, tt.totalPages); (err != nil) != tt.wantErr {
+			t.Errorf("ValidatePageNumbers(%v, %d) error = %v, wantErr %v", tt.pages, tt.totalPages, err, tt.wantErr)
+		}
 	}
 }
 
 func TestFormatPageRanges(t *testing.T) {
 	tests := []struct {
-		name  string
 		pages []int
 		want  string
 	}{
-		{
-			name:  "empty",
-			pages: []int{},
-			want:  "",
-		},
-		{
-			name:  "single page",
-			pages: []int{1},
-			want:  "1",
-		},
-		{
-			name:  "consecutive pages",
-			pages: []int{1, 2, 3, 4, 5},
-			want:  "1-5",
-		},
-		{
-			name:  "non-consecutive pages",
-			pages: []int{1, 3, 5},
-			want:  "1,3,5",
-		},
-		{
-			name:  "mixed",
-			pages: []int{1, 2, 3, 5, 7, 8, 9},
-			want:  "1-3,5,7-9",
-		},
-		{
-			name:  "unsorted",
-			pages: []int{5, 1, 3, 2, 4},
-			want:  "1-5",
-		},
+		{[]int{}, ""},
+		{[]int{1}, "1"},
+		{[]int{1, 2, 3, 4, 5}, "1-5"},
+		{[]int{1, 3, 5}, "1,3,5"},
+		{[]int{1, 2, 3, 5, 7, 8, 9}, "1-3,5,7-9"},
+		{[]int{5, 1, 3, 2, 4}, "1-5"},
+		{[]int{1, 1, 2, 2, 3}, "1-3"},
+		{[]int{1, 2}, "1-2"},
+		{[]int{1, 3}, "1,3"},
+		{[]int{1, 2, 5, 6, 7}, "1-2,5-7"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := FormatPageRanges(tt.pages)
-			if got != tt.want {
-				t.Errorf("FormatPageRanges() = %v, want %v", got, tt.want)
-			}
-		})
+		if got := FormatPageRanges(tt.pages); got != tt.want {
+			t.Errorf("FormatPageRanges(%v) = %q, want %q", tt.pages, got, tt.want)
+		}
 	}
 }
 
@@ -249,36 +123,28 @@ func TestParseReorderSequence(t *testing.T) {
 		wantErr     bool
 		errContains string
 	}{
-		// Basic cases
-		{name: "single page", spec: "1", totalPages: 5, want: []int{1}},
-		{name: "multiple pages", spec: "1,3,5", totalPages: 5, want: []int{1, 3, 5}},
-		{name: "simple range", spec: "1-3", totalPages: 5, want: []int{1, 2, 3}},
-		{name: "reverse range", spec: "3-1", totalPages: 5, want: []int{3, 2, 1}},
-
-		// end keyword
-		{name: "end keyword", spec: "end", totalPages: 5, want: []int{5}},
-		{name: "range to end", spec: "3-end", totalPages: 5, want: []int{3, 4, 5}},
-		{name: "end to start", spec: "end-1", totalPages: 5, want: []int{5, 4, 3, 2, 1}},
-
-		// Reorder scenarios
-		{name: "move page 3 to front", spec: "3,1,2,4,5", totalPages: 5, want: []int{3, 1, 2, 4, 5}},
-		{name: "reverse all", spec: "5-1", totalPages: 5, want: []int{5, 4, 3, 2, 1}},
-		{name: "duplicate page", spec: "1,2,1", totalPages: 5, want: []int{1, 2, 1}},
-
-		// Edge cases
-		{name: "single page document", spec: "1", totalPages: 1, want: []int{1}},
-		{name: "whitespace handling", spec: " 1 , 2 , 3 ", totalPages: 5, want: []int{1, 2, 3}},
-		{name: "last page only", spec: "end", totalPages: 1, want: []int{1}},
-
-		// Error cases
-		{name: "empty spec", spec: "", totalPages: 5, wantErr: true, errContains: "empty"},
-		{name: "invalid page zero", spec: "0", totalPages: 5, wantErr: true, errContains: "out of range"},
-		{name: "page exceeds total", spec: "10", totalPages: 5, wantErr: true, errContains: "out of range"},
-		{name: "invalid character", spec: "abc", totalPages: 5, wantErr: true, errContains: "invalid"},
-		{name: "negative page in range", spec: "-1-5", totalPages: 5, wantErr: true, errContains: "invalid"},
-		{name: "invalid total pages zero", spec: "1", totalPages: 0, wantErr: true, errContains: "invalid total"},
-		{name: "invalid total pages negative", spec: "1", totalPages: -1, wantErr: true, errContains: "invalid total"},
-		{name: "only whitespace", spec: "   ", totalPages: 5, wantErr: true, errContains: "no pages"},
+		{"single page", "1", 5, []int{1}, false, ""},
+		{"multiple pages", "1,3,5", 5, []int{1, 3, 5}, false, ""},
+		{"simple range", "1-3", 5, []int{1, 2, 3}, false, ""},
+		{"reverse range", "3-1", 5, []int{3, 2, 1}, false, ""},
+		{"end keyword", "end", 5, []int{5}, false, ""},
+		{"range to end", "3-end", 5, []int{3, 4, 5}, false, ""},
+		{"end to start", "end-1", 5, []int{5, 4, 3, 2, 1}, false, ""},
+		{"move page 3 to front", "3,1,2,4,5", 5, []int{3, 1, 2, 4, 5}, false, ""},
+		{"reverse all", "5-1", 5, []int{5, 4, 3, 2, 1}, false, ""},
+		{"duplicate page", "1,2,1", 5, []int{1, 2, 1}, false, ""},
+		{"single page document", "1", 1, []int{1}, false, ""},
+		{"whitespace handling", " 1 , 2 , 3 ", 5, []int{1, 2, 3}, false, ""},
+		{"last page only", "end", 1, []int{1}, false, ""},
+		{"end-1 with 10 pages", "end-1", 10, []int{10, 9, 8, 7, 6, 5, 4, 3, 2, 1}, false, ""},
+		{"empty spec", "", 5, nil, true, "empty"},
+		{"invalid page zero", "0", 5, nil, true, "out of range"},
+		{"page exceeds total", "10", 5, nil, true, "out of range"},
+		{"invalid character", "abc", 5, nil, true, "invalid"},
+		{"negative page in range", "-1-5", 5, nil, true, "invalid"},
+		{"invalid total pages zero", "1", 0, nil, true, "invalid total"},
+		{"invalid total pages negative", "1", -1, nil, true, "invalid total"},
+		{"only whitespace", "   ", 5, nil, true, "no pages"},
 	}
 
 	for _, tt := range tests {
@@ -286,7 +152,7 @@ func TestParseReorderSequence(t *testing.T) {
 			got, err := ParseReorderSequence(tt.spec, tt.totalPages)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("expected error containing %q, got nil", tt.errContains)
+					t.Errorf("expected error containing %q", tt.errContains)
 				} else if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("error = %q, want containing %q", err.Error(), tt.errContains)
 				}
@@ -300,5 +166,39 @@ func TestParseReorderSequence(t *testing.T) {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseAndExpandPages(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    []int
+		wantErr bool
+	}{
+		{"", nil, false},
+		{"1", []int{1}, false},
+		{"1-3", []int{1, 2, 3}, false},
+		{"1,3-5,7", []int{1, 3, 4, 5, 7}, false},
+		{"abc", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := ParseAndExpandPages(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPageRangeStruct(t *testing.T) {
+	pr := PageRange{Start: 1, End: 5}
+	if pr.Start != 1 || pr.End != 5 {
+		t.Errorf("PageRange = {%d, %d}, want {1, 5}", pr.Start, pr.End)
 	}
 }

@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1049,5 +1050,694 @@ func TestSplitByPageCount(t *testing.T) {
 
 	if pdfCount == 0 {
 		t.Error("SplitByPageCount() did not create any PDF files")
+	}
+}
+
+// PDF/A validation tests
+
+func TestValidatePDFA(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	result, err := ValidatePDFA(pdfFile, "1b", "")
+	if err != nil {
+		t.Fatalf("ValidatePDFA() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("ValidatePDFA() returned nil result")
+	}
+
+	if result.Level != "1b" {
+		t.Errorf("ValidatePDFA() Level = %q, want %q", result.Level, "1b")
+	}
+
+	// Note: regular PDFs are unlikely to pass PDF/A validation
+	// We just verify the function works without crashing
+}
+
+func TestValidatePDFALevels(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	levels := []string{"1a", "1b", "2a", "2b", "3a", "3b"}
+
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
+			result, err := ValidatePDFA(pdfFile, level, "")
+			if err != nil {
+				t.Fatalf("ValidatePDFA(%q) error = %v", level, err)
+			}
+			if result == nil {
+				t.Fatalf("ValidatePDFA(%q) returned nil", level)
+			}
+			if result.Level != level {
+				t.Errorf("ValidatePDFA() Level = %q, want %q", result.Level, level)
+			}
+		})
+	}
+}
+
+func TestValidatePDFANonExistent(t *testing.T) {
+	result, err := ValidatePDFA("/nonexistent/file.pdf", "1b", "")
+	// ValidatePDFA may return a result with IsValid=false instead of an error
+	if err == nil && result != nil && result.IsValid {
+		t.Error("ValidatePDFA() should report invalid for non-existent file")
+	}
+}
+
+func TestConvertToPDFA(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "pdfa.pdf")
+	err = ConvertToPDFA(pdfFile, output, "1b", "")
+	if err != nil {
+		t.Fatalf("ConvertToPDFA() error = %v", err)
+	}
+
+	// Verify output exists
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("ConvertToPDFA() did not create output file")
+	}
+}
+
+func TestConvertToPDFANonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "pdfa.pdf")
+	err = ConvertToPDFA("/nonexistent/file.pdf", output, "1b", "")
+	if err == nil {
+		t.Error("ConvertToPDFA() expected error for non-existent file")
+	}
+}
+
+// CreatePDFFromImages tests
+
+func TestCreatePDFFromImages(t *testing.T) {
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "from_images.pdf")
+	err = CreatePDFFromImages([]string{testImage}, output, "")
+	if err != nil {
+		t.Fatalf("CreatePDFFromImages() error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("CreatePDFFromImages() did not create output file")
+	}
+}
+
+func TestCreatePDFFromImagesMultiple(t *testing.T) {
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Use the same image multiple times
+	output := filepath.Join(tmpDir, "multi_images.pdf")
+	err = CreatePDFFromImages([]string{testImage, testImage}, output, "")
+	if err != nil {
+		t.Fatalf("CreatePDFFromImages() error = %v", err)
+	}
+
+	// Verify output has multiple pages
+	count, err := PageCount(output, "")
+	if err != nil {
+		t.Fatalf("PageCount() error = %v", err)
+	}
+	if count < 2 {
+		t.Errorf("CreatePDFFromImages() pages = %d, want >= 2", count)
+	}
+}
+
+func TestCreatePDFFromImagesPageSize(t *testing.T) {
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pageSizes := []string{"A4", "Letter", "LETTER", "a4"}
+
+	for _, size := range pageSizes {
+		t.Run(size, func(t *testing.T) {
+			output := filepath.Join(tmpDir, "pagesize_"+size+".pdf")
+			err := CreatePDFFromImages([]string{testImage}, output, size)
+			if err != nil {
+				t.Fatalf("CreatePDFFromImages() with pageSize %q error = %v", size, err)
+			}
+			if _, err := os.Stat(output); os.IsNotExist(err) {
+				t.Errorf("CreatePDFFromImages() did not create output file")
+			}
+		})
+	}
+}
+
+func TestCreatePDFFromImagesMissing(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "from_images.pdf")
+	err = CreatePDFFromImages([]string{"/nonexistent/image.png"}, output, "")
+	if err == nil {
+		t.Error("CreatePDFFromImages() expected error for missing image")
+	}
+}
+
+// Additional edge case tests
+
+func TestRotateAllAngles(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	angles := []int{0, 90, 180, 270}
+
+	for _, angle := range angles {
+		t.Run(fmt.Sprintf("%d_degrees", angle), func(t *testing.T) {
+			output := filepath.Join(tmpDir, fmt.Sprintf("rotated_%d.pdf", angle))
+			err := Rotate(pdfFile, output, angle, nil, "")
+			if err != nil {
+				t.Fatalf("Rotate() angle=%d error = %v", angle, err)
+			}
+			if _, err := os.Stat(output); os.IsNotExist(err) {
+				t.Errorf("Rotate() did not create output file")
+			}
+		})
+	}
+}
+
+func TestMergeSingleFile(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+	err = Merge([]string{pdfFile}, output, "")
+	if err != nil {
+		t.Fatalf("Merge() single file error = %v", err)
+	}
+
+	// Verify output exists
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("Merge() did not create output file")
+	}
+}
+
+func TestMergeMultipleFiles(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+	// Merge 3 copies of the same file
+	err = Merge([]string{pdfFile, pdfFile, pdfFile}, output, "")
+	if err != nil {
+		t.Fatalf("Merge() multiple files error = %v", err)
+	}
+
+	// Verify merged file has triple the pages
+	origCount, _ := PageCount(pdfFile, "")
+	mergedCount, err := PageCount(output, "")
+	if err != nil {
+		t.Fatalf("PageCount() error = %v", err)
+	}
+	if mergedCount != origCount*3 {
+		t.Errorf("Merged PDF has %d pages, want %d", mergedCount, origCount*3)
+	}
+}
+
+func TestExtractPagesEmptyList(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "extracted.pdf")
+	// Empty pages list - behavior depends on implementation
+	err = ExtractPages(pdfFile, output, []int{}, "")
+	// Just verify it doesn't panic
+	_ = err
+}
+
+func TestExtractPagesNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "extracted.pdf")
+	err = ExtractPages("/nonexistent/file.pdf", output, []int{1}, "")
+	if err == nil {
+		t.Error("ExtractPages() expected error for non-existent file")
+	}
+}
+
+func TestDecryptWrongPassword(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// First encrypt the file
+	encrypted := filepath.Join(tmpDir, "encrypted.pdf")
+	err = Encrypt(pdfFile, encrypted, "correctpassword", "")
+	if err != nil {
+		t.Fatalf("Encrypt() error = %v", err)
+	}
+
+	// Try to decrypt with wrong password
+	decrypted := filepath.Join(tmpDir, "decrypted.pdf")
+	err = Decrypt(encrypted, decrypted, "wrongpassword")
+	if err == nil {
+		t.Error("Decrypt() should return error for wrong password")
+	}
+}
+
+func TestEncryptSpecialPassword(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Test with special characters in password
+	passwords := []string{
+		"p@ss!w0rd#$%",
+		"pass with spaces",
+		"unicode:日本語",
+	}
+
+	for _, pw := range passwords {
+		t.Run(pw, func(t *testing.T) {
+			encrypted := filepath.Join(tmpDir, "encrypted_special.pdf")
+			err := Encrypt(pdfFile, encrypted, pw, "")
+			if err != nil {
+				t.Fatalf("Encrypt() with special password error = %v", err)
+			}
+		})
+	}
+}
+
+func TestSplitByPageCountEdges(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	totalPages, err := PageCount(pdfFile, "")
+	if err != nil {
+		t.Fatalf("PageCount() error = %v", err)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Test with pageCount = 1 (split into individual pages)
+	t.Run("pageCount=1", func(t *testing.T) {
+		outDir := filepath.Join(tmpDir, "split1")
+		os.MkdirAll(outDir, 0755)
+		err := SplitByPageCount(pdfFile, outDir, 1, "")
+		if err != nil {
+			t.Fatalf("SplitByPageCount(1) error = %v", err)
+		}
+
+		files, _ := os.ReadDir(outDir)
+		pdfCount := 0
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), ".pdf") {
+				pdfCount++
+			}
+		}
+		if pdfCount != totalPages {
+			t.Errorf("SplitByPageCount(1) created %d files, want %d", pdfCount, totalPages)
+		}
+	})
+
+	// Test with pageCount > total pages
+	t.Run("pageCount>total", func(t *testing.T) {
+		outDir := filepath.Join(tmpDir, "splithigh")
+		os.MkdirAll(outDir, 0755)
+		err := SplitByPageCount(pdfFile, outDir, totalPages+10, "")
+		if err != nil {
+			t.Fatalf("SplitByPageCount(high) error = %v", err)
+		}
+
+		// Should create just 1 file
+		files, _ := os.ReadDir(outDir)
+		pdfCount := 0
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), ".pdf") {
+				pdfCount++
+			}
+		}
+		if pdfCount != 1 {
+			t.Errorf("SplitByPageCount(high) created %d files, want 1", pdfCount)
+		}
+	})
+}
+
+func TestGetMetadataNonExistent(t *testing.T) {
+	_, err := GetMetadata("/nonexistent/file.pdf", "")
+	if err == nil {
+		t.Error("GetMetadata() expected error for non-existent file")
+	}
+}
+
+func TestSetMetadataNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "metadata.pdf")
+	meta := &Metadata{Title: "Test"}
+	err = SetMetadata("/nonexistent/file.pdf", output, meta, "")
+	if err == nil {
+		t.Error("SetMetadata() expected error for non-existent file")
+	}
+}
+
+func TestExtractImagesValid(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// This may or may not find images depending on the PDF
+	err = ExtractImages(pdfFile, tmpDir, nil, "")
+	// Just verify it doesn't panic
+	_ = err
+}
+
+func TestAddWatermarkNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "watermarked.pdf")
+	err = AddWatermark("/nonexistent/file.pdf", output, "WATERMARK", nil, "")
+	if err == nil {
+		t.Error("AddWatermark() expected error for non-existent file")
+	}
+}
+
+func TestRotateNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "rotated.pdf")
+	err = Rotate("/nonexistent/file.pdf", output, 90, nil, "")
+	if err == nil {
+		t.Error("Rotate() expected error for non-existent file")
+	}
+}
+
+func TestMergeWithProgress(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Test with progress enabled but few files (should use standard merge)
+	output := filepath.Join(tmpDir, "merged.pdf")
+	err = MergeWithProgress([]string{pdfFile, pdfFile}, output, "", true)
+	if err != nil {
+		t.Fatalf("MergeWithProgress() error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("MergeWithProgress() did not create output file")
+	}
+}
+
+func TestExtractTextWithProgress(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Test with progress enabled
+	text, err := ExtractTextWithProgress(pdfFile, nil, "", true)
+	if err != nil {
+		t.Fatalf("ExtractTextWithProgress() error = %v", err)
+	}
+	// Just verify it returns without error
+	_ = text
+}
+
+func TestSplitWithProgress(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = SplitWithProgress(pdfFile, tmpDir, 1, "", true)
+	if err != nil {
+		t.Fatalf("SplitWithProgress() error = %v", err)
+	}
+
+	// Verify files were created
+	files, _ := os.ReadDir(tmpDir)
+	pdfCount := 0
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".pdf") {
+			pdfCount++
+		}
+	}
+	if pdfCount == 0 {
+		t.Error("SplitWithProgress() did not create any files")
+	}
+}
+
+// Additional edge case tests for helper functions
+
+func TestExtractParenStringEdges(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		start   int
+		want    string
+		wantEnd int
+	}{
+		{
+			name:    "tab escape",
+			content: "(a\\tb)",
+			start:   0,
+			want:    "a\tb",
+			wantEnd: 6,
+		},
+		{
+			name:    "return escape",
+			content: "(a\\rb)",
+			start:   0,
+			want:    "a\rb",
+			wantEnd: 6,
+		},
+		{
+			name:    "backslash escape",
+			content: "(a\\\\b)",
+			start:   0,
+			want:    "a\\b",
+			wantEnd: 6,
+		},
+		{
+			name:    "out of bounds start",
+			content: "(Hello)",
+			start:   100,
+			want:    "",
+			wantEnd: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, end := extractParenString(tt.content, tt.start)
+			if got != tt.want {
+				t.Errorf("extractParenString() string = %q, want %q", got, tt.want)
+			}
+			if end != tt.wantEnd {
+				t.Errorf("extractParenString() end = %d, want %d", end, tt.wantEnd)
+			}
+		})
+	}
+}
+
+func TestInfoStruct(t *testing.T) {
+	info := Info{
+		FilePath:    "/path/to/file.pdf",
+		FileSize:    1024,
+		Pages:       10,
+		Version:     "1.4",
+		Title:       "Test PDF",
+		Author:      "Test Author",
+		Subject:     "Test Subject",
+		Keywords:    "test, pdf",
+		Creator:     "Test Creator",
+		Producer:    "Test Producer",
+		CreatedDate: "2024-01-01",
+		ModDate:     "2024-01-02",
+		Encrypted:   false,
+	}
+
+	if info.FilePath != "/path/to/file.pdf" {
+		t.Errorf("Info.FilePath = %q, want %q", info.FilePath, "/path/to/file.pdf")
+	}
+	if info.Pages != 10 {
+		t.Errorf("Info.Pages = %d, want %d", info.Pages, 10)
+	}
+}
+
+func TestMetadataStruct(t *testing.T) {
+	meta := Metadata{
+		Title:       "Test Title",
+		Author:      "Test Author",
+		Subject:     "Test Subject",
+		Keywords:    "test, keywords",
+		Creator:     "Test Creator",
+		Producer:    "Test Producer",
+		CreatedDate: "2024-01-01",
+		ModDate:     "2024-01-02",
+	}
+
+	if meta.Title != "Test Title" {
+		t.Errorf("Metadata.Title = %q, want %q", meta.Title, "Test Title")
+	}
+}
+
+func TestPDFAValidationResultStruct(t *testing.T) {
+	result := PDFAValidationResult{
+		IsValid:  false,
+		Level:    "1b",
+		Errors:   []string{"error1", "error2"},
+		Warnings: []string{"warning1"},
+	}
+
+	if result.IsValid {
+		t.Error("PDFAValidationResult.IsValid should be false")
+	}
+	if result.Level != "1b" {
+		t.Errorf("PDFAValidationResult.Level = %q, want %q", result.Level, "1b")
+	}
+	if len(result.Errors) != 2 {
+		t.Errorf("PDFAValidationResult.Errors length = %d, want 2", len(result.Errors))
+	}
+}
+
+func TestValidateValid(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	err := Validate(pdfFile, "")
+	if err != nil {
+		t.Errorf("Validate() error = %v", err)
 	}
 }

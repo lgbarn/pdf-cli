@@ -7,7 +7,6 @@ import (
 )
 
 func TestFileExists(t *testing.T) {
-	// Create a temp file
 	tmpFile, err := os.CreateTemp("", "test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -15,41 +14,21 @@ func TestFileExists(t *testing.T) {
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	tests := []struct {
-		name string
-		path string
-		want bool
-	}{
-		{
-			name: "existing file",
-			path: tmpFile.Name(),
-			want: true,
-		},
-		{
-			name: "non-existing file",
-			path: "/nonexistent/path/to/file",
-			want: false,
-		},
+	if !FileExists(tmpFile.Name()) {
+		t.Error("FileExists() = false for existing file")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := FileExists(tt.path); got != tt.want {
-				t.Errorf("FileExists() = %v, want %v", got, tt.want)
-			}
-		})
+	if FileExists("/nonexistent/path/to/file") {
+		t.Error("FileExists() = true for non-existing file")
 	}
 }
 
 func TestIsDir(t *testing.T) {
-	// Create a temp directory
 	tmpDir, err := os.MkdirTemp("", "test-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create a temp file
 	tmpFile, err := os.CreateTemp("", "test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -57,34 +36,14 @@ func TestIsDir(t *testing.T) {
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	tests := []struct {
-		name string
-		path string
-		want bool
-	}{
-		{
-			name: "directory",
-			path: tmpDir,
-			want: true,
-		},
-		{
-			name: "file",
-			path: tmpFile.Name(),
-			want: false,
-		},
-		{
-			name: "non-existing",
-			path: "/nonexistent/path",
-			want: false,
-		},
+	if !IsDir(tmpDir) {
+		t.Error("IsDir() = false for directory")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsDir(tt.path); got != tt.want {
-				t.Errorf("IsDir() = %v, want %v", got, tt.want)
-			}
-		})
+	if IsDir(tmpFile.Name()) {
+		t.Error("IsDir() = true for file")
+	}
+	if IsDir("/nonexistent/path") {
+		t.Error("IsDir() = true for non-existing path")
 	}
 }
 
@@ -96,13 +55,15 @@ func TestEnsureDir(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	newDir := filepath.Join(tmpDir, "new", "nested", "dir")
-
 	if err := EnsureDir(newDir); err != nil {
 		t.Errorf("EnsureDir() error = %v", err)
 	}
-
 	if !IsDir(newDir) {
 		t.Error("EnsureDir() did not create directory")
+	}
+
+	if err := EnsureDir(tmpDir); err != nil {
+		t.Errorf("EnsureDir() on existing directory error = %v", err)
 	}
 }
 
@@ -117,100 +78,64 @@ func TestAtomicWrite(t *testing.T) {
 	testData := []byte("Hello, World!")
 
 	if err := AtomicWrite(testPath, testData); err != nil {
-		t.Errorf("AtomicWrite() error = %v", err)
+		t.Errorf("error = %v", err)
 	}
-
-	// Verify the file exists and has correct content
 	data, err := os.ReadFile(testPath)
 	if err != nil {
-		t.Errorf("Failed to read written file: %v", err)
+		t.Fatalf("Failed to read: %v", err)
+	}
+	if string(data) != string(testData) {
+		t.Errorf("wrote %q, want %q", data, testData)
 	}
 
-	if string(data) != string(testData) {
-		t.Errorf("AtomicWrite() wrote %q, want %q", string(data), string(testData))
+	nestedPath := filepath.Join(tmpDir, "nested", "dirs", "file.txt")
+	if err := AtomicWrite(nestedPath, []byte("content")); err != nil {
+		t.Errorf("AtomicWrite nested error = %v", err)
+	}
+	if !FileExists(nestedPath) {
+		t.Error("AtomicWrite() did not create file in nested directory")
 	}
 }
 
 func TestGenerateOutputFilename(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		suffix string
-		want   string
+		input, suffix, want string
 	}{
-		{
-			name:   "simple pdf",
-			input:  "document.pdf",
-			suffix: "_output",
-			want:   "document_output.pdf",
-		},
-		{
-			name:   "with path",
-			input:  "/path/to/document.pdf",
-			suffix: "_compressed",
-			want:   "/path/to/document_compressed.pdf",
-		},
-		{
-			name:   "uppercase extension",
-			input:  "document.PDF",
-			suffix: "_rotated",
-			want:   "document_rotated.PDF",
-		},
+		{"document.pdf", "_output", "document_output.pdf"},
+		{"/path/to/document.pdf", "_compressed", "/path/to/document_compressed.pdf"},
+		{"document.PDF", "_rotated", "document_rotated.PDF"},
 	}
-
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := GenerateOutputFilename(tt.input, tt.suffix); got != tt.want {
-				t.Errorf("GenerateOutputFilename() = %v, want %v", got, tt.want)
-			}
-		})
+		if got := GenerateOutputFilename(tt.input, tt.suffix); got != tt.want {
+			t.Errorf("GenerateOutputFilename(%q, %q) = %q, want %q", tt.input, tt.suffix, got, tt.want)
+		}
 	}
 }
 
 func TestFormatFileSize(t *testing.T) {
 	tests := []struct {
-		name  string
 		bytes int64
 		want  string
 	}{
-		{
-			name:  "bytes",
-			bytes: 500,
-			want:  "500 B",
-		},
-		{
-			name:  "kilobytes",
-			bytes: 1024,
-			want:  "1.00 KB",
-		},
-		{
-			name:  "megabytes",
-			bytes: 1024 * 1024,
-			want:  "1.00 MB",
-		},
-		{
-			name:  "gigabytes",
-			bytes: 1024 * 1024 * 1024,
-			want:  "1.00 GB",
-		},
-		{
-			name:  "mixed",
-			bytes: 1536 * 1024,
-			want:  "1.50 MB",
-		},
+		{0, "0 B"},
+		{1, "1 B"},
+		{500, "500 B"},
+		{1023, "1023 B"},
+		{1024, "1.00 KB"},
+		{1024 * 1024, "1.00 MB"},
+		{1536 * 1024, "1.50 MB"},
+		{1024 * 1024 * 1024, "1.00 GB"},
+		{1024*1024 - 1, "1024.00 KB"},
+		{1024*1024*1024 - 1, "1024.00 MB"},
 	}
-
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := FormatFileSize(tt.bytes); got != tt.want {
-				t.Errorf("FormatFileSize() = %v, want %v", got, tt.want)
-			}
-		})
+		if got := FormatFileSize(tt.bytes); got != tt.want {
+			t.Errorf("FormatFileSize(%d) = %q, want %q", tt.bytes, got, tt.want)
+		}
 	}
 }
 
 func TestValidatePDFFile(t *testing.T) {
-	// Create a temp PDF file
 	tmpDir, err := os.MkdirTemp("", "test-*")
 	if err != nil {
 		t.Fatal(err)
@@ -218,43 +143,176 @@ func TestValidatePDFFile(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	pdfFile := filepath.Join(tmpDir, "test.pdf")
-	if err := os.WriteFile(pdfFile, []byte("dummy"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
+	upperPDF := filepath.Join(tmpDir, "test.PDF")
 	txtFile := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(txtFile, []byte("dummy"), 0644); err != nil {
-		t.Fatal(err)
+	for _, f := range []string{pdfFile, upperPDF, txtFile} {
+		if err := os.WriteFile(f, []byte("dummy"), 0644); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	tests := []struct {
-		name    string
 		path    string
 		wantErr bool
 	}{
-		{
-			name:    "valid pdf file",
-			path:    pdfFile,
-			wantErr: false,
-		},
-		{
-			name:    "non-pdf file",
-			path:    txtFile,
-			wantErr: true,
-		},
-		{
-			name:    "non-existing file",
-			path:    "/nonexistent/file.pdf",
-			wantErr: true,
-		},
+		{pdfFile, false},
+		{upperPDF, false},
+		{txtFile, true},
+		{"/nonexistent/file.pdf", true},
+	}
+	for _, tt := range tests {
+		t.Run(filepath.Base(tt.path), func(t *testing.T) {
+			if err := ValidatePDFFile(tt.path); (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePDFFile(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCopyFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	srcFile := filepath.Join(tmpDir, "source.txt")
+	srcContent := []byte("Hello, World!")
+	if err := os.WriteFile(srcFile, srcContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("success", func(t *testing.T) {
+		dstFile := filepath.Join(tmpDir, "dest.txt")
+		if err := CopyFile(srcFile, dstFile); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+		if content, _ := os.ReadFile(dstFile); string(content) != string(srcContent) {
+			t.Errorf("content = %q, want %q", content, srcContent)
+		}
+	})
+
+	t.Run("nested destination", func(t *testing.T) {
+		dstFile := filepath.Join(tmpDir, "nested", "dir", "dest.txt")
+		if err := CopyFile(srcFile, dstFile); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+		if !FileExists(dstFile) {
+			t.Error("did not create destination file")
+		}
+	})
+
+	t.Run("non-existent source", func(t *testing.T) {
+		if err := CopyFile("/nonexistent/file.txt", filepath.Join(tmpDir, "out.txt")); err == nil {
+			t.Error("should return error for non-existent source")
+		}
+	})
+
+	t.Run("overwrite", func(t *testing.T) {
+		dstFile := filepath.Join(tmpDir, "overwrite.txt")
+		os.WriteFile(dstFile, []byte("old"), 0644)
+		if err := CopyFile(srcFile, dstFile); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+		if content, _ := os.ReadFile(dstFile); string(content) != string(srcContent) {
+			t.Error("did not overwrite content")
+		}
+	})
+
+	t.Run("large file", func(t *testing.T) {
+		largeFile := filepath.Join(tmpDir, "large.bin")
+		largeContent := make([]byte, 1024*1024)
+		os.WriteFile(largeFile, largeContent, 0644)
+
+		dstFile := filepath.Join(tmpDir, "large_copy.bin")
+		if err := CopyFile(largeFile, dstFile); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+		srcInfo, _ := os.Stat(largeFile)
+		dstInfo, _ := os.Stat(dstFile)
+		if srcInfo.Size() != dstInfo.Size() {
+			t.Errorf("size mismatch: src=%d, dst=%d", srcInfo.Size(), dstInfo.Size())
+		}
+	})
+}
+
+func TestValidatePDFFiles(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	pdfs := make([]string, 10)
+	for i := 0; i < 10; i++ {
+		pdfs[i] = filepath.Join(tmpDir, "file"+string(rune('a'+i))+".pdf")
+		os.WriteFile(pdfs[i], []byte("dummy"), 0644)
+	}
+	txtFile := filepath.Join(tmpDir, "file.txt")
+	os.WriteFile(txtFile, []byte("dummy"), 0644)
+
+	tests := []struct {
+		name    string
+		paths   []string
+		wantErr bool
+	}{
+		{"empty", []string{}, false},
+		{"single valid", pdfs[:1], false},
+		{"two valid", pdfs[:2], false},
+		{"five valid", pdfs[:5], false},
+		{"ten valid", pdfs, false},
+		{"invalid", []string{txtFile}, true},
+		{"mixed", []string{pdfs[0], txtFile}, true},
+		{"non-existent", []string{"/nonexistent/file.pdf"}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidatePDFFile(tt.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePDFFile() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ValidatePDFFiles(tt.paths); (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestGetFileSize(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.txt")
+	os.WriteFile(testFile, []byte("1234567890"), 0644)
+
+	if size, err := GetFileSize(testFile); err != nil || size != 10 {
+		t.Errorf("GetFileSize() = %d, %v; want 10, nil", size, err)
+	}
+	if _, err := GetFileSize("/nonexistent/file.txt"); err == nil {
+		t.Error("should error for non-existent file")
+	}
+	if _, err := GetFileSize(tmpDir); err != nil {
+		t.Errorf("GetFileSize() on directory error = %v", err)
+	}
+}
+
+func TestEnsureParentDir(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	paths := []string{
+		filepath.Join(tmpDir, "a", "b", "c", "file.txt"),
+		filepath.Join(tmpDir, "single", "file.txt"),
+		"file.txt",
+		"/file.txt",
+		filepath.Join(tmpDir, "file.txt"),
+	}
+	for _, path := range paths {
+		if err := EnsureParentDir(path); err != nil {
+			t.Errorf("EnsureParentDir(%q) error = %v", path, err)
+		}
 	}
 }

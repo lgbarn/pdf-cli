@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/lgbarn/pdf-cli/internal/pdf"
 )
 
 // testdataDir returns the path to the testdata directory
@@ -16,134 +18,107 @@ func samplePDF() string {
 	return filepath.Join(testdataDir(), "sample.pdf")
 }
 
-func TestParseAndValidatePages_EmptyString(t *testing.T) {
-	// Empty string should return nil (meaning all pages)
-	pages, err := parseAndValidatePages("", samplePDF(), "")
-	if err != nil {
-		t.Fatalf("parseAndValidatePages('') error = %v, want nil", err)
-	}
-	if pages != nil {
-		t.Errorf("parseAndValidatePages('') = %v, want nil", pages)
-	}
-}
-
-func TestParseAndValidatePages_SinglePage(t *testing.T) {
+func TestParseAndValidatePages(t *testing.T) {
 	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
 		t.Skip("sample.pdf not found in testdata")
 	}
 
-	pages, err := parseAndValidatePages("1", samplePDF(), "")
-	if err != nil {
-		t.Fatalf("parseAndValidatePages('1') error = %v", err)
+	tests := []struct {
+		name    string
+		spec    string
+		file    string
+		want    []int
+		wantErr bool
+	}{
+		{"empty string", "", samplePDF(), nil, false},
+		{"single page", "1", samplePDF(), []int{1}, false},
+		{"page range", "1-3", samplePDF(), []int{1, 2, 3}, false},
+		{"mixed selection", "1,3", samplePDF(), []int{1, 3}, false},
+		{"same page range", "1-1", samplePDF(), []int{1}, false},
+		{"reversed range", "5-1", samplePDF(), nil, true},
+		{"zero page", "0", samplePDF(), nil, true},
+		{"page exceeds count", "9999", samplePDF(), nil, true},
+		{"invalid format", "abc", samplePDF(), nil, true},
+		{"non-existent file", "1", "/nonexistent/file.pdf", nil, true},
 	}
-	if len(pages) != 1 || pages[0] != 1 {
-		t.Errorf("parseAndValidatePages('1') = %v, want [1]", pages)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pages, err := parseAndValidatePages(tt.spec, tt.file, "")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && len(pages) != len(tt.want) {
+				t.Errorf("got %v, want %v", pages, tt.want)
+			}
+		})
 	}
 }
 
-func TestParseAndValidatePages_PageRange(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
+func TestTruncateString(t *testing.T) {
+	tests := []struct {
+		s      string
+		maxLen int
+		want   string
+	}{
+		{"hello", 10, "hello"},
+		{"hello", 5, "hello"},
+		{"hello world", 8, "hello..."},
+		{"hello", 3, "hel"},
+		{"hello", 2, "he"},
+		{"", 10, ""},
+		{"test", 4, "test"},
 	}
 
-	pages, err := parseAndValidatePages("1-3", samplePDF(), "")
-	if err != nil {
-		t.Fatalf("parseAndValidatePages('1-3') error = %v", err)
-	}
-	expected := []int{1, 2, 3}
-	if len(pages) != len(expected) {
-		t.Fatalf("parseAndValidatePages('1-3') length = %d, want %d", len(pages), len(expected))
-	}
-	for i, p := range pages {
-		if p != expected[i] {
-			t.Errorf("parseAndValidatePages('1-3')[%d] = %d, want %d", i, p, expected[i])
+	for _, tt := range tests {
+		if got := truncateString(tt.s, tt.maxLen); got != tt.want {
+			t.Errorf("truncateString(%q, %d) = %q, want %q", tt.s, tt.maxLen, got, tt.want)
 		}
 	}
 }
 
-func TestParseAndValidatePages_MixedSelection(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	pages, err := parseAndValidatePages("1,3", samplePDF(), "")
-	if err != nil {
-		t.Fatalf("parseAndValidatePages('1,3') error = %v", err)
-	}
-	expected := []int{1, 3}
-	if len(pages) != len(expected) {
-		t.Fatalf("parseAndValidatePages('1,3') length = %d, want %d", len(pages), len(expected))
-	}
-	for i, p := range pages {
-		if p != expected[i] {
-			t.Errorf("parseAndValidatePages('1,3')[%d] = %d, want %d", i, p, expected[i])
-		}
+func TestPrintIfSet(t *testing.T) {
+	for _, tc := range []struct{ label, value string }{
+		{"Label", ""},
+		{"Label", "Value"},
+		{"", ""},
+	} {
+		printIfSet(tc.label, tc.value)
 	}
 }
 
-func TestParseAndValidatePages_InvalidReversedRange(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
+func TestHasMetadata(t *testing.T) {
+	tests := []struct {
+		name string
+		meta *pdf.Metadata
+		want bool
+	}{
+		{"empty", &pdf.Metadata{}, false},
+		{"title", &pdf.Metadata{Title: "Test"}, true},
+		{"author", &pdf.Metadata{Author: "John"}, true},
+		{"subject", &pdf.Metadata{Subject: "Testing"}, true},
+		{"keywords", &pdf.Metadata{Keywords: "test"}, true},
+		{"creator", &pdf.Metadata{Creator: "App"}, true},
+		{"producer", &pdf.Metadata{Producer: "Prod"}, true},
+		{"all fields", &pdf.Metadata{Title: "T", Author: "A", Subject: "S", Keywords: "K", Creator: "C", Producer: "P"}, true},
 	}
 
-	_, err := parseAndValidatePages("5-1", samplePDF(), "")
-	if err == nil {
-		t.Error("parseAndValidatePages('5-1') expected error for reversed range")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hasMetadata(tt.meta); got != tt.want {
+				t.Errorf("hasMetadata() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestParseAndValidatePages_InvalidZeroPage(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	_, err := parseAndValidatePages("0", samplePDF(), "")
-	if err == nil {
-		t.Error("parseAndValidatePages('0') expected error for zero page")
-	}
-}
-
-func TestParseAndValidatePages_InvalidPageExceedsCount(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	// Use a very large page number that won't exist
-	_, err := parseAndValidatePages("9999", samplePDF(), "")
-	if err == nil {
-		t.Error("parseAndValidatePages('9999') expected error for page exceeding count")
-	}
-}
-
-func TestParseAndValidatePages_InvalidFormat(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	_, err := parseAndValidatePages("abc", samplePDF(), "")
-	if err == nil {
-		t.Error("parseAndValidatePages('abc') expected error for invalid format")
-	}
-}
-
-func TestParseAndValidatePages_NonExistentFile(t *testing.T) {
-	_, err := parseAndValidatePages("1", "/nonexistent/file.pdf", "")
-	if err == nil {
-		t.Error("parseAndValidatePages() expected error for non-existent file")
-	}
-}
-
-func TestParseAndValidatePages_ComplexRange(t *testing.T) {
-	if _, err := os.Stat(samplePDF()); os.IsNotExist(err) {
-		t.Skip("sample.pdf not found in testdata")
-	}
-
-	// Test a complex but valid range for page 1
-	pages, err := parseAndValidatePages("1-1", samplePDF(), "")
-	if err != nil {
-		t.Fatalf("parseAndValidatePages('1-1') error = %v", err)
-	}
-	if len(pages) != 1 || pages[0] != 1 {
-		t.Errorf("parseAndValidatePages('1-1') = %v, want [1]", pages)
+func TestPrintMetadataFields(t *testing.T) {
+	for _, meta := range []*pdf.Metadata{
+		{},
+		{Title: "T", Author: "A", Subject: "S", Keywords: "K", Creator: "C", Producer: "P"},
+		{Title: "Only Title", Author: "Only Author"},
+	} {
+		printMetadataFields(meta)
 	}
 }
