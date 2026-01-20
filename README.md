@@ -28,6 +28,7 @@ A fast, lightweight command-line tool for everyday PDF operations. No GUI needed
 - **Secure**: Supports encrypted PDFs with password protection
 - **Cross-platform**: Works on Linux, macOS, and Windows
 - **Scriptable**: Perfect for automation and batch processing
+- **OCR Support**: Extract text from scanned PDFs using built-in WASM-based OCR
 
 ## Quick Start
 
@@ -44,8 +45,14 @@ pdf extract document.pdf -p 1-5 -o pages.pdf
 # Compress a large PDF
 pdf compress large.pdf -o smaller.pdf
 
+# Batch compress multiple PDFs
+pdf compress *.pdf
+
 # Get PDF info
 pdf info document.pdf
+
+# Extract text from a scanned PDF using OCR
+pdf text scanned.pdf --ocr
 ```
 
 ## Installation
@@ -79,20 +86,20 @@ make build
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `info` | Display PDF information (pages, metadata, encryption status) |
-| `merge` | Combine multiple PDFs into a single file |
-| `split` | Split a PDF into individual pages or chunks |
-| `extract` | Extract specific pages into a new PDF |
-| `rotate` | Rotate pages by 90, 180, or 270 degrees |
-| `compress` | Optimize and reduce PDF file size |
-| `encrypt` | Add password protection to a PDF |
-| `decrypt` | Remove password protection from a PDF |
-| `text` | Extract text content from a PDF |
-| `images` | Extract embedded images from a PDF |
-| `meta` | View or modify PDF metadata (title, author, etc.) |
-| `watermark` | Add text or image watermarks |
+| Command | Description | Batch Support |
+|---------|-------------|:-------------:|
+| `info` | Display PDF information (pages, metadata, encryption status) | - |
+| `merge` | Combine multiple PDFs into a single file | - |
+| `split` | Split a PDF into individual pages or chunks | - |
+| `extract` | Extract specific pages into a new PDF | - |
+| `rotate` | Rotate pages by 90, 180, or 270 degrees | ✓ |
+| `compress` | Optimize and reduce PDF file size | ✓ |
+| `encrypt` | Add password protection to a PDF | ✓ |
+| `decrypt` | Remove password protection from a PDF | ✓ |
+| `text` | Extract text content (supports OCR for scanned PDFs) | - |
+| `images` | Extract embedded images from a PDF | - |
+| `meta` | View or modify PDF metadata (title, author, etc.) | - |
+| `watermark` | Add text or image watermarks | ✓ |
 
 ## Usage Examples
 
@@ -156,7 +163,14 @@ pdf rotate document.pdf -a 180 -p 1-5 -o rotated.pdf
 ### Compress a PDF
 
 ```bash
+# Compress a single file
 pdf compress large.pdf -o smaller.pdf
+
+# Batch compress multiple PDFs (output: *_compressed.pdf)
+pdf compress *.pdf
+
+# With progress bar for large files
+pdf compress large.pdf -o smaller.pdf --progress
 ```
 
 ### Encrypt a PDF
@@ -167,12 +181,19 @@ pdf encrypt document.pdf --password mysecret -o secure.pdf
 
 # Set separate user and owner passwords
 pdf encrypt document.pdf --password userpass --owner-password ownerpass -o secure.pdf
+
+# Batch encrypt multiple PDFs (output: *_encrypted.pdf)
+pdf encrypt *.pdf --password mysecret
 ```
 
 ### Decrypt a PDF
 
 ```bash
+# Decrypt a single file
 pdf decrypt secure.pdf --password mysecret -o unlocked.pdf
+
+# Batch decrypt multiple PDFs (output: *_decrypted.pdf)
+pdf decrypt *.pdf --password mysecret
 ```
 
 ### Extract Text
@@ -186,6 +207,25 @@ pdf text document.pdf -o content.txt
 
 # Extract text from specific pages
 pdf text document.pdf -p 1-5 -o chapter1.txt
+
+# With progress bar for large documents
+pdf text large-document.pdf --progress
+```
+
+### Extract Text with OCR (for scanned PDFs)
+
+```bash
+# Use OCR for scanned/image-based PDFs
+pdf text scanned.pdf --ocr
+
+# OCR with specific language (downloads tessdata on first use)
+pdf text scanned.pdf --ocr --ocr-lang eng
+
+# Multi-language OCR
+pdf text scanned.pdf --ocr --ocr-lang eng+fra
+
+# OCR specific pages and save to file
+pdf text scanned.pdf --ocr -p 1-10 -o content.txt
 ```
 
 ### Extract Images
@@ -226,6 +266,9 @@ pdf watermark document.pdf -i logo.png -o branded.pdf
 
 # Watermark specific pages only
 pdf watermark document.pdf -t "DRAFT" -p 1-5 -o draft.pdf
+
+# Batch watermark multiple PDFs (output: *_watermarked.pdf)
+pdf watermark *.pdf -t "CONFIDENTIAL"
 ```
 
 ## Global Options
@@ -236,6 +279,7 @@ These options work with all commands:
 |--------|-------|-------------|
 | `--verbose` | `-v` | Show detailed output during operations |
 | `--force` | `-f` | Overwrite existing files without prompting |
+| `--progress` | | Show progress bar for long operations |
 | `--password` | `-P` | Password for encrypted input PDFs |
 | `--help` | `-h` | Show help for any command |
 | `--version` | | Display version information |
@@ -320,6 +364,7 @@ pdf-cli/
 ├── internal/
 │   ├── cli/           # CLI framework and flags
 │   ├── commands/      # Individual command implementations
+│   ├── ocr/           # OCR text extraction (WASM-based)
 │   ├── pdf/           # PDF processing wrapper
 │   └── util/          # Utilities (errors, files, page parsing)
 ├── testdata/          # Test PDF files
@@ -359,14 +404,22 @@ pdf info document.pdf --password yourpassword
 
 ### "no text extracted" from a PDF
 
-Some PDFs contain scanned images instead of actual text. The `text` command only extracts embedded text, not OCR. For image-based PDFs, you'll need an OCR tool.
+Some PDFs contain scanned images instead of actual text. Use the `--ocr` flag to extract text using OCR:
+
+```bash
+pdf text scanned.pdf --ocr
+```
+
+The first time you use OCR, pdf-cli will download the required language data (~15MB for English).
 
 ### Large PDF processing is slow
 
-For very large PDFs (hundreds of pages), operations may take time. Use `--verbose` to see progress:
+For very large PDFs (hundreds of pages), operations may take time. Use `--progress` to see a progress bar:
 
 ```bash
-pdf compress large.pdf -o smaller.pdf --verbose
+pdf text large.pdf --progress
+pdf split large.pdf -o output/ --progress
+pdf merge -o combined.pdf *.pdf --progress
 ```
 
 Note: pdf-cli automatically uses parallel processing for:
@@ -399,6 +452,8 @@ This project uses the following open-source libraries:
 
 - [pdfcpu](https://github.com/pdfcpu/pdfcpu) - PDF processing library
 - [ledongthuc/pdf](https://github.com/ledongthuc/pdf) - PDF text extraction
+- [gogosseract](https://github.com/danlock/gogosseract) - WASM-based OCR (no external dependencies)
+- [progressbar](https://github.com/schollz/progressbar) - Progress bar display
 - [cobra](https://github.com/spf13/cobra) - CLI framework
 
 ## License
