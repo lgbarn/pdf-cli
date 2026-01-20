@@ -364,25 +364,19 @@ func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool)
 	defer finishProgressBar(bar)
 
 	ctx := context.Background()
-	var result strings.Builder
+	texts := make([]string, 0, len(imageFiles))
 
 	for _, imgPath := range imageFiles {
 		text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
-		if err != nil {
-			continue // Skip failed images
-		}
-		if text != "" {
-			if result.Len() > 0 {
-				result.WriteString("\n")
-			}
-			result.WriteString(text)
+		if err == nil {
+			texts = append(texts, text)
 		}
 		if bar != nil {
 			_ = bar.Add(1)
 		}
 	}
 
-	return result.String(), nil
+	return joinNonEmpty(texts, "\n"), nil
 }
 
 func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
@@ -396,10 +390,7 @@ func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
-	workers := runtime.NumCPU()
-	if workers > 8 {
-		workers = 8
-	}
+	workers := min(runtime.NumCPU(), 8)
 	sem := make(chan struct{}, workers)
 
 	var wg sync.WaitGroup
@@ -420,8 +411,8 @@ func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (
 		close(results)
 	}()
 
-	// Collect results
-	texts := make(map[int]string)
+	// Collect results in order using a slice
+	texts := make([]string, len(imageFiles))
 	for res := range results {
 		texts[res.index] = res.text
 		if bar != nil {
@@ -429,15 +420,20 @@ func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (
 		}
 	}
 
-	// Build result in order
+	return joinNonEmpty(texts, "\n"), nil
+}
+
+// joinNonEmpty joins non-empty strings with the given separator.
+func joinNonEmpty(strs []string, sep string) string {
 	var result strings.Builder
-	for i := range imageFiles {
-		if text := texts[i]; text != "" {
-			if result.Len() > 0 {
-				result.WriteString("\n")
-			}
-			result.WriteString(text)
+	for _, s := range strs {
+		if s == "" {
+			continue
 		}
+		if result.Len() > 0 {
+			result.WriteString(sep)
+		}
+		result.WriteString(s)
 	}
-	return result.String(), nil
+	return result.String()
 }

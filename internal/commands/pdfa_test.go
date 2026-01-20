@@ -69,41 +69,24 @@ func TestPdfaConvertSubcommand(t *testing.T) {
 }
 
 func TestPdfaValidateFlags(t *testing.T) {
-	tests := []struct {
-		name     string
-		flagName string
-		wantErr  bool
-	}{
-		{name: "level flag", flagName: "level", wantErr: false},
-		{name: "password flag", flagName: "password", wantErr: false},
-	}
+	requiredFlags := []string{"level", "password"}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flag := pdfaValidateCmd.Flags().Lookup(tt.flagName)
-			if flag == nil && !tt.wantErr {
-				t.Errorf("pdfa validate should have --%s flag", tt.flagName)
+	for _, flagName := range requiredFlags {
+		t.Run(flagName+" flag", func(t *testing.T) {
+			if flag := pdfaValidateCmd.Flags().Lookup(flagName); flag == nil {
+				t.Errorf("pdfa validate should have --%s flag", flagName)
 			}
 		})
 	}
 }
 
 func TestPdfaConvertFlags(t *testing.T) {
-	tests := []struct {
-		name     string
-		flagName string
-		wantErr  bool
-	}{
-		{name: "level flag", flagName: "level", wantErr: false},
-		{name: "output flag", flagName: "output", wantErr: false},
-		{name: "password flag", flagName: "password", wantErr: false},
-	}
+	requiredFlags := []string{"level", "output", "password"}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flag := pdfaConvertCmd.Flags().Lookup(tt.flagName)
-			if flag == nil && !tt.wantErr {
-				t.Errorf("pdfa convert should have --%s flag", tt.flagName)
+	for _, flagName := range requiredFlags {
+		t.Run(flagName+" flag", func(t *testing.T) {
+			if flag := pdfaConvertCmd.Flags().Lookup(flagName); flag == nil {
+				t.Errorf("pdfa convert should have --%s flag", flagName)
 			}
 		})
 	}
