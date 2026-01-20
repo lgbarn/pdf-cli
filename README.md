@@ -337,6 +337,21 @@ pdf pdfa convert document.pdf --level 2b -o archive.pdf
 
 **Note:** Full PDF/A validation and conversion may require specialized tools. This tool provides basic validation and optimization that can help with PDF/A compliance. For comprehensive validation, consider using [veraPDF](https://verapdf.org/).
 
+> **⚠️ PDF/A Limitations**
+>
+> This tool provides **basic** PDF/A validation and optimization, not full ISO compliance:
+>
+> | Feature | Status |
+> |---------|--------|
+> | Structure validation | ✓ Supported |
+> | Encryption detection | ✓ Supported |
+> | Font embedding check | ✗ Limited |
+> | Color profile validation | ✗ Not supported |
+> | Full ISO 19005 compliance | ✗ Not supported |
+>
+> For comprehensive PDF/A validation, use [veraPDF](https://verapdf.org/).
+> For full PDF/A conversion, consider Ghostscript or Adobe Acrobat.
+
 ## Global Options
 
 These options work with all commands:

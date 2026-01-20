@@ -152,11 +152,11 @@ func formatRange(start, end int) string {
 // and page duplication (1,2,3,1 repeats page 1 at the end).
 func ParseReorderSequence(spec string, totalPages int) ([]int, error) {
 	if spec == "" {
-		return nil, fmt.Errorf("empty sequence specification")
+		return nil, fmt.Errorf("empty page sequence: specify pages like '1,3,5', '1-10', or 'end'")
 	}
 
 	if totalPages < 1 {
-		return nil, fmt.Errorf("invalid total pages: %d", totalPages)
+		return nil, fmt.Errorf("invalid total pages: %d (must be >= 1)", totalPages)
 	}
 
 	var result []int
@@ -184,12 +184,13 @@ func ParseReorderSequence(spec string, totalPages int) ([]int, error) {
 
 // parseReorderPart parses a single part of a reorder sequence (e.g., "1", "1-5", "end-1").
 func parseReorderPart(part string, totalPages int) ([]int, error) {
+	originalPart := part
 	part = strings.ReplaceAll(part, "end", strconv.Itoa(totalPages))
 
 	if !strings.Contains(part, "-") {
 		page, err := strconv.Atoi(part)
 		if err != nil {
-			return nil, fmt.Errorf("invalid page number: %s", part)
+			return nil, fmt.Errorf("invalid page '%s': use a number (1-%d) or 'end'", originalPart, totalPages)
 		}
 		if err := validatePageInRange(page, totalPages); err != nil {
 			return nil, err
@@ -198,18 +199,20 @@ func parseReorderPart(part string, totalPages int) ([]int, error) {
 	}
 
 	bounds := strings.SplitN(part, "-", 2)
-	if len(bounds) != 2 {
-		return nil, fmt.Errorf("invalid range: %s", part)
+	if len(bounds) != 2 || bounds[0] == "" || bounds[1] == "" {
+		return nil, fmt.Errorf("invalid range '%s': use format 'start-end' (e.g., '1-5', 'end-1')", originalPart)
 	}
 
 	start, err := strconv.Atoi(strings.TrimSpace(bounds[0]))
 	if err != nil {
-		return nil, fmt.Errorf("invalid page number in range %s: %v", part, err)
+		return nil, fmt.Errorf("in range '%s': '%s' is not a valid page number (use 1-%d or 'end')",
+			originalPart, bounds[0], totalPages)
 	}
 
 	end, err := strconv.Atoi(strings.TrimSpace(bounds[1]))
 	if err != nil {
-		return nil, fmt.Errorf("invalid page number in range %s: %v", part, err)
+		return nil, fmt.Errorf("in range '%s': '%s' is not a valid page number (use 1-%d or 'end')",
+			originalPart, bounds[1], totalPages)
 	}
 
 	if err := validatePageInRange(start, totalPages); err != nil {
@@ -225,7 +228,8 @@ func parseReorderPart(part string, totalPages int) ([]int, error) {
 // validatePageInRange checks if a page number is within valid bounds.
 func validatePageInRange(page, totalPages int) error {
 	if page < 1 || page > totalPages {
-		return fmt.Errorf("page %d is out of range (document has %d pages)", page, totalPages)
+		return fmt.Errorf("page %d out of range: document has %d pages (valid: 1-%d, or 'end')",
+			page, totalPages, totalPages)
 	}
 	return nil
 }

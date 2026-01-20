@@ -2,6 +2,7 @@ package util
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -234,6 +235,69 @@ func TestFormatPageRanges(t *testing.T) {
 			got := FormatPageRanges(tt.pages)
 			if got != tt.want {
 				t.Errorf("FormatPageRanges() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseReorderSequence(t *testing.T) {
+	tests := []struct {
+		name        string
+		spec        string
+		totalPages  int
+		want        []int
+		wantErr     bool
+		errContains string
+	}{
+		// Basic cases
+		{name: "single page", spec: "1", totalPages: 5, want: []int{1}},
+		{name: "multiple pages", spec: "1,3,5", totalPages: 5, want: []int{1, 3, 5}},
+		{name: "simple range", spec: "1-3", totalPages: 5, want: []int{1, 2, 3}},
+		{name: "reverse range", spec: "3-1", totalPages: 5, want: []int{3, 2, 1}},
+
+		// end keyword
+		{name: "end keyword", spec: "end", totalPages: 5, want: []int{5}},
+		{name: "range to end", spec: "3-end", totalPages: 5, want: []int{3, 4, 5}},
+		{name: "end to start", spec: "end-1", totalPages: 5, want: []int{5, 4, 3, 2, 1}},
+
+		// Reorder scenarios
+		{name: "move page 3 to front", spec: "3,1,2,4,5", totalPages: 5, want: []int{3, 1, 2, 4, 5}},
+		{name: "reverse all", spec: "5-1", totalPages: 5, want: []int{5, 4, 3, 2, 1}},
+		{name: "duplicate page", spec: "1,2,1", totalPages: 5, want: []int{1, 2, 1}},
+
+		// Edge cases
+		{name: "single page document", spec: "1", totalPages: 1, want: []int{1}},
+		{name: "whitespace handling", spec: " 1 , 2 , 3 ", totalPages: 5, want: []int{1, 2, 3}},
+		{name: "last page only", spec: "end", totalPages: 1, want: []int{1}},
+
+		// Error cases
+		{name: "empty spec", spec: "", totalPages: 5, wantErr: true, errContains: "empty"},
+		{name: "invalid page zero", spec: "0", totalPages: 5, wantErr: true, errContains: "out of range"},
+		{name: "page exceeds total", spec: "10", totalPages: 5, wantErr: true, errContains: "out of range"},
+		{name: "invalid character", spec: "abc", totalPages: 5, wantErr: true, errContains: "invalid"},
+		{name: "negative page in range", spec: "-1-5", totalPages: 5, wantErr: true, errContains: "invalid"},
+		{name: "invalid total pages zero", spec: "1", totalPages: 0, wantErr: true, errContains: "invalid total"},
+		{name: "invalid total pages negative", spec: "1", totalPages: -1, wantErr: true, errContains: "invalid total"},
+		{name: "only whitespace", spec: "   ", totalPages: 5, wantErr: true, errContains: "no pages"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseReorderSequence(tt.spec, tt.totalPages)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error containing %q, got nil", tt.errContains)
+				} else if !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("error = %q, want containing %q", err.Error(), tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
 	}

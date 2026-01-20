@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -337,7 +339,24 @@ func isImageFile(path string) bool {
 	}
 }
 
+// imageResult holds the result of processing a single image.
+type imageResult struct {
+	index int
+	text  string
+}
+
+// parallelThreshold is the minimum number of images to trigger parallel processing.
+const parallelThreshold = 5
+
 func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, error) {
+	// Use sequential processing for small batches or WASM backend (not thread-safe)
+	if len(imageFiles) <= parallelThreshold || e.backend.Name() == "wasm" {
+		return e.processImagesSequential(imageFiles, showProgress)
+	}
+	return e.processImagesParallel(imageFiles, showProgress)
+}
+
+func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = newProgressBar("OCR processing", len(imageFiles), 1)
@@ -363,5 +382,62 @@ func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, 
 		}
 	}
 
+	return result.String(), nil
+}
+
+func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
+	var bar *progressbar.ProgressBar
+	if showProgress {
+		bar = newProgressBar("OCR processing", len(imageFiles), 1)
+	}
+	defer finishProgressBar(bar)
+
+	ctx := context.Background()
+	results := make(chan imageResult, len(imageFiles))
+
+	// Limit concurrent workers to avoid resource exhaustion
+	workers := runtime.NumCPU()
+	if workers > 8 {
+		workers = 8
+	}
+	sem := make(chan struct{}, workers)
+
+	var wg sync.WaitGroup
+	for i, imgPath := range imageFiles {
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore
+		go func(idx int, path string) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release semaphore
+			text, _ := e.backend.ProcessImage(ctx, path, e.lang)
+			results <- imageResult{index: idx, text: text}
+		}(i, imgPath)
+	}
+
+	// Close results channel when all workers complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results
+	texts := make(map[int]string)
+	for res := range results {
+		texts[res.index] = res.text
+		if bar != nil {
+			_ = bar.Add(1)
+		}
+	}
+
+	// Build result in order
+	var result strings.Builder
+	for i := range imageFiles {
+		if text := texts[i]; text != "" {
+			if result.Len() > 0 {
+				result.WriteString("\n")
+			}
+			result.WriteString(text)
+		}
+	}
 	return result.String(), nil
 }
