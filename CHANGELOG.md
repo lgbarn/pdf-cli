@@ -5,6 +5,21 @@ All notable changes to pdf-cli are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-01-20
+
+### Added
+- **`combine-images` command**: Create PDFs from multiple images
+  - Supports PNG, JPEG, and TIFF formats
+  - Optional `--page-size` flag (A4, Letter, or auto-fit to image)
+  - Each image becomes one page in the output PDF
+- Unit tests for OCR package helper functions
+  - `parseLanguages`, `primaryLanguage`, `isImageFile`, `joinNonEmpty`
+  - `ParseBackendType`, `BackendType.String()`
+
+### Changed
+- Code simplification using Go 1.21+ `slices.Equal` in tests
+- Improved naming consistency (`isImageFile` function)
+
 ## [1.3.1] - 2025-01-19
 
 ### Added
@@ -90,6 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Addressed all Gosec static analysis findings
 - Secure handling of encrypted PDFs
 
+[1.3.2]: https://github.com/lgbarn/pdf-cli/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/lgbarn/pdf-cli/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/lgbarn/pdf-cli/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/lgbarn/pdf-cli/compare/v1.1.0...v1.2.0
