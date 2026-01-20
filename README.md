@@ -532,6 +532,7 @@ pdf merge -o combined.pdf *.pdf --progress
 Note: pdf-cli automatically uses parallel processing for:
 - File validation when merging more than 3 files
 - Text extraction when processing more than 5 pages
+- OCR processing when using native Tesseract backend with more than 5 images
 
 This significantly improves performance for batch operations.
 
