@@ -159,7 +159,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	defer os.Remove(tmpPath)
 
 	// Copy first file to temp

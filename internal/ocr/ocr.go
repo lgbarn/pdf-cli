@@ -88,7 +88,7 @@ func getDataDir() (string, error) {
 	}
 
 	dataDir := filepath.Join(configDir, "pdf-cli", "tessdata")
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
+	if err := os.MkdirAll(dataDir, 0750); err != nil {
 		return "", err
 	}
 
@@ -155,10 +155,10 @@ func (e *Engine) downloadTessdata(lang string) error {
 	// Copy with progress bar
 	bar := newBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
 	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return err
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	finishProgressBar(bar)
 
 	// Move to final location
@@ -235,7 +235,7 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 	primaryLang := strings.Split(e.lang, "+")[0]
 	primaryLang = strings.Split(primaryLang, ",")[0]
 	tessDataPath := filepath.Join(e.dataDir, primaryLang+".traineddata")
-	tessDataFile, err := os.Open(tessDataPath)
+	tessDataFile, err := os.Open(tessDataPath) // #nosec G304 -- path is within user config dir
 	if err != nil {
 		return "", fmt.Errorf("failed to read tessdata: %w", err)
 	}
@@ -277,7 +277,7 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 
 // processImage performs OCR on a single image file
 func (e *Engine) processImage(ctx context.Context, tess *gogosseract.Tesseract, imgPath string) string {
-	imgFile, err := os.Open(imgPath)
+	imgFile, err := os.Open(imgPath) // #nosec G304 -- path is from temp directory we created
 	if err != nil {
 		return ""
 	}
