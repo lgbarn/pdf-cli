@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -15,24 +17,36 @@ func init() {
 }
 
 var infoCmd = &cobra.Command{
-	Use:   "info <file.pdf>",
+	Use:   "info <file.pdf> [file2.pdf...]",
 	Short: "Display PDF information",
 	Long: `Display detailed information about a PDF file.
 
 Shows file size, page count, PDF version, encryption status,
 and metadata like title, author, subject, and keywords.
 
+When multiple files are provided, displays a summary table.
+
 Examples:
   pdf info document.pdf
-  pdf info encrypted.pdf --password secret`,
-	Args: cobra.ExactArgs(1),
+  pdf info encrypted.pdf --password secret
+  pdf info *.pdf                           # Batch mode: show summary table`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: runInfo,
 }
 
 func runInfo(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
 	password := cli.GetPassword(cmd)
 
+	// Single file: detailed output
+	if len(args) == 1 {
+		return displaySingleInfo(args[0], password)
+	}
+
+	// Multiple files: table output
+	return displayBatchInfo(args, password)
+}
+
+func displaySingleInfo(inputFile, password string) error {
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
@@ -60,9 +74,53 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// printIfSet prints a labeled value only if the value is non-empty
+func displayBatchInfo(files []string, password string) error {
+	// Print header
+	fmt.Printf("%-40s %8s %6s %10s\n", "FILE", "PAGES", "VER", "SIZE")
+	fmt.Println(strings.Repeat("-", 70))
+
+	var hasErrors bool
+	for _, file := range files {
+		if err := util.ValidatePDFFile(file); err != nil {
+			fmt.Printf("%-40s ERROR: %v\n", truncateString(filepath.Base(file), 40), err)
+			hasErrors = true
+			continue
+		}
+
+		info, err := pdf.GetInfo(file, password)
+		if err != nil {
+			fmt.Printf("%-40s ERROR: %v\n", truncateString(filepath.Base(file), 40), err)
+			hasErrors = true
+			continue
+		}
+
+		fmt.Printf("%-40s %8d %6s %10s\n",
+			truncateString(filepath.Base(file), 40),
+			info.Pages,
+			info.Version,
+			util.FormatFileSize(info.FileSize))
+	}
+
+	if hasErrors {
+		fmt.Println()
+		fmt.Println("Some files had errors. Use -v for details.")
+	}
+
+	return nil
+}
+
 func printIfSet(label, value string) {
 	if value != "" {
 		fmt.Printf("%-11s %s\n", label+":", value)
 	}
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
 }

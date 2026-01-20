@@ -98,6 +98,7 @@ func TestAllCommandsRegistered(t *testing.T) {
 		"merge",
 		"split",
 		"extract",
+		"reorder",
 		"rotate",
 		"compress",
 		"encrypt",
@@ -106,6 +107,7 @@ func TestAllCommandsRegistered(t *testing.T) {
 		"images",
 		"meta",
 		"watermark",
+		"pdfa",
 		"completion",
 	}
 
@@ -133,8 +135,8 @@ func TestInfoCommandExists(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("info command is nil")
 	}
-	if cmd.Use != "info <file.pdf>" {
-		t.Errorf("info command Use = %q, want %q", cmd.Use, "info <file.pdf>")
+	if cmd.Use != "info <file.pdf> [file2.pdf...]" {
+		t.Errorf("info command Use = %q, want %q", cmd.Use, "info <file.pdf> [file2.pdf...]")
 	}
 }
 

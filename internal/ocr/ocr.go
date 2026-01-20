@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/danlock/gogosseract"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -18,11 +17,10 @@ import (
 )
 
 const (
-	// TessdataURL is the base URL for downloading tessdata files
+	// TessdataURL is the base URL for downloading tessdata files.
 	TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
 )
 
-// progressBarTheme is the default theme for progress bars
 var progressBarTheme = progressbar.Theme{
 	Saucer:        "=",
 	SaucerHead:    ">",
@@ -31,7 +29,6 @@ var progressBarTheme = progressbar.Theme{
 	BarEnd:        "]",
 }
 
-// newProgressBar creates a progress bar for count-based operations
 func newProgressBar(description string, total, threshold int) *progressbar.ProgressBar {
 	if total <= threshold {
 		return nil
@@ -44,7 +41,6 @@ func newProgressBar(description string, total, threshold int) *progressbar.Progr
 	)
 }
 
-// newBytesProgressBar creates a progress bar for byte-based downloads
 func newBytesProgressBar(description string, total int64) *progressbar.ProgressBar {
 	return progressbar.NewOptions64(total,
 		progressbar.OptionSetDescription(description),
@@ -54,33 +50,102 @@ func newBytesProgressBar(description string, total int64) *progressbar.ProgressB
 	)
 }
 
-// finishProgressBar prints a newline after the progress bar if it exists
 func finishProgressBar(bar *progressbar.ProgressBar) {
 	if bar != nil {
 		fmt.Fprintln(os.Stderr)
 	}
 }
 
-// Engine provides OCR capabilities
-type Engine struct {
-	dataDir string
-	lang    string
+// EngineOptions contains options for creating an OCR engine.
+type EngineOptions struct {
+	Lang        string
+	DataDir     string
+	BackendType BackendType
 }
 
-// NewEngine creates a new OCR engine
+// Engine provides OCR capabilities with configurable backend.
+type Engine struct {
+	dataDir     string
+	lang        string
+	backendType BackendType
+	backend     Backend
+}
+
+// NewEngine creates a new OCR engine with auto backend selection.
 func NewEngine(lang string) (*Engine, error) {
-	dataDir, err := getDataDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get data directory: %w", err)
+	return NewEngineWithOptions(EngineOptions{
+		Lang:        lang,
+		BackendType: BackendAuto,
+	})
+}
+
+// NewEngineWithOptions creates a new OCR engine with specified options.
+func NewEngineWithOptions(opts EngineOptions) (*Engine, error) {
+	dataDir := opts.DataDir
+	if dataDir == "" {
+		var err error
+		dataDir, err = getDataDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data directory: %w", err)
+		}
 	}
 
-	return &Engine{
-		dataDir: dataDir,
-		lang:    lang,
-	}, nil
+	lang := opts.Lang
+	if lang == "" {
+		lang = "eng"
+	}
+
+	engine := &Engine{
+		dataDir:     dataDir,
+		lang:        lang,
+		backendType: opts.BackendType,
+	}
+
+	backend, err := engine.selectBackend()
+	if err != nil {
+		return nil, err
+	}
+	engine.backend = backend
+
+	return engine, nil
 }
 
-// getDataDir returns the directory for storing tessdata files
+func (e *Engine) selectBackend() (Backend, error) {
+	switch e.backendType {
+	case BackendNative:
+		backend, err := NewNativeBackend(e.lang, e.dataDir)
+		if err != nil {
+			return nil, fmt.Errorf("native backend requested but not available: %w", err)
+		}
+		return backend, nil
+
+	case BackendWASM:
+		return NewWASMBackend(e.lang, e.dataDir)
+
+	default: // BackendAuto - try native first, fall back to WASM
+		if backend, err := NewNativeBackend(e.lang, ""); err == nil {
+			return backend, nil
+		}
+		return NewWASMBackend(e.lang, e.dataDir)
+	}
+}
+
+// BackendName returns the name of the currently active backend.
+func (e *Engine) BackendName() string {
+	if e.backend != nil {
+		return e.backend.Name()
+	}
+	return "none"
+}
+
+// Close releases resources held by the engine.
+func (e *Engine) Close() error {
+	if e.backend != nil {
+		return e.backend.Close()
+	}
+	return nil
+}
+
 func getDataDir() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
@@ -95,34 +160,47 @@ func getDataDir() (string, error) {
 	return dataDir, nil
 }
 
-// EnsureTessdata ensures the tessdata file for the language exists
+// EnsureTessdata ensures the tessdata file for the language exists.
 func (e *Engine) EnsureTessdata() error {
-	// Parse language(s) - can be comma or plus separated
-	langs := strings.FieldsFunc(e.lang, func(r rune) bool {
-		return r == '+' || r == ','
-	})
-
-	for _, lang := range langs {
-		lang = strings.TrimSpace(lang)
-		if lang == "" {
-			continue
-		}
-
+	for _, lang := range parseLanguages(e.lang) {
 		dataFile := filepath.Join(e.dataDir, lang+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := e.downloadTessdata(lang); err != nil {
+			if err := downloadTessdata(e.dataDir, lang); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", lang, err)
 			}
 		}
 	}
-
 	return nil
 }
 
-// downloadTessdata downloads the tessdata file for a language
-func (e *Engine) downloadTessdata(lang string) error {
+// parseLanguages splits a language string (e.g., "eng+fra" or "eng,fra") into individual languages.
+func parseLanguages(lang string) []string {
+	parts := strings.FieldsFunc(lang, func(r rune) bool {
+		return r == '+' || r == ','
+	})
+
+	var result []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// primaryLanguage returns the first language from a language string.
+func primaryLanguage(lang string) string {
+	langs := parseLanguages(lang)
+	if len(langs) > 0 {
+		return langs[0]
+	}
+	return lang
+}
+
+func downloadTessdata(dataDir, lang string) error {
 	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
-	dataFile := filepath.Join(e.dataDir, lang+".traineddata")
+	dataFile := filepath.Join(dataDir, lang+".traineddata")
 
 	fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
 
@@ -144,15 +222,13 @@ func (e *Engine) downloadTessdata(lang string) error {
 		return fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
 	}
 
-	// Create temporary file first
-	tmpFile, err := os.CreateTemp(e.dataDir, "tessdata-*.tmp")
+	tmpFile, err := os.CreateTemp(dataDir, "tessdata-*.tmp")
 	if err != nil {
 		return err
 	}
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	// Copy with progress bar
 	bar := newBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
 	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
 		_ = tmpFile.Close()
@@ -161,36 +237,62 @@ func (e *Engine) downloadTessdata(lang string) error {
 	_ = tmpFile.Close()
 	finishProgressBar(bar)
 
-	// Move to final location
 	return os.Rename(tmpPath, dataFile)
 }
 
-// ExtractTextFromPDF extracts text from a PDF using OCR
+// ExtractTextFromPDF extracts text from a PDF using OCR.
 func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string, showProgress bool) (string, error) {
-	// Ensure tessdata is available
-	if err := e.EnsureTessdata(); err != nil {
-		return "", err
+	if e.backend.Name() == "wasm" {
+		if err := e.EnsureTessdata(); err != nil {
+			return "", err
+		}
 	}
 
-	// Create temp directory for extracted images
 	tmpDir, err := os.MkdirTemp("", "pdf-ocr-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Get page count if no specific pages requested
-	if len(pages) == 0 {
-		pageCount, err := pdf.PageCount(pdfPath, password)
-		if err != nil {
-			return "", fmt.Errorf("failed to get page count: %w", err)
-		}
-		for i := 1; i <= pageCount; i++ {
-			pages = append(pages, i)
-		}
+	pages, err = e.resolvePages(pdfPath, pages, password)
+	if err != nil {
+		return "", err
 	}
 
-	// Extract images from PDF
+	if err := e.extractImagesToDir(pdfPath, tmpDir, pages, password); err != nil {
+		return "", err
+	}
+
+	imageFiles, err := findImageFiles(tmpDir)
+	if err != nil {
+		return "", err
+	}
+
+	if len(imageFiles) == 0 {
+		return "", fmt.Errorf("no images found in PDF - OCR requires image-based PDF")
+	}
+
+	return e.processImages(imageFiles, showProgress)
+}
+
+func (e *Engine) resolvePages(pdfPath string, pages []int, password string) ([]int, error) {
+	if len(pages) > 0 {
+		return pages, nil
+	}
+
+	pageCount, err := pdf.PageCount(pdfPath, password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get page count: %w", err)
+	}
+
+	result := make([]int, pageCount)
+	for i := range result {
+		result[i] = i + 1
+	}
+	return result, nil
+}
+
+func (e *Engine) extractImagesToDir(pdfPath, tmpDir string, pages []int, password string) error {
 	conf := model.NewDefaultConfiguration()
 	if password != "" {
 		conf.UserPW = password
@@ -203,64 +305,53 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 	}
 
 	if err := api.ExtractImagesFile(pdfPath, tmpDir, pageStrs, conf); err != nil {
-		return "", fmt.Errorf("failed to extract images from PDF: %w", err)
+		return fmt.Errorf("failed to extract images from PDF: %w", err)
 	}
+	return nil
+}
 
-	// Find extracted images
+func findImageFiles(dir string) ([]string, error) {
 	var imageFiles []string
-	err = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
-			ext := strings.ToLower(filepath.Ext(path))
-			if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tif" || ext == ".tiff" {
-				imageFiles = append(imageFiles, path)
-			}
+		if !info.IsDir() && isImageFile(path) {
+			imageFiles = append(imageFiles, path)
 		}
 		return nil
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to find extracted images: %w", err)
+		return nil, fmt.Errorf("failed to find extracted images: %w", err)
 	}
+	return imageFiles, nil
+}
 
-	if len(imageFiles) == 0 {
-		return "", fmt.Errorf("no images found in PDF - OCR requires image-based PDF")
+func isImageFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".png", ".jpg", ".jpeg", ".tif", ".tiff":
+		return true
+	default:
+		return false
 	}
+}
 
-	// Initialize gogosseract
-	ctx := context.Background()
-
-	// Read tessdata file
-	primaryLang := strings.Split(e.lang, "+")[0]
-	primaryLang = strings.Split(primaryLang, ",")[0]
-	tessDataPath := filepath.Join(e.dataDir, primaryLang+".traineddata")
-	tessDataFile, err := os.Open(tessDataPath) // #nosec G304 -- path is within user config dir
-	if err != nil {
-		return "", fmt.Errorf("failed to read tessdata: %w", err)
-	}
-	defer tessDataFile.Close()
-
-	// Create OCR engine
-	tess, err := gogosseract.New(ctx, gogosseract.Config{
-		Language:     primaryLang,
-		TrainingData: tessDataFile,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to create OCR engine: %w", err)
-	}
-	defer tess.Close(ctx)
-
-	// Process each image with OCR
+func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = newProgressBar("OCR processing", len(imageFiles), 1)
 	}
 	defer finishProgressBar(bar)
 
+	ctx := context.Background()
 	var result strings.Builder
+
 	for _, imgPath := range imageFiles {
-		text := e.processImage(ctx, tess, imgPath)
+		text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
+		if err != nil {
+			continue // Skip failed images
+		}
 		if text != "" {
 			if result.Len() > 0 {
 				result.WriteString("\n")
@@ -273,25 +364,4 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 	}
 
 	return result.String(), nil
-}
-
-// processImage performs OCR on a single image file
-func (e *Engine) processImage(ctx context.Context, tess *gogosseract.Tesseract, imgPath string) string {
-	imgFile, err := os.Open(imgPath) // #nosec G304 -- path is from temp directory we created
-	if err != nil {
-		return ""
-	}
-	defer imgFile.Close()
-
-	if err := tess.LoadImage(ctx, imgFile, gogosseract.LoadImageOptions{}); err != nil {
-		return ""
-	}
-
-	text, err := tess.GetText(ctx, nil)
-	_ = tess.ClearImage(ctx)
-	if err != nil {
-		return ""
-	}
-
-	return strings.TrimSpace(text)
 }
