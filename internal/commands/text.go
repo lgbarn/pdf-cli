@@ -29,6 +29,7 @@ var textCmd = &cobra.Command{
 
 By default, extracts text from all pages and prints to stdout.
 Use -o to save to a file, or -p to extract from specific pages.
+Use "-" to read from stdin.
 
 For scanned or image-based PDFs, use --ocr to enable OCR text extraction.
 OCR requires downloading tessdata on first use (~15MB per language).
@@ -39,14 +40,13 @@ Examples:
   pdf text document.pdf -p 1-5 -o chapter1.txt
   pdf text scanned.pdf --ocr                    # OCR for scanned PDF
   pdf text scanned.pdf --ocr --ocr-lang eng+fra # Multi-language OCR
-  pdf text scanned.pdf --ocr --ocr-backend=native # Use system Tesseract
-  pdf text scanned.pdf --ocr --ocr-backend=wasm   # Use WASM Tesseract`,
+  cat document.pdf | pdf text -                 # Read from stdin`,
 	Args: cobra.ExactArgs(1),
 	RunE: runText,
 }
 
 func runText(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
+	inputArg := args[0]
 	output := cli.GetOutput(cmd)
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
@@ -54,8 +54,17 @@ func runText(cmd *cobra.Command, args []string) error {
 	ocrLang, _ := cmd.Flags().GetString("ocr-lang")
 	ocrBackend, _ := cmd.Flags().GetString("ocr-backend")
 
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	// Handle stdin input
+	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	if err != nil {
 		return err
+	}
+	defer cleanup()
+
+	if !util.IsStdinInput(inputArg) {
+		if err := util.ValidatePDFFile(inputFile); err != nil {
+			return err
+		}
 	}
 
 	pages, err := parseAndValidatePages(pagesStr, inputFile, password)

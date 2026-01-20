@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -13,6 +14,7 @@ func init() {
 	cli.AddCommand(encryptCmd)
 	cli.AddOutputFlag(encryptCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(encryptCmd, "User password (required)")
+	cli.AddStdoutFlag(encryptCmd)
 	encryptCmd.Flags().String("owner-password", "", "Owner password (defaults to user password)")
 	_ = encryptCmd.MarkFlagRequired("password")
 }
@@ -27,12 +29,12 @@ The owner password (optional) controls editing permissions.
 
 Supports batch processing of multiple files. When processing
 multiple files, output files are named with '_encrypted' suffix.
+Use "-" to read from stdin. Use --stdout for binary output.
 
 Examples:
   pdf encrypt document.pdf --password secret -o secure.pdf
-  pdf encrypt document.pdf --password user123 --owner-password admin456 -o protected.pdf
-  pdf encrypt *.pdf --password secret        # Batch encrypt
-  pdf encrypt doc1.pdf doc2.pdf --password s # Multiple files`,
+  pdf encrypt document.pdf --password user123 --owner-password admin456
+  cat in.pdf | pdf encrypt - --password secret --stdout > secure.pdf`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runEncrypt,
 }
@@ -41,9 +43,15 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	userPassword := cli.GetPassword(cmd)
 	ownerPassword, _ := cmd.Flags().GetString("owner-password")
 	output := cli.GetOutput(cmd)
+	toStdout := cli.GetStdout(cmd)
 
 	if userPassword == "" {
 		return fmt.Errorf("password is required for encryption")
+	}
+
+	// Handle stdin/stdout for single file
+	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+		return encryptWithStdio(args[0], output, userPassword, ownerPassword, toStdout)
 	}
 
 	if err := validateBatchOutput(args, output, "_encrypted"); err != nil {
@@ -53,6 +61,45 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return encryptFile(inputFile, output, userPassword, ownerPassword)
 	})
+}
+
+func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword string, toStdout bool) error {
+	// Handle stdin input
+	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	// Handle stdout output
+	var output string
+	var outputCleanup func()
+	if toStdout {
+		tmpFile, err := os.CreateTemp("", "pdf-cli-encrypt-*.pdf")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		output = tmpFile.Name()
+		_ = tmpFile.Close()
+		outputCleanup = func() { _ = os.Remove(output) }
+		defer outputCleanup()
+	} else {
+		output = outputOrDefault(explicitOutput, inputArg, "_encrypted")
+		if err := checkOutputFile(output); err != nil {
+			return err
+		}
+	}
+
+	if err := pdf.Encrypt(inputFile, output, userPassword, ownerPassword); err != nil {
+		return util.WrapError("encrypting file", inputArg, err)
+	}
+
+	if toStdout {
+		return util.WriteToStdout(output)
+	}
+
+	fmt.Fprintf(os.Stderr, "Encrypted to %s\n", output)
+	return nil
 }
 
 func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) error {

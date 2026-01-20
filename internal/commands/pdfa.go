@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -15,10 +16,12 @@ func init() {
 	pdfaCmd.AddCommand(pdfaConvertCmd)
 
 	cli.AddPasswordFlag(pdfaValidateCmd, "Password for encrypted PDFs")
+	cli.AddFormatFlag(pdfaValidateCmd)
 	pdfaValidateCmd.Flags().String("level", "", "PDF/A level to validate: 1b, 2b, 3b (default: any)")
 
 	cli.AddOutputFlag(pdfaConvertCmd, "Output file path")
 	cli.AddPasswordFlag(pdfaConvertCmd, "Password for encrypted PDFs")
+	cli.AddStdoutFlag(pdfaConvertCmd)
 	pdfaConvertCmd.Flags().String("level", "2b", "Target PDF/A level: 1b, 2b, 3b")
 }
 
@@ -72,17 +75,31 @@ Note: Full PDF/A conversion may require specialized tools like Ghostscript
 or Adobe Acrobat. This tool performs optimization which can help with some
 PDF/A requirements but may not achieve full compliance for complex documents.
 
+Use "-" to read from stdin. Use --stdout for binary output.
+
 Examples:
   pdf pdfa convert document.pdf -o archive.pdf
-  pdf pdfa convert document.pdf --level 2b -o archive.pdf`,
+  pdf pdfa convert document.pdf --level 2b -o archive.pdf
+  cat in.pdf | pdf pdfa convert - --stdout > archive.pdf`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPdfaConvert,
+}
+
+// PDFAValidateOutput represents PDF/A validation result for structured output.
+type PDFAValidateOutput struct {
+	File     string   `json:"file"`
+	Valid    bool     `json:"valid"`
+	Level    string   `json:"level,omitempty"`
+	Errors   []string `json:"errors,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 func runPdfaValidate(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	password := cli.GetPassword(cmd)
 	level, _ := cmd.Flags().GetString("level")
+	format := cli.GetFormat(cmd)
+	formatter := util.NewOutputFormatter(format)
 
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
@@ -98,6 +115,19 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 		return util.WrapError("validating PDF/A", inputFile, err)
 	}
 
+	// Structured output (JSON)
+	if formatter.IsStructured() {
+		output := PDFAValidateOutput{
+			File:     inputFile,
+			Valid:    result.IsValid,
+			Level:    result.Level,
+			Errors:   result.Errors,
+			Warnings: result.Warnings,
+		}
+		return formatter.Print(output)
+	}
+
+	// Human-readable output
 	if result.IsValid {
 		fmt.Printf("✓ %s passes basic PDF/A validation\n", inputFile)
 	} else {
@@ -122,28 +152,55 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 }
 
 func runPdfaConvert(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
+	inputArg := args[0]
 	output := cli.GetOutput(cmd)
 	password := cli.GetPassword(cmd)
+	toStdout := cli.GetStdout(cmd)
 	level, _ := cmd.Flags().GetString("level")
 
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	// Handle stdin input
+	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	if err != nil {
 		return err
 	}
+	defer cleanup()
 
-	output = outputOrDefault(output, inputFile, "_pdfa")
-
-	if err := checkOutputFile(output); err != nil {
-		return err
+	if !util.IsStdinInput(inputArg) {
+		if err := util.ValidatePDFFile(inputFile); err != nil {
+			return err
+		}
 	}
 
-	cli.PrintVerbose("Converting %s to PDF/A-%s format", inputFile, level)
-
-	if err := pdf.ConvertToPDFA(inputFile, output, level, password); err != nil {
-		return util.WrapError("converting to PDF/A", inputFile, err)
+	// Handle stdout output
+	var actualOutput string
+	var outputCleanup func()
+	if toStdout {
+		tmpFile, err := os.CreateTemp("", "pdf-cli-pdfa-*.pdf")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		actualOutput = tmpFile.Name()
+		_ = tmpFile.Close()
+		outputCleanup = func() { _ = os.Remove(actualOutput) }
+		defer outputCleanup()
+	} else {
+		actualOutput = outputOrDefault(output, inputArg, "_pdfa")
+		if err := checkOutputFile(actualOutput); err != nil {
+			return err
+		}
 	}
 
-	fmt.Printf("PDF optimized and saved to %s\n", output)
+	cli.PrintVerbose("Converting %s to PDF/A-%s format", inputArg, level)
+
+	if err := pdf.ConvertToPDFA(inputFile, actualOutput, level, password); err != nil {
+		return util.WrapError("converting to PDF/A", inputArg, err)
+	}
+
+	if toStdout {
+		return util.WriteToStdout(actualOutput)
+	}
+
+	fmt.Printf("PDF optimized and saved to %s\n", actualOutput)
 	fmt.Println("\nNote: Full PDF/A conversion may require specialized tools.")
 	fmt.Println("Consider using veraPDF to validate the output.")
 

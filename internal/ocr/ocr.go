@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/lgbarn/pdf-cli/internal/pdf"
+	"github.com/lgbarn/pdf-cli/internal/util"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -22,41 +22,6 @@ const (
 	// TessdataURL is the base URL for downloading tessdata files.
 	TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
 )
-
-var progressBarTheme = progressbar.Theme{
-	Saucer:        "=",
-	SaucerHead:    ">",
-	SaucerPadding: " ",
-	BarStart:      "[",
-	BarEnd:        "]",
-}
-
-func newProgressBar(description string, total, threshold int) *progressbar.ProgressBar {
-	if total <= threshold {
-		return nil
-	}
-	return progressbar.NewOptions(total,
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetTheme(progressBarTheme),
-	)
-}
-
-func newBytesProgressBar(description string, total int64) *progressbar.ProgressBar {
-	return progressbar.NewOptions64(total,
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetTheme(progressBarTheme),
-	)
-}
-
-func finishProgressBar(bar *progressbar.ProgressBar) {
-	if bar != nil {
-		fmt.Fprintln(os.Stderr)
-	}
-}
 
 // EngineOptions contains options for creating an OCR engine.
 type EngineOptions struct {
@@ -231,13 +196,13 @@ func downloadTessdata(dataDir, lang string) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	bar := newBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
+	bar := util.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
 	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
 		_ = tmpFile.Close()
 		return err
 	}
 	_ = tmpFile.Close()
-	finishProgressBar(bar)
+	util.FinishProgressBar(bar)
 
 	return os.Rename(tmpPath, dataFile)
 }
@@ -295,18 +260,12 @@ func (e *Engine) resolvePages(pdfPath string, pages []int, password string) ([]i
 }
 
 func (e *Engine) extractImagesToDir(pdfPath, tmpDir string, pages []int, password string) error {
-	conf := model.NewDefaultConfiguration()
-	if password != "" {
-		conf.UserPW = password
-		conf.OwnerPW = password
-	}
-
 	pageStrs := make([]string, len(pages))
 	for i, p := range pages {
 		pageStrs[i] = fmt.Sprintf("%d", p)
 	}
 
-	if err := api.ExtractImagesFile(pdfPath, tmpDir, pageStrs, conf); err != nil {
+	if err := api.ExtractImagesFile(pdfPath, tmpDir, pageStrs, pdf.NewConfig(password)); err != nil {
 		return fmt.Errorf("failed to extract images from PDF: %w", err)
 	}
 	return nil
@@ -318,7 +277,7 @@ func findImageFiles(dir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && isImageFile(path) {
+		if !info.IsDir() && util.IsImageFile(path) {
 			imageFiles = append(imageFiles, path)
 		}
 		return nil
@@ -327,16 +286,6 @@ func findImageFiles(dir string) ([]string, error) {
 		return nil, fmt.Errorf("failed to find extracted images: %w", err)
 	}
 	return imageFiles, nil
-}
-
-func isImageFile(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".png", ".jpg", ".jpeg", ".tif", ".tiff":
-		return true
-	default:
-		return false
-	}
 }
 
 // imageResult holds the result of processing a single image.
@@ -359,9 +308,9 @@ func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, 
 func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = newProgressBar("OCR processing", len(imageFiles), 1)
+		bar = util.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
-	defer finishProgressBar(bar)
+	defer util.FinishProgressBar(bar)
 
 	ctx := context.Background()
 	texts := make([]string, 0, len(imageFiles))
@@ -382,9 +331,9 @@ func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool)
 func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = newProgressBar("OCR processing", len(imageFiles), 1)
+		bar = util.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
-	defer finishProgressBar(bar)
+	defer util.FinishProgressBar(bar)
 
 	ctx := context.Background()
 	results := make(chan imageResult, len(imageFiles))

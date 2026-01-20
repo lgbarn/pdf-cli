@@ -3,6 +3,8 @@ package ocr
 import (
 	"slices"
 	"testing"
+
+	"github.com/lgbarn/pdf-cli/internal/util"
 )
 
 func TestParseLanguages(t *testing.T) {
@@ -69,7 +71,7 @@ func TestIsImageFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			if got := isImageFile(tt.path); got != tt.want {
+			if got := util.IsImageFile(tt.path); got != tt.want {
 				t.Errorf("isImageFile(%q) = %v, want %v", tt.path, got, tt.want)
 			}
 		})

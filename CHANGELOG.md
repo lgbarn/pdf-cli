@@ -5,6 +5,36 @@ All notable changes to pdf-cli are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-01-19
+
+### Added
+- **Structured output formats**: New `--format` flag for machine-readable output
+  - Supports `json`, `csv`, and `tsv` formats
+  - Available on `info`, `meta`, and `pdfa validate` commands
+  - Example: `pdf info document.pdf --format json | jq .pages`
+- **stdin/stdout support**: Process PDFs from pipes (Unix philosophy)
+  - Use `-` to read from stdin: `cat doc.pdf | pdf text -`
+  - Use `--stdout` for binary output: `pdf compress input.pdf --stdout > out.pdf`
+  - Supported on: text, info, compress, extract, rotate, reorder, encrypt, decrypt, pdfa convert
+- **Improved OCR test coverage**: 66%+ coverage (up from 9.3%)
+  - Comprehensive mock infrastructure for testing
+  - Filesystem integration tests
+  - Backend selection tests
+
+### Changed
+- **Code deduplication**: Extracted shared utilities to `internal/util/`
+  - `util.IsImageFile()` - Shared image file detection
+  - `util.NewProgressBar()` - Unified progress bar creation
+  - `util.FinishProgressBar()` - Consistent progress bar cleanup
+- Exported `pdf.NewConfig()` for use across packages
+
+### Internal
+- Added `internal/util/images.go` for shared image utilities
+- Added `internal/util/progress.go` for shared progress bar utilities
+- Added `internal/util/output.go` for structured output formatting
+- Added `internal/util/stdio.go` for stdin/stdout handling
+- Added format flag helpers to `internal/cli/flags.go`
+
 ## [1.3.2] - 2025-01-20
 
 ### Added
@@ -105,6 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Addressed all Gosec static analysis findings
 - Secure handling of encrypted PDFs
 
+[1.4.0]: https://github.com/lgbarn/pdf-cli/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/lgbarn/pdf-cli/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/lgbarn/pdf-cli/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/lgbarn/pdf-cli/compare/v1.2.0...v1.3.0

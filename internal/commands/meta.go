@@ -14,6 +14,7 @@ func init() {
 	cli.AddCommand(metaCmd)
 	cli.AddOutputFlag(metaCmd, "Output file path (for setting metadata)")
 	cli.AddPasswordFlag(metaCmd, "Password for encrypted PDFs")
+	cli.AddFormatFlag(metaCmd)
 	metaCmd.Flags().String("title", "", "Set document title")
 	metaCmd.Flags().String("author", "", "Set document author")
 	metaCmd.Flags().String("subject", "", "Set document subject")
@@ -44,6 +45,8 @@ Examples:
 func runMeta(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	password := cli.GetPassword(cmd)
+	format := cli.GetFormat(cmd)
+	formatter := util.NewOutputFormatter(format)
 
 	title, _ := cmd.Flags().GetString("title")
 	author, _ := cmd.Flags().GetString("author")
@@ -61,13 +64,24 @@ func runMeta(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 1 {
-		return viewMetadata(args[0], password)
+		return viewMetadata(args[0], password, formatter)
 	}
 
-	return viewBatchMetadata(args, password)
+	return viewBatchMetadata(args, password, formatter)
 }
 
-func viewMetadata(inputFile, password string) error {
+// MetadataOutput represents PDF metadata for structured output.
+type MetadataOutput struct {
+	File     string `json:"file"`
+	Title    string `json:"title,omitempty"`
+	Author   string `json:"author,omitempty"`
+	Subject  string `json:"subject,omitempty"`
+	Keywords string `json:"keywords,omitempty"`
+	Creator  string `json:"creator,omitempty"`
+	Producer string `json:"producer,omitempty"`
+}
+
+func viewMetadata(inputFile, password string, formatter *util.OutputFormatter) error {
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
@@ -79,6 +93,21 @@ func viewMetadata(inputFile, password string) error {
 		return util.WrapError("reading metadata", inputFile, err)
 	}
 
+	// Structured output (JSON/CSV/TSV)
+	if formatter.IsStructured() {
+		output := MetadataOutput{
+			File:     inputFile,
+			Title:    meta.Title,
+			Author:   meta.Author,
+			Subject:  meta.Subject,
+			Keywords: meta.Keywords,
+			Creator:  meta.Creator,
+			Producer: meta.Producer,
+		}
+		return formatter.Print(output)
+	}
+
+	// Human-readable output
 	fmt.Printf("File: %s\n\n", inputFile)
 
 	if !hasMetadata(meta) {
@@ -90,7 +119,45 @@ func viewMetadata(inputFile, password string) error {
 	return nil
 }
 
-func viewBatchMetadata(files []string, password string) error {
+func viewBatchMetadata(files []string, password string, formatter *util.OutputFormatter) error {
+	// Structured output (JSON/CSV/TSV)
+	if formatter.IsStructured() {
+		var outputs []MetadataOutput
+		for _, file := range files {
+			if err := util.ValidatePDFFile(file); err != nil {
+				continue
+			}
+			meta, err := pdf.GetMetadata(file, password)
+			if err != nil {
+				continue
+			}
+			outputs = append(outputs, MetadataOutput{
+				File:     file,
+				Title:    meta.Title,
+				Author:   meta.Author,
+				Subject:  meta.Subject,
+				Keywords: meta.Keywords,
+				Creator:  meta.Creator,
+				Producer: meta.Producer,
+			})
+		}
+
+		if formatter.Format == util.FormatJSON {
+			return formatter.Print(outputs)
+		}
+
+		// CSV/TSV: use table format
+		headers := []string{"file", "title", "author", "subject", "keywords", "creator", "producer"}
+		var rows [][]string
+		for _, o := range outputs {
+			rows = append(rows, []string{
+				o.File, o.Title, o.Author, o.Subject, o.Keywords, o.Creator, o.Producer,
+			})
+		}
+		return formatter.PrintTable(headers, rows)
+	}
+
+	// Human-readable output
 	for i, file := range files {
 		if i > 0 {
 			fmt.Println()

@@ -45,3 +45,25 @@ func GetPassword(cmd *cobra.Command) string {
 	password, _ := cmd.Flags().GetString("password")
 	return password
 }
+
+// AddFormatFlag adds the --format flag to a command for structured output.
+func AddFormatFlag(cmd *cobra.Command) {
+	cmd.Flags().String("format", "", "Output format: json, csv, tsv (default: human-readable)")
+}
+
+// GetFormat gets the format flag value.
+func GetFormat(cmd *cobra.Command) string {
+	format, _ := cmd.Flags().GetString("format")
+	return format
+}
+
+// AddStdoutFlag adds the --stdout flag to a command for binary stdout output.
+func AddStdoutFlag(cmd *cobra.Command) {
+	cmd.Flags().Bool("stdout", false, "Write binary output to stdout")
+}
+
+// GetStdout gets the stdout flag value.
+func GetStdout(cmd *cobra.Command) bool {
+	stdout, _ := cmd.Flags().GetBool("stdout")
+	return stdout
+}

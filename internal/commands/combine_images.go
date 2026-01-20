@@ -2,8 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -43,7 +41,7 @@ func runCombineImages(cmd *cobra.Command, args []string) error {
 		if !util.FileExists(img) {
 			return fmt.Errorf("image file not found: %s", img)
 		}
-		if !isImageFile(img) {
+		if !util.IsImageFile(img) {
 			return fmt.Errorf("not a supported image format: %s (supported: png, jpg, jpeg, tif, tiff)", img)
 		}
 	}
@@ -60,15 +58,4 @@ func runCombineImages(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Created %s from %d image(s)\n", output, len(args))
 	return nil
-}
-
-// isImageFile checks if the file has a supported image extension.
-func isImageFile(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".png", ".jpg", ".jpeg", ".tif", ".tiff":
-		return true
-	default:
-		return false
-	}
 }

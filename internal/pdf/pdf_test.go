@@ -80,7 +80,7 @@ func TestNewConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conf := newConfig(tt.password)
+			conf := NewConfig(tt.password)
 			if conf == nil {
 				t.Fatal("newConfig() returned nil")
 			}

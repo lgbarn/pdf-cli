@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
+	"github.com/lgbarn/pdf-cli/internal/util"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -17,38 +18,8 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-// progressBarTheme is the default theme for progress bars
-var progressBarTheme = progressbar.Theme{
-	Saucer:        "=",
-	SaucerHead:    ">",
-	SaucerPadding: " ",
-	BarStart:      "[",
-	BarEnd:        "]",
-}
-
-// newProgressBar creates a consistent progress bar with the given description and total count.
-// Returns nil if total is below the threshold for showing progress.
-func newProgressBar(description string, total int, threshold int) *progressbar.ProgressBar {
-	if total <= threshold {
-		return nil
-	}
-	return progressbar.NewOptions(total,
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetTheme(progressBarTheme),
-	)
-}
-
-// finishProgressBar prints a newline after the progress bar if it exists
-func finishProgressBar(bar *progressbar.ProgressBar) {
-	if bar != nil {
-		fmt.Fprintln(os.Stderr)
-	}
-}
-
-// newConfig creates a pdfcpu configuration with optional password.
-func newConfig(password string) *model.Configuration {
+// NewConfig creates a pdfcpu configuration with optional password.
+func NewConfig(password string) *model.Configuration {
 	conf := model.NewDefaultConfiguration()
 	if password != "" {
 		conf.UserPW = password
@@ -102,7 +73,7 @@ func GetInfo(path, password string) (*Info, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	pdfInfoResult, err := api.PDFInfo(f, path, nil, false, newConfig(password))
+	pdfInfoResult, err := api.PDFInfo(f, path, nil, false, NewConfig(password))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read PDF info: %w", err)
 	}
@@ -130,7 +101,7 @@ func GetInfo(path, password string) (*Info, error) {
 // PageCount returns the number of pages in a PDF
 func PageCount(path, password string) (int, error) {
 	// Note: PageCountFile doesn't use config in newer pdfcpu versions
-	_ = newConfig(password)
+	_ = NewConfig(password)
 	return api.PageCountFile(path)
 }
 
@@ -147,11 +118,11 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 
 	// For small number of files or no progress, use the standard merge
 	if !showProgress || len(inputs) <= 3 {
-		return api.MergeCreateFile(inputs, output, false, newConfig(password))
+		return api.MergeCreateFile(inputs, output, false, NewConfig(password))
 	}
 
 	// For larger number of files with progress, merge incrementally
-	bar := newProgressBar("Merging PDFs", len(inputs), 0)
+	bar := util.NewProgressBar("Merging PDFs", len(inputs), 0)
 
 	// Create temp file for intermediate results
 	tmpFile, err := os.CreateTemp("", "pdf-merge-*.pdf")
@@ -174,7 +145,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 
 	// Merge remaining files one at a time
 	for i := 1; i < len(inputs); i++ {
-		err := api.MergeCreateFile([]string{tmpPath, inputs[i]}, tmpPath+".new", false, newConfig(password))
+		err := api.MergeCreateFile([]string{tmpPath, inputs[i]}, tmpPath+".new", false, NewConfig(password))
 		if err != nil {
 			return fmt.Errorf("failed to merge file %s: %w", inputs[i], err)
 		}
@@ -185,7 +156,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 		_ = bar.Add(1)
 	}
 
-	finishProgressBar(bar)
+	util.FinishProgressBar(bar)
 
 	// Move final result to output
 	return os.Rename(tmpPath, output)
@@ -210,12 +181,12 @@ func SplitWithProgress(input, outputDir string, pageCount int, password string, 
 
 	// For small PDFs or no progress, use the standard split
 	if !showProgress || totalPages <= 5 {
-		return api.SplitFile(input, outputDir, pageCount, newConfig(password))
+		return api.SplitFile(input, outputDir, pageCount, NewConfig(password))
 	}
 
 	// Calculate number of output files
 	numOutputFiles := (totalPages + pageCount - 1) / pageCount
-	bar := newProgressBar("Splitting PDF", numOutputFiles, 0)
+	bar := util.NewProgressBar("Splitting PDF", numOutputFiles, 0)
 
 	// Get base name for output files
 	baseName := filepath.Base(input)
@@ -251,23 +222,23 @@ func SplitWithProgress(input, outputDir string, pageCount int, password string, 
 		_ = bar.Add(1)
 	}
 
-	finishProgressBar(bar)
+	util.FinishProgressBar(bar)
 	return nil
 }
 
 // ExtractPages extracts specific pages from a PDF into a new file
 func ExtractPages(input, output string, pages []int, password string) error {
-	return api.CollectFile(input, output, pagesToStrings(pages), newConfig(password))
+	return api.CollectFile(input, output, pagesToStrings(pages), NewConfig(password))
 }
 
 // Rotate rotates pages in a PDF
 func Rotate(input, output string, angle int, pages []int, password string) error {
-	return api.RotateFile(input, output, angle, pagesToStrings(pages), newConfig(password))
+	return api.RotateFile(input, output, angle, pagesToStrings(pages), NewConfig(password))
 }
 
 // Compress optimizes a PDF for file size
 func Compress(input, output, password string) error {
-	return api.OptimizeFile(input, output, newConfig(password))
+	return api.OptimizeFile(input, output, NewConfig(password))
 }
 
 // Encrypt adds password protection to a PDF
@@ -284,7 +255,7 @@ func Encrypt(input, output, userPW, ownerPW string) error {
 
 // Decrypt removes password protection from a PDF
 func Decrypt(input, output, password string) error {
-	return api.DecryptFile(input, output, newConfig(password))
+	return api.DecryptFile(input, output, NewConfig(password))
 }
 
 // ExtractText extracts text content from a PDF
@@ -340,9 +311,9 @@ func extractTextPrimary(input string, pages []int, showProgress bool) (string, e
 func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = newProgressBar("Extracting text", len(pages), 5)
+		bar = util.NewProgressBar("Extracting text", len(pages), 5)
 	}
-	defer finishProgressBar(bar)
+	defer util.FinishProgressBar(bar)
 
 	var result strings.Builder
 	for _, pageNum := range pages {
@@ -386,9 +357,9 @@ func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgre
 
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = newProgressBar("Extracting text", len(pages), 5)
+		bar = util.NewProgressBar("Extracting text", len(pages), 5)
 	}
-	defer finishProgressBar(bar)
+	defer util.FinishProgressBar(bar)
 
 	results := make(chan pageResult, len(pages))
 
@@ -431,7 +402,7 @@ func extractTextFallback(input string, pages []int, password string) (string, er
 	}
 	defer os.RemoveAll(tmpDir)
 
-	if err := api.ExtractContentFile(input, tmpDir, pagesToStrings(pages), newConfig(password)); err != nil {
+	if err := api.ExtractContentFile(input, tmpDir, pagesToStrings(pages), NewConfig(password)); err != nil {
 		return "", fmt.Errorf("failed to extract content: %w", err)
 	}
 
@@ -551,7 +522,7 @@ func extractParenString(content string, start int) (string, int) {
 
 // ExtractImages extracts images from a PDF
 func ExtractImages(input, outputDir string, pages []int, password string) error {
-	return api.ExtractImagesFile(input, outputDir, pagesToStrings(pages), newConfig(password))
+	return api.ExtractImagesFile(input, outputDir, pagesToStrings(pages), NewConfig(password))
 }
 
 // Metadata holds PDF metadata fields
@@ -607,7 +578,7 @@ func SetMetadata(input, output string, meta *Metadata, password string) error {
 		properties["Producer"] = meta.Producer
 	}
 
-	return api.AddPropertiesFile(input, output, properties, newConfig(password))
+	return api.AddPropertiesFile(input, output, properties, NewConfig(password))
 }
 
 // AddWatermark adds a text watermark to a PDF
@@ -616,7 +587,7 @@ func AddWatermark(input, output, text string, pages []int, password string) erro
 	if err != nil {
 		return fmt.Errorf("failed to parse watermark: %w", err)
 	}
-	return api.AddWatermarksFile(input, output, pagesToStrings(pages), wm, newConfig(password))
+	return api.AddWatermarksFile(input, output, pagesToStrings(pages), wm, NewConfig(password))
 }
 
 // AddImageWatermark adds an image watermark to a PDF
@@ -625,17 +596,17 @@ func AddImageWatermark(input, output, imagePath string, pages []int, password st
 	if err != nil {
 		return fmt.Errorf("failed to parse image watermark: %w", err)
 	}
-	return api.AddWatermarksFile(input, output, pagesToStrings(pages), wm, newConfig(password))
+	return api.AddWatermarksFile(input, output, pagesToStrings(pages), wm, NewConfig(password))
 }
 
 // Validate validates a PDF file
 func Validate(path, password string) error {
-	return api.ValidateFile(path, newConfig(password))
+	return api.ValidateFile(path, NewConfig(password))
 }
 
 // ValidateToBuffer validates a PDF from bytes
 func ValidateToBuffer(data []byte) error {
-	return api.Validate(bytes.NewReader(data), newConfig(""))
+	return api.Validate(bytes.NewReader(data), NewConfig(""))
 }
 
 // PDFAValidationResult contains the result of PDF/A validation.
@@ -649,7 +620,7 @@ type PDFAValidationResult struct {
 // ValidatePDFA validates a PDF for PDF/A compliance.
 // Note: pdfcpu provides basic validation; full PDF/A validation requires specialized tools.
 func ValidatePDFA(path, level, password string) (*PDFAValidationResult, error) {
-	conf := newConfig(password)
+	conf := NewConfig(password)
 
 	if err := api.ValidateFile(path, conf); err != nil {
 		return &PDFAValidationResult{
@@ -693,7 +664,7 @@ func ValidatePDFA(path, level, password string) (*PDFAValidationResult, error) {
 // which may help with some PDF/A requirements, but full conversion requires
 // specialized tools like Ghostscript or Adobe Acrobat.
 func ConvertToPDFA(input, output, level, password string) error {
-	return api.OptimizeFile(input, output, newConfig(password))
+	return api.OptimizeFile(input, output, NewConfig(password))
 }
 
 // CreatePDFFromImages creates a PDF from multiple image files.

@@ -27,7 +27,8 @@ A fast, lightweight command-line tool for everyday PDF operations. No GUI needed
 - **Simple**: Intuitive commands that do one thing well
 - **Secure**: Supports encrypted PDFs with password protection
 - **Cross-platform**: Works on Linux, macOS, and Windows
-- **Scriptable**: Perfect for automation and batch processing
+- **Scriptable**: Perfect for automation and batch processing with JSON/CSV/TSV output
+- **Unix-friendly**: Supports stdin/stdout for seamless pipelines
 - **OCR Support**: Extract text from scanned PDFs using native Tesseract (when installed) or built-in WASM fallback
 
 ## Quick Start
@@ -51,8 +52,15 @@ pdf compress *.pdf
 # Get PDF info
 pdf info document.pdf
 
+# Get PDF info as JSON (for scripting)
+pdf info document.pdf --format json
+
 # Extract text from a scanned PDF using OCR
 pdf text scanned.pdf --ocr
+
+# Process PDF from stdin (Unix pipes)
+cat document.pdf | pdf text -
+curl -s https://example.com/doc.pdf | pdf info -
 ```
 
 ## Installation
@@ -86,23 +94,23 @@ make build
 
 ## Commands
 
-| Command | Description | Batch Support |
-|---------|-------------|:-------------:|
-| `info` | Display PDF information (pages, metadata, encryption status) | ✓ |
-| `merge` | Combine multiple PDFs into a single file | - |
-| `split` | Split a PDF into individual pages or chunks | - |
-| `extract` | Extract specific pages into a new PDF | - |
-| `reorder` | Reorder, reverse, or duplicate pages | - |
-| `rotate` | Rotate pages by 90, 180, or 270 degrees | ✓ |
-| `compress` | Optimize and reduce PDF file size | ✓ |
-| `encrypt` | Add password protection to a PDF | ✓ |
-| `decrypt` | Remove password protection from a PDF | ✓ |
-| `text` | Extract text content (supports OCR for scanned PDFs) | - |
-| `images` | Extract embedded images from a PDF | - |
-| `combine-images` | Create a PDF from multiple images | - |
-| `meta` | View or modify PDF metadata (title, author, etc.) | ✓ |
-| `watermark` | Add text or image watermarks | ✓ |
-| `pdfa` | PDF/A validation and conversion | - |
+| Command | Description | Batch | stdin | stdout |
+|---------|-------------|:-----:|:-----:|:------:|
+| `info` | Display PDF information (pages, metadata, encryption status) | ✓ | ✓ | - |
+| `merge` | Combine multiple PDFs into a single file | - | - | - |
+| `split` | Split a PDF into individual pages or chunks | - | - | - |
+| `extract` | Extract specific pages into a new PDF | - | ✓ | ✓ |
+| `reorder` | Reorder, reverse, or duplicate pages | - | ✓ | ✓ |
+| `rotate` | Rotate pages by 90, 180, or 270 degrees | ✓ | ✓ | ✓ |
+| `compress` | Optimize and reduce PDF file size | ✓ | ✓ | ✓ |
+| `encrypt` | Add password protection to a PDF | ✓ | ✓ | ✓ |
+| `decrypt` | Remove password protection from a PDF | ✓ | ✓ | ✓ |
+| `text` | Extract text content (supports OCR for scanned PDFs) | - | ✓ | - |
+| `images` | Extract embedded images from a PDF | - | - | - |
+| `combine-images` | Create a PDF from multiple images | - | - | - |
+| `meta` | View or modify PDF metadata (title, author, etc.) | ✓ | - | - |
+| `watermark` | Add text or image watermarks | ✓ | - | - |
+| `pdfa` | PDF/A validation and conversion | - | ✓ | ✓ |
 
 ## Usage Examples
 
@@ -114,6 +122,14 @@ pdf info document.pdf
 
 # Multiple files - summary table
 pdf info *.pdf
+
+# Machine-readable output (JSON, CSV, TSV)
+pdf info document.pdf --format json
+pdf info *.pdf --format csv > report.csv
+pdf info *.pdf --format tsv
+
+# Process via jq
+pdf info document.pdf --format json | jq '.pages'
 ```
 
 Single file output:
@@ -125,6 +141,20 @@ Version:    1.7
 Title:      Annual Report
 Author:     John Doe
 Encrypted:  No
+```
+
+JSON output (`--format json`):
+```json
+{
+  "file": "document.pdf",
+  "size": 2568192,
+  "sizeHuman": "2.45 MB",
+  "pages": 42,
+  "version": "1.7",
+  "title": "Annual Report",
+  "author": "John Doe",
+  "encrypted": false
+}
 ```
 
 Batch output:
@@ -203,6 +233,10 @@ pdf compress *.pdf
 
 # With progress bar for large files
 pdf compress large.pdf -o smaller.pdf --progress
+
+# stdin/stdout support for pipelines
+cat large.pdf | pdf compress - --stdout > compressed.pdf
+curl -s https://example.com/doc.pdf | pdf compress - --stdout > local.pdf
 ```
 
 ### Encrypt a PDF
@@ -242,6 +276,10 @@ pdf text document.pdf -p 1-5 -o chapter1.txt
 
 # With progress bar for large documents
 pdf text large-document.pdf --progress
+
+# Read from stdin
+cat document.pdf | pdf text -
+curl -s https://example.com/doc.pdf | pdf text -
 ```
 
 ### Extract Text with OCR (for scanned PDFs)
@@ -283,6 +321,32 @@ pdf images document.pdf -o images/
 # Extract images from specific pages
 pdf images document.pdf -p 1-10 -o images/
 ```
+
+### Using stdin/stdout Pipelines
+
+pdf-cli supports Unix-style pipelines for processing PDFs without intermediate files:
+
+```bash
+# Download and extract text in one command
+curl -s https://example.com/document.pdf | pdf text -
+
+# Download, compress, and save
+curl -s https://example.com/large.pdf | pdf compress - --stdout > compressed.pdf
+
+# Chain multiple operations
+cat input.pdf | pdf extract - -p 1-5 --stdout | pdf rotate - -a 90 --stdout > output.pdf
+
+# Process PDF from another command
+generate-report | pdf compress - --stdout > report.pdf
+
+# Get info from a remote PDF
+curl -s https://example.com/doc.pdf | pdf info - --format json | jq '.pages'
+```
+
+**Notes:**
+- Use `-` as the input file to read from stdin
+- Use `--stdout` flag to write binary output to stdout
+- When using stdin, pdfcpu requires the entire file, so the PDF is temporarily stored
 
 ### Combine Images into PDF
 
@@ -378,6 +442,14 @@ These options work with all commands:
 | `--password` | `-P` | Password for encrypted input PDFs |
 | `--help` | `-h` | Show help for any command |
 | `--version` | | Display version information |
+
+### Command-Specific Options
+
+| Option | Commands | Description |
+|--------|----------|-------------|
+| `--format` | info, meta, pdfa | Output format: `json`, `csv`, `tsv` (default: human-readable) |
+| `--stdout` | compress, extract, rotate, reorder, encrypt, decrypt, pdfa convert | Write binary output to stdout |
+| `-` (stdin) | text, info, compress, extract, rotate, reorder, encrypt, decrypt, pdfa convert | Read PDF from stdin |
 
 ### Working with Encrypted PDFs
 

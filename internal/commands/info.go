@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
@@ -14,6 +15,7 @@ import (
 func init() {
 	cli.AddCommand(infoCmd)
 	cli.AddPasswordFlag(infoCmd, "Password for encrypted PDFs")
+	cli.AddFormatFlag(infoCmd)
 }
 
 var infoCmd = &cobra.Command{
@@ -25,30 +27,57 @@ Shows file size, page count, PDF version, encryption status,
 and metadata like title, author, subject, and keywords.
 
 When multiple files are provided, displays a summary table.
+Use "-" to read a single file from stdin.
 
 Examples:
   pdf info document.pdf
   pdf info encrypted.pdf --password secret
-  pdf info *.pdf                           # Batch mode: show summary table`,
+  pdf info *.pdf                           # Batch mode: show summary table
+  cat document.pdf | pdf info -            # Read from stdin
+  pdf info document.pdf --format json      # JSON output`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInfo,
 }
 
 func runInfo(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
+	format := cli.GetFormat(cmd)
+	formatter := util.NewOutputFormatter(format)
 
-	// Single file: detailed output
+	// Single file: detailed output (supports stdin)
 	if len(args) == 1 {
-		return displaySingleInfo(args[0], password)
+		inputArg := args[0]
+
+		// Handle stdin input
+		inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+
+		return displaySingleInfo(inputFile, password, formatter, util.IsStdinInput(inputArg))
 	}
 
 	// Multiple files: table output
-	return displayBatchInfo(args, password)
+	return displayBatchInfo(args, password, formatter)
 }
 
-func displaySingleInfo(inputFile, password string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
-		return err
+// InfoOutput represents PDF info for structured output.
+type InfoOutput struct {
+	File      string            `json:"file"`
+	Size      int64             `json:"size"`
+	SizeHuman string            `json:"size_human"`
+	Pages     int               `json:"pages"`
+	Version   string            `json:"version"`
+	Encrypted bool              `json:"encrypted"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatter, isStdin bool) error {
+	if !isStdin {
+		if err := util.ValidatePDFFile(inputFile); err != nil {
+			return err
+		}
 	}
 
 	cli.PrintVerbose("Reading PDF info from %s", inputFile)
@@ -58,6 +87,39 @@ func displaySingleInfo(inputFile, password string) error {
 		return util.WrapError("reading info", inputFile, err)
 	}
 
+	// Structured output (JSON/CSV/TSV)
+	if formatter.IsStructured() {
+		output := InfoOutput{
+			File:      info.FilePath,
+			Size:      info.FileSize,
+			SizeHuman: util.FormatFileSize(info.FileSize),
+			Pages:     info.Pages,
+			Version:   info.Version,
+			Encrypted: info.Encrypted,
+			Metadata:  make(map[string]string),
+		}
+		if info.Title != "" {
+			output.Metadata["title"] = info.Title
+		}
+		if info.Author != "" {
+			output.Metadata["author"] = info.Author
+		}
+		if info.Subject != "" {
+			output.Metadata["subject"] = info.Subject
+		}
+		if info.Keywords != "" {
+			output.Metadata["keywords"] = info.Keywords
+		}
+		if info.Creator != "" {
+			output.Metadata["creator"] = info.Creator
+		}
+		if info.Producer != "" {
+			output.Metadata["producer"] = info.Producer
+		}
+		return formatter.Print(output)
+	}
+
+	// Human-readable output
 	fmt.Printf("File:       %s\n", info.FilePath)
 	fmt.Printf("Size:       %s\n", util.FormatFileSize(info.FileSize))
 	fmt.Printf("Pages:      %d\n", info.Pages)
@@ -74,8 +136,56 @@ func displaySingleInfo(inputFile, password string) error {
 	return nil
 }
 
-func displayBatchInfo(files []string, password string) error {
-	// Print header
+func displayBatchInfo(files []string, password string, formatter *util.OutputFormatter) error {
+	// Structured output (JSON/CSV/TSV)
+	if formatter.IsStructured() {
+		var outputs []InfoOutput
+		for _, file := range files {
+			if err := util.ValidatePDFFile(file); err != nil {
+				continue
+			}
+			info, err := pdf.GetInfo(file, password)
+			if err != nil {
+				continue
+			}
+			output := InfoOutput{
+				File:      info.FilePath,
+				Size:      info.FileSize,
+				SizeHuman: util.FormatFileSize(info.FileSize),
+				Pages:     info.Pages,
+				Version:   info.Version,
+				Encrypted: info.Encrypted,
+				Metadata:  make(map[string]string),
+			}
+			if info.Title != "" {
+				output.Metadata["title"] = info.Title
+			}
+			if info.Author != "" {
+				output.Metadata["author"] = info.Author
+			}
+			outputs = append(outputs, output)
+		}
+
+		if formatter.Format == util.FormatJSON {
+			return formatter.Print(outputs)
+		}
+
+		// CSV/TSV: use table format
+		headers := []string{"file", "pages", "version", "size", "encrypted"}
+		var rows [][]string
+		for _, o := range outputs {
+			rows = append(rows, []string{
+				o.File,
+				strconv.Itoa(o.Pages),
+				o.Version,
+				o.SizeHuman,
+				strconv.FormatBool(o.Encrypted),
+			})
+		}
+		return formatter.PrintTable(headers, rows)
+	}
+
+	// Human-readable output
 	fmt.Printf("%-40s %8s %6s %10s\n", "FILE", "PAGES", "VER", "SIZE")
 	fmt.Println(strings.Repeat("-", 70))
 

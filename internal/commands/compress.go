@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -13,6 +14,7 @@ func init() {
 	cli.AddCommand(compressCmd)
 	cli.AddOutputFlag(compressCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(compressCmd, "Password for encrypted PDFs")
+	cli.AddStdoutFlag(compressCmd)
 }
 
 var compressCmd = &cobra.Command{
@@ -25,12 +27,14 @@ and can significantly reduce file size without losing quality.
 
 Supports batch processing of multiple files. When processing
 multiple files, output files are named with '_compressed' suffix.
+Use "-" to read from stdin (single file only).
+Use --stdout to write binary output to stdout.
 
 Examples:
   pdf compress large.pdf -o smaller.pdf
   pdf compress document.pdf
   pdf compress *.pdf                      # Batch compress
-  pdf compress doc1.pdf doc2.pdf doc3.pdf # Multiple files`,
+  cat input.pdf | pdf compress - --stdout > out.pdf  # stdin/stdout`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runCompress,
 }
@@ -38,6 +42,12 @@ Examples:
 func runCompress(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	output := cli.GetOutput(cmd)
+	toStdout := cli.GetStdout(cmd)
+
+	// Handle stdin/stdout for single file
+	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+		return compressWithStdio(args[0], output, password, toStdout)
+	}
 
 	if err := validateBatchOutput(args, output, "_compressed"); err != nil {
 		return err
@@ -46,6 +56,46 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return compressFile(inputFile, output, password)
 	})
+}
+
+func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {
+	// Handle stdin input
+	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	// Create temp output for stdout case
+	var output string
+	var outputCleanup func()
+	if toStdout {
+		tmpFile, err := os.CreateTemp("", "pdf-cli-compress-*.pdf")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		output = tmpFile.Name()
+		_ = tmpFile.Close()
+		outputCleanup = func() { _ = os.Remove(output) }
+		defer outputCleanup()
+	} else {
+		output = outputOrDefault(explicitOutput, inputArg, "_compressed")
+		if err := checkOutputFile(output); err != nil {
+			return err
+		}
+	}
+
+	if err := pdf.Compress(inputFile, output, password); err != nil {
+		return util.WrapError("compressing file", inputArg, err)
+	}
+
+	if toStdout {
+		return util.WriteToStdout(output)
+	}
+
+	newSize, _ := util.GetFileSize(output)
+	fmt.Fprintf(os.Stderr, "Compressed to %s (%s)\n", output, util.FormatFileSize(newSize))
+	return nil
 }
 
 func compressFile(inputFile, explicitOutput, password string) error {

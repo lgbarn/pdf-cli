@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -13,6 +14,7 @@ func init() {
 	cli.AddCommand(decryptCmd)
 	cli.AddOutputFlag(decryptCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(decryptCmd, "Password for the encrypted PDF (required)")
+	cli.AddStdoutFlag(decryptCmd)
 	_ = decryptCmd.MarkFlagRequired("password")
 }
 
@@ -26,12 +28,12 @@ The output files will be unprotected PDFs.
 
 Supports batch processing of multiple files. When processing
 multiple files, output files are named with '_decrypted' suffix.
+Use "-" to read from stdin. Use --stdout for binary output.
 
 Examples:
   pdf decrypt secure.pdf --password secret -o unlocked.pdf
   pdf decrypt protected.pdf --password mypassword
-  pdf decrypt *.pdf --password secret        # Batch decrypt
-  pdf decrypt doc1.pdf doc2.pdf --password s # Multiple files`,
+  cat secure.pdf | pdf decrypt - --password secret --stdout > unlocked.pdf`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runDecrypt,
 }
@@ -39,9 +41,15 @@ Examples:
 func runDecrypt(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	output := cli.GetOutput(cmd)
+	toStdout := cli.GetStdout(cmd)
 
 	if password == "" {
 		return fmt.Errorf("password is required for decryption")
+	}
+
+	// Handle stdin/stdout for single file
+	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+		return decryptWithStdio(args[0], output, password, toStdout)
 	}
 
 	if err := validateBatchOutput(args, output, "_decrypted"); err != nil {
@@ -51,6 +59,45 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return decryptFile(inputFile, output, password)
 	})
+}
+
+func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {
+	// Handle stdin input
+	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	// Handle stdout output
+	var output string
+	var outputCleanup func()
+	if toStdout {
+		tmpFile, err := os.CreateTemp("", "pdf-cli-decrypt-*.pdf")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file: %w", err)
+		}
+		output = tmpFile.Name()
+		_ = tmpFile.Close()
+		outputCleanup = func() { _ = os.Remove(output) }
+		defer outputCleanup()
+	} else {
+		output = outputOrDefault(explicitOutput, inputArg, "_decrypted")
+		if err := checkOutputFile(output); err != nil {
+			return err
+		}
+	}
+
+	if err := pdf.Decrypt(inputFile, output, password); err != nil {
+		return util.WrapError("decrypting file", inputArg, err)
+	}
+
+	if toStdout {
+		return util.WriteToStdout(output)
+	}
+
+	fmt.Fprintf(os.Stderr, "Decrypted to %s\n", output)
+	return nil
 }
 
 func decryptFile(inputFile, explicitOutput, password string) error {
