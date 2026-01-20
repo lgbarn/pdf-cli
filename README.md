@@ -99,6 +99,7 @@ make build
 | `decrypt` | Remove password protection from a PDF | ✓ |
 | `text` | Extract text content (supports OCR for scanned PDFs) | - |
 | `images` | Extract embedded images from a PDF | - |
+| `combine-images` | Create a PDF from multiple images | - |
 | `meta` | View or modify PDF metadata (title, author, etc.) | ✓ |
 | `watermark` | Add text or image watermarks | ✓ |
 | `pdfa` | PDF/A validation and conversion | - |
@@ -281,6 +282,19 @@ pdf images document.pdf -o images/
 
 # Extract images from specific pages
 pdf images document.pdf -p 1-10 -o images/
+```
+
+### Combine Images into PDF
+
+```bash
+# Create PDF from multiple images
+pdf combine-images photo1.jpg photo2.jpg -o album.pdf
+
+# Create PDF from all PNG files in current directory
+pdf combine-images *.png -o scans.pdf
+
+# Create PDF with specific page size
+pdf combine-images scan1.png scan2.png -o document.pdf --page-size A4
 ```
 
 ### View and Modify Metadata

@@ -695,3 +695,24 @@ func ValidatePDFA(path, level, password string) (*PDFAValidationResult, error) {
 func ConvertToPDFA(input, output, level, password string) error {
 	return api.OptimizeFile(input, output, newConfig(password))
 }
+
+// CreatePDFFromImages creates a PDF from multiple image files.
+// Each image becomes one page in the output PDF.
+func CreatePDFFromImages(images []string, output, pageSize string) error {
+	imp := pdfcpu.DefaultImportConfig()
+	imp.Pos = types.Full
+
+	if pageSize != "" {
+		imp.UserDim = true
+		switch strings.ToUpper(pageSize) {
+		case "A4":
+			imp.PageSize = "A4"
+		case "LETTER":
+			imp.PageSize = "Letter"
+		default:
+			imp.PageSize = pageSize
+		}
+	}
+
+	return api.ImportImagesFile(images, output, imp, nil)
+}
