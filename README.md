@@ -28,7 +28,7 @@ A fast, lightweight command-line tool for everyday PDF operations. No GUI needed
 - **Secure**: Supports encrypted PDFs with password protection
 - **Cross-platform**: Works on Linux, macOS, and Windows
 - **Scriptable**: Perfect for automation and batch processing
-- **OCR Support**: Extract text from scanned PDFs using built-in WASM-based OCR
+- **OCR Support**: Extract text from scanned PDFs using native Tesseract (when installed) or built-in WASM fallback
 
 ## Quick Start
 
@@ -88,28 +88,34 @@ make build
 
 | Command | Description | Batch Support |
 |---------|-------------|:-------------:|
-| `info` | Display PDF information (pages, metadata, encryption status) | - |
+| `info` | Display PDF information (pages, metadata, encryption status) | ✓ |
 | `merge` | Combine multiple PDFs into a single file | - |
 | `split` | Split a PDF into individual pages or chunks | - |
 | `extract` | Extract specific pages into a new PDF | - |
+| `reorder` | Reorder, reverse, or duplicate pages | - |
 | `rotate` | Rotate pages by 90, 180, or 270 degrees | ✓ |
 | `compress` | Optimize and reduce PDF file size | ✓ |
 | `encrypt` | Add password protection to a PDF | ✓ |
 | `decrypt` | Remove password protection from a PDF | ✓ |
 | `text` | Extract text content (supports OCR for scanned PDFs) | - |
 | `images` | Extract embedded images from a PDF | - |
-| `meta` | View or modify PDF metadata (title, author, etc.) | - |
+| `meta` | View or modify PDF metadata (title, author, etc.) | ✓ |
 | `watermark` | Add text or image watermarks | ✓ |
+| `pdfa` | PDF/A validation and conversion | - |
 
 ## Usage Examples
 
 ### Get PDF Information
 
 ```bash
+# Single file - detailed output
 pdf info document.pdf
+
+# Multiple files - summary table
+pdf info *.pdf
 ```
 
-Output:
+Single file output:
 ```
 File:       document.pdf
 Size:       2.45 MB
@@ -118,6 +124,15 @@ Version:    1.7
 Title:      Annual Report
 Author:     John Doe
 Encrypted:  No
+```
+
+Batch output:
+```
+FILE                                        PAGES    VER       SIZE
+----------------------------------------------------------------------
+document1.pdf                                  42    1.7    2.45 MB
+document2.pdf                                  15    1.5  512.00 KB
+report.pdf                                    128    1.7   10.23 MB
 ```
 
 ### Merge Multiple PDFs
@@ -148,6 +163,22 @@ pdf extract document.pdf -p 1-5 -o first-five.pdf
 
 # Extract specific pages and ranges
 pdf extract document.pdf -p 1,3,5,10-15 -o selected.pdf
+```
+
+### Reorder Pages
+
+```bash
+# Move page 5 to position 2
+pdf reorder document.pdf -s "1,5,2,3,4" -o reordered.pdf
+
+# Reverse all pages
+pdf reorder document.pdf -s "end-1" -o reversed.pdf
+
+# Duplicate page 1 at the end
+pdf reorder document.pdf -s "1-end,1" -o with-copy.pdf
+
+# Remove the first page
+pdf reorder document.pdf -s "2-end" -o skip-first.pdf
 ```
 
 ### Rotate Pages
@@ -218,7 +249,7 @@ pdf text large-document.pdf --progress
 # Use OCR for scanned/image-based PDFs
 pdf text scanned.pdf --ocr
 
-# OCR with specific language (downloads tessdata on first use)
+# OCR with specific language (downloads tessdata on first use for WASM)
 pdf text scanned.pdf --ocr --ocr-lang eng
 
 # Multi-language OCR
@@ -226,7 +257,21 @@ pdf text scanned.pdf --ocr --ocr-lang eng+fra
 
 # OCR specific pages and save to file
 pdf text scanned.pdf --ocr -p 1-10 -o content.txt
+
+# Force native Tesseract (if installed)
+pdf text scanned.pdf --ocr --ocr-backend=native
+
+# Force WASM Tesseract (no system dependencies)
+pdf text scanned.pdf --ocr --ocr-backend=wasm
+
+# Auto-select (native if available, else WASM) - this is the default
+pdf text scanned.pdf --ocr --ocr-backend=auto
 ```
+
+**OCR Backend Selection:**
+- `auto` (default): Uses native Tesseract if installed, otherwise falls back to WASM
+- `native`: Requires system Tesseract installation but provides better quality/speed
+- `wasm`: Built-in, no external dependencies, downloads tessdata on first use (~15MB/language)
 
 ### Extract Images
 
@@ -241,8 +286,11 @@ pdf images document.pdf -p 1-10 -o images/
 ### View and Modify Metadata
 
 ```bash
-# View metadata
+# View metadata for a single file
 pdf meta document.pdf
+
+# View metadata for multiple files
+pdf meta *.pdf
 
 # Set metadata
 pdf meta document.pdf --title "My Document" --author "Jane Doe" -o updated.pdf
@@ -270,6 +318,24 @@ pdf watermark document.pdf -t "DRAFT" -p 1-5 -o draft.pdf
 # Batch watermark multiple PDFs (output: *_watermarked.pdf)
 pdf watermark *.pdf -t "CONFIDENTIAL"
 ```
+
+### PDF/A Validation and Conversion
+
+```bash
+# Validate PDF/A compliance
+pdf pdfa validate document.pdf
+
+# Validate against specific PDF/A level
+pdf pdfa validate document.pdf --level 1b
+
+# Convert/optimize a PDF toward PDF/A format
+pdf pdfa convert document.pdf -o archive.pdf
+
+# Convert with specific target level
+pdf pdfa convert document.pdf --level 2b -o archive.pdf
+```
+
+**Note:** Full PDF/A validation and conversion may require specialized tools. This tool provides basic validation and optimization that can help with PDF/A compliance. For comprehensive validation, consider using [veraPDF](https://verapdf.org/).
 
 ## Global Options
 
@@ -364,7 +430,12 @@ pdf-cli/
 ├── internal/
 │   ├── cli/           # CLI framework and flags
 │   ├── commands/      # Individual command implementations
-│   ├── ocr/           # OCR text extraction (WASM-based)
+│   ├── ocr/           # OCR text extraction (native + WASM backends)
+│   │   ├── backend.go # Backend interface and types
+│   │   ├── detect.go  # Native Tesseract detection
+│   │   ├── native.go  # Native Tesseract backend (CLI-based)
+│   │   ├── wasm.go    # WASM Tesseract backend (gogosseract)
+│   │   └── ocr.go     # Engine with backend selection
 │   ├── pdf/           # PDF processing wrapper
 │   └── util/          # Utilities (errors, files, page parsing)
 ├── testdata/          # Test PDF files
@@ -410,7 +481,28 @@ Some PDFs contain scanned images instead of actual text. Use the `--ocr` flag to
 pdf text scanned.pdf --ocr
 ```
 
-The first time you use OCR, pdf-cli will download the required language data (~15MB for English).
+The OCR engine automatically uses native Tesseract if installed, or falls back to the built-in WASM version.
+
+### Native Tesseract not detected
+
+If you have Tesseract installed but pdf-cli doesn't detect it:
+
+```bash
+# Check if Tesseract is in PATH
+tesseract --version
+
+# Force native backend to see the error
+pdf text scanned.pdf --ocr --ocr-backend=native -v
+```
+
+Common solutions:
+- Ensure `tesseract` is in your PATH
+- Set `TESSDATA_PREFIX` to your tessdata directory
+- Install Tesseract: `brew install tesseract` (macOS) or `apt install tesseract-ocr` (Linux)
+
+### WASM OCR tessdata download
+
+The first time you use WASM OCR, pdf-cli will download the required language data (~15MB for English).
 
 ### Large PDF processing is slow
 

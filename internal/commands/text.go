@@ -19,6 +19,7 @@ func init() {
 	cli.AddPasswordFlag(textCmd, "Password for encrypted PDFs")
 	textCmd.Flags().Bool("ocr", false, "Use OCR for image-based PDFs")
 	textCmd.Flags().String("ocr-lang", "eng", "OCR language(s), e.g., 'eng' or 'eng+fra'")
+	textCmd.Flags().String("ocr-backend", "auto", "OCR backend: auto (native if available, else wasm), native, or wasm")
 }
 
 var textCmd = &cobra.Command{
@@ -37,7 +38,9 @@ Examples:
   pdf text document.pdf -o content.txt
   pdf text document.pdf -p 1-5 -o chapter1.txt
   pdf text scanned.pdf --ocr                    # OCR for scanned PDF
-  pdf text scanned.pdf --ocr --ocr-lang eng+fra # Multi-language OCR`,
+  pdf text scanned.pdf --ocr --ocr-lang eng+fra # Multi-language OCR
+  pdf text scanned.pdf --ocr --ocr-backend=native # Use system Tesseract
+  pdf text scanned.pdf --ocr --ocr-backend=wasm   # Use WASM Tesseract`,
 	Args: cobra.ExactArgs(1),
 	RunE: runText,
 }
@@ -49,6 +52,7 @@ func runText(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	useOCR, _ := cmd.Flags().GetBool("ocr")
 	ocrLang, _ := cmd.Flags().GetString("ocr-lang")
+	ocrBackend, _ := cmd.Flags().GetString("ocr-backend")
 
 	if err := util.ValidatePDFFile(inputFile); err != nil {
 		return err
@@ -62,20 +66,25 @@ func runText(cmd *cobra.Command, args []string) error {
 	var text string
 
 	if useOCR {
-		// Use OCR for text extraction
-		cli.PrintVerbose("Extracting text from %s using OCR (language: %s)", inputFile, ocrLang)
+		backendType := ocr.ParseBackendType(ocrBackend)
+		cli.PrintVerbose("Extracting text from %s using OCR (language: %s, backend: %s)", inputFile, ocrLang, ocrBackend)
 
-		engine, err := ocr.NewEngine(ocrLang)
+		engine, err := ocr.NewEngineWithOptions(ocr.EngineOptions{
+			Lang:        ocrLang,
+			BackendType: backendType,
+		})
 		if err != nil {
 			return util.WrapError("initializing OCR", inputFile, err)
 		}
+		defer engine.Close()
+
+		cli.PrintVerbose("Using OCR backend: %s", engine.BackendName())
 
 		text, err = engine.ExtractTextFromPDF(inputFile, pages, password, cli.Progress())
 		if err != nil {
 			return util.WrapError("extracting text with OCR", inputFile, err)
 		}
 	} else {
-		// Try normal text extraction first
 		cli.PrintVerbose("Extracting text from %s", inputFile)
 
 		text, err = pdf.ExtractTextWithProgress(inputFile, pages, password, cli.Progress())
@@ -83,7 +92,6 @@ func runText(cmd *cobra.Command, args []string) error {
 			return util.WrapError("extracting text", inputFile, err)
 		}
 
-		// If no text found and not explicitly OCR, suggest using --ocr
 		if strings.TrimSpace(text) == "" {
 			cli.PrintStatus("No text found. Try using --ocr for scanned/image-based PDFs.")
 		}
