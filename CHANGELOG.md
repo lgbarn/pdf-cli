@@ -16,10 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Use `-` to read from stdin: `cat doc.pdf | pdf text -`
   - Use `--stdout` for binary output: `pdf compress input.pdf --stdout > out.pdf`
   - Supported on: text, info, compress, extract, rotate, reorder, encrypt, decrypt, pdfa convert
-- **Improved OCR test coverage**: 66%+ coverage (up from 9.3%)
-  - Comprehensive mock infrastructure for testing
-  - Filesystem integration tests
-  - Backend selection tests
+- **Comprehensive test coverage improvements**:
+  - CLI: 98.0% coverage
+  - Util: 90.7% coverage
+  - OCR: 75.5% coverage (up from 9.3%)
+  - Commands: 60.7% coverage
+  - PDF: 57.9% coverage
+  - Overall: 69.6% coverage
+  - Comprehensive mock infrastructure for OCR testing
+  - Table-driven test patterns for maintainability
+  - Integration tests with real PDF files
 
 ### Changed
 - **Code deduplication**: Extracted shared utilities to `internal/util/`
