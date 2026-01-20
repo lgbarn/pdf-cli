@@ -56,7 +56,7 @@ func ReadFromStdin() (path string, cleanup func(), err error) {
 
 // WriteToStdout writes a file's contents to stdout.
 func WriteToStdout(path string) error {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path comes from temp files we control
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
