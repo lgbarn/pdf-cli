@@ -152,3 +152,132 @@ func TestStdioHandler_OutputPath(t *testing.T) {
 		t.Errorf("Expected /custom/path.pdf, got %s", handler.OutputPath())
 	}
 }
+
+func TestStdioHandler_InputPath(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test-input-*.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	handler := &StdioHandler{
+		InputArg:       tmpFile.Name(),
+		ExplicitOutput: "/custom/path.pdf",
+		Operation:      "test",
+	}
+	defer handler.Cleanup()
+
+	handler.Setup()
+
+	if handler.InputPath() != tmpFile.Name() {
+		t.Errorf("Expected %s, got %s", tmpFile.Name(), handler.InputPath())
+	}
+}
+
+func TestStdioHandler_Finalize_NoStdout(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test-input-*.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	handler := &StdioHandler{
+		InputArg:       tmpFile.Name(),
+		ExplicitOutput: "/tmp/output.pdf",
+		ToStdout:       false,
+		Operation:      "test",
+	}
+	defer handler.Cleanup()
+
+	_, _, err = handler.Setup()
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Finalize should be a no-op when ToStdout is false
+	err = handler.Finalize()
+	if err != nil {
+		t.Errorf("Finalize without stdout should not error: %v", err)
+	}
+}
+
+func TestStdioHandler_Finalize_WithStdout(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test-input-*.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	handler := &StdioHandler{
+		InputArg:  tmpFile.Name(),
+		ToStdout:  true,
+		Operation: "test",
+	}
+	defer handler.Cleanup()
+
+	_, output, err := handler.Setup()
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Write some content to the temp output file
+	if err := os.WriteFile(output, []byte("test content"), 0600); err != nil {
+		t.Fatalf("Failed to write test content: %v", err)
+	}
+
+	// Finalize should write to stdout (which we can't easily capture in a test)
+	// But we can verify it doesn't panic or error
+	err = handler.Finalize()
+	if err != nil {
+		t.Errorf("Finalize with stdout returned error: %v", err)
+	}
+}
+
+func TestStdioHandler_Cleanup_MultipleCalls(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test-input-*.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	handler := &StdioHandler{
+		InputArg:  tmpFile.Name(),
+		ToStdout:  true,
+		Operation: "test",
+	}
+
+	_, _, err = handler.Setup()
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Call Cleanup multiple times - should be safe
+	handler.Cleanup()
+	handler.Cleanup()
+	handler.Cleanup()
+	// No panic = pass
+}
+
+func TestStdioHandler_Setup_NonexistentInput(t *testing.T) {
+	// Note: StdioHandler.Setup() does not validate that the input file exists
+	// It only resolves the path. File validation happens in the command handler.
+	// This test verifies the handler correctly returns the nonexistent path.
+	handler := &StdioHandler{
+		InputArg:  "/nonexistent/file.pdf",
+		ToStdout:  false,
+		Operation: "test",
+	}
+	defer handler.Cleanup()
+
+	input, _, err := handler.Setup()
+	if err != nil {
+		t.Errorf("Setup should not fail for nonexistent file: %v", err)
+	}
+	if input != "/nonexistent/file.pdf" {
+		t.Errorf("Expected input path to be /nonexistent/file.pdf, got %s", input)
+	}
+}
