@@ -58,9 +58,9 @@ func TempFile(prefix, content string) (string, func()) {
 
 // CopyFile copies a file from src to dst for test isolation.
 func CopyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
+	data, err := os.ReadFile(src) // #nosec G304 - test fixture, paths are controlled
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, data, 0644) // #nosec G306 - test fixture, permissive permissions OK
 }

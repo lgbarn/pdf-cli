@@ -82,7 +82,7 @@ func Load() (*Config, error) {
 
 	path := ConfigPath()
 	if path != "" {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 - path is from XDG config, not user input
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return nil, err
