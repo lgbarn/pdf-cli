@@ -193,6 +193,6 @@ func TestNativeBackendProcessImageWithCancelledContext(t *testing.T) {
 
 	_, err = backend.ProcessImage(ctx, "/nonexistent/image.png", "eng")
 	if err == nil {
-		t.Error("ProcessImage() expected error with cancelled context")
+		t.Error("ProcessImage() expected error with canceled context")
 	}
 }

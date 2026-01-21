@@ -17,6 +17,7 @@ func resetFlags(t *testing.T) {
 	// Reset global flags
 	_ = rootCmd.PersistentFlags().Set("verbose", "false")
 	_ = rootCmd.PersistentFlags().Set("force", "false")
+	_ = rootCmd.PersistentFlags().Set("dry-run", "false")
 
 	// Reset subcommand flags by finding and resetting each one
 	for _, cmd := range rootCmd.Commands() {
@@ -46,6 +47,31 @@ func resetFlags(t *testing.T) {
 		}
 		if f := cmd.Flags().Lookup("owner-password"); f != nil {
 			_ = cmd.Flags().Set("owner-password", "")
+		}
+		if f := cmd.Flags().Lookup("stdout"); f != nil {
+			_ = cmd.Flags().Set("stdout", "false")
+		}
+		if f := cmd.Flags().Lookup("ocr"); f != nil {
+			_ = cmd.Flags().Set("ocr", "false")
+		}
+		if f := cmd.Flags().Lookup("format"); f != nil {
+			_ = cmd.Flags().Set("format", "")
+		}
+		// Reset meta flags
+		if f := cmd.Flags().Lookup("title"); f != nil {
+			_ = cmd.Flags().Set("title", "")
+		}
+		if f := cmd.Flags().Lookup("author"); f != nil {
+			_ = cmd.Flags().Set("author", "")
+		}
+		if f := cmd.Flags().Lookup("subject"); f != nil {
+			_ = cmd.Flags().Set("subject", "")
+		}
+		if f := cmd.Flags().Lookup("keywords"); f != nil {
+			_ = cmd.Flags().Set("keywords", "")
+		}
+		if f := cmd.Flags().Lookup("creator"); f != nil {
+			_ = cmd.Flags().Set("creator", "")
 		}
 	}
 }

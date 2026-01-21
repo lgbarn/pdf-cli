@@ -45,8 +45,20 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Check coverage threshold (75%)
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          echo "Total coverage: ${COVERAGE}%"
+          # Use awk for floating point comparison (more portable than bc)
+          if awk "BEGIN {exit !($COVERAGE < 75)}"; then
+            echo "::error::Coverage ${COVERAGE}% is below 75% threshold"
+            exit 1
+          else
+            echo "Coverage ${COVERAGE}% meets 75% threshold"
+          fi
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -105,7 +117,8 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Install Gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4
+
       - name: Run Gosec
-        uses: securego/gosec@master
-        with:
-          args: -exclude-dir=testdata ./...
+        run: gosec -exclude-dir=testdata ./...

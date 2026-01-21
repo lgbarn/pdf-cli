@@ -5,8 +5,10 @@ import (
 	"path/filepath"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
+	"github.com/lgbarn/pdf-cli/internal/output"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -43,10 +45,10 @@ Examples:
 }
 
 func runMeta(cmd *cobra.Command, args []string) error {
-	output := cli.GetOutput(cmd)
+	outputFile := cli.GetOutput(cmd)
 	password := cli.GetPassword(cmd)
 	format := cli.GetFormat(cmd)
-	formatter := util.NewOutputFormatter(format)
+	formatter := output.NewOutputFormatter(format)
 
 	title, _ := cmd.Flags().GetString("title")
 	author, _ := cmd.Flags().GetString("author")
@@ -60,7 +62,7 @@ func runMeta(cmd *cobra.Command, args []string) error {
 		if len(args) > 1 {
 			return fmt.Errorf("cannot set metadata on multiple files; use a single file")
 		}
-		return setMetadata(args[0], output, password, title, author, subject, keywords, creator)
+		return setMetadata(args[0], outputFile, password, title, author, subject, keywords, creator)
 	}
 
 	if len(args) == 1 {
@@ -81,8 +83,8 @@ type MetadataOutput struct {
 	Producer string `json:"producer,omitempty"`
 }
 
-func viewMetadata(inputFile, password string, formatter *util.OutputFormatter) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+func viewMetadata(inputFile, password string, formatter *output.OutputFormatter) error {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -90,7 +92,7 @@ func viewMetadata(inputFile, password string, formatter *util.OutputFormatter) e
 
 	meta, err := pdf.GetMetadata(inputFile, password)
 	if err != nil {
-		return util.WrapError("reading metadata", inputFile, err)
+		return pdferrors.WrapError("reading metadata", inputFile, err)
 	}
 
 	// Structured output (JSON/CSV/TSV)
@@ -119,12 +121,12 @@ func viewMetadata(inputFile, password string, formatter *util.OutputFormatter) e
 	return nil
 }
 
-func viewBatchMetadata(files []string, password string, formatter *util.OutputFormatter) error {
+func viewBatchMetadata(files []string, password string, formatter *output.OutputFormatter) error {
 	// Structured output (JSON/CSV/TSV)
 	if formatter.IsStructured() {
 		var outputs []MetadataOutput
 		for _, file := range files {
-			if err := util.ValidatePDFFile(file); err != nil {
+			if err := fileio.ValidatePDFFile(file); err != nil {
 				continue
 			}
 			meta, err := pdf.GetMetadata(file, password)
@@ -142,7 +144,7 @@ func viewBatchMetadata(files []string, password string, formatter *util.OutputFo
 			})
 		}
 
-		if formatter.Format == util.FormatJSON {
+		if formatter.Format == output.FormatJSON {
 			return formatter.Print(outputs)
 		}
 
@@ -165,7 +167,7 @@ func viewBatchMetadata(files []string, password string, formatter *util.OutputFo
 
 		fmt.Printf("=== %s ===\n", filepath.Base(file))
 
-		if err := util.ValidatePDFFile(file); err != nil {
+		if err := fileio.ValidatePDFFile(file); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			continue
 		}
@@ -187,14 +189,36 @@ func viewBatchMetadata(files []string, password string, formatter *util.OutputFo
 	return nil
 }
 
-func setMetadata(inputFile, output, password, title, author, subject, keywords, creator string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+func setMetadata(inputFile, outputFile, password, title, author, subject, keywords, creator string) error {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
-	output = outputOrDefault(output, inputFile, "_updated")
+	outputFile = outputOrDefault(outputFile, inputFile, "_updated")
 
-	if err := checkOutputFile(output); err != nil {
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		cli.DryRunPrint("Would set metadata on: %s", inputFile)
+		if title != "" {
+			cli.DryRunPrint("  Title: \"%s\"", title)
+		}
+		if author != "" {
+			cli.DryRunPrint("  Author: \"%s\"", author)
+		}
+		if subject != "" {
+			cli.DryRunPrint("  Subject: \"%s\"", subject)
+		}
+		if keywords != "" {
+			cli.DryRunPrint("  Keywords: \"%s\"", keywords)
+		}
+		if creator != "" {
+			cli.DryRunPrint("  Creator: \"%s\"", creator)
+		}
+		cli.DryRunPrint("  Output: %s", outputFile)
+		return nil
+	}
+
+	if err := checkOutputFile(outputFile); err != nil {
 		return err
 	}
 
@@ -208,11 +232,11 @@ func setMetadata(inputFile, output, password, title, author, subject, keywords, 
 
 	cli.PrintVerbose("Setting metadata on %s", inputFile)
 
-	if err := pdf.SetMetadata(inputFile, output, meta, password); err != nil {
-		return util.WrapError("setting metadata", inputFile, err)
+	if err := pdf.SetMetadata(inputFile, outputFile, meta, password); err != nil {
+		return pdferrors.WrapError("setting metadata", inputFile, err)
 	}
 
-	fmt.Printf("Metadata updated in %s\n", output)
+	fmt.Printf("Metadata updated in %s\n", outputFile)
 	return nil
 }
 

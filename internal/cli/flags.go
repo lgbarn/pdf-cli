@@ -1,7 +1,14 @@
 package cli
 
 import (
+	"github.com/lgbarn/pdf-cli/internal/logging"
 	"github.com/spf13/cobra"
+)
+
+// Logging flag variables.
+var (
+	logLevel  string
+	logFormat string
 )
 
 // AddOutputFlag adds the -o/--output flag to a command
@@ -66,4 +73,25 @@ func AddStdoutFlag(cmd *cobra.Command) {
 func GetStdout(cmd *cobra.Command) bool {
 	stdout, _ := cmd.Flags().GetBool("stdout")
 	return stdout
+}
+
+// AddLoggingFlags adds --log-level and --log-format persistent flags to a command.
+func AddLoggingFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", "silent", "Log level (debug, info, warn, error, silent)")
+	cmd.PersistentFlags().StringVar(&logFormat, "log-format", "text", "Log format (text, json)")
+}
+
+// GetLogLevel returns the log level flag value.
+func GetLogLevel() string {
+	return logLevel
+}
+
+// GetLogFormat returns the log format flag value.
+func GetLogFormat() string {
+	return logFormat
+}
+
+// InitLogging initializes the logging system from flags.
+func InitLogging() {
+	logging.Init(logging.ParseLevel(logLevel), logging.ParseFormat(logFormat))
 }

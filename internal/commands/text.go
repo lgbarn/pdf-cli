@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/ocr"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -55,14 +56,14 @@ func runText(cmd *cobra.Command, args []string) error {
 	ocrBackend, _ := cmd.Flags().GetString("ocr-backend")
 
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
-	if !util.IsStdinInput(inputArg) {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+	if !fileio.IsStdinInput(inputArg) {
+		if err := fileio.ValidatePDFFile(inputFile); err != nil {
 			return err
 		}
 	}
@@ -83,7 +84,7 @@ func runText(cmd *cobra.Command, args []string) error {
 			BackendType: backendType,
 		})
 		if err != nil {
-			return util.WrapError("initializing OCR", inputFile, err)
+			return pdferrors.WrapError("initializing OCR", inputFile, err)
 		}
 		defer engine.Close()
 
@@ -91,14 +92,14 @@ func runText(cmd *cobra.Command, args []string) error {
 
 		text, err = engine.ExtractTextFromPDF(inputFile, pages, password, cli.Progress())
 		if err != nil {
-			return util.WrapError("extracting text with OCR", inputFile, err)
+			return pdferrors.WrapError("extracting text with OCR", inputFile, err)
 		}
 	} else {
 		cli.PrintVerbose("Extracting text from %s", inputFile)
 
 		text, err = pdf.ExtractTextWithProgress(inputFile, pages, password, cli.Progress())
 		if err != nil {
-			return util.WrapError("extracting text", inputFile, err)
+			return pdferrors.WrapError("extracting text", inputFile, err)
 		}
 
 		if strings.TrimSpace(text) == "" {

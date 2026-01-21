@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -50,8 +52,13 @@ func runRotate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid rotation angle: %d (must be 90, 180, or 270)", angle)
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return rotateDryRun(args, output, pagesStr, password, angle)
+	}
+
 	// Handle stdin/stdout for single file
-	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return rotateWithStdio(args[0], output, pagesStr, password, angle, toStdout)
 	}
 
@@ -64,52 +71,75 @@ func runRotate(cmd *cobra.Command, args []string) error {
 	})
 }
 
-func rotateWithStdio(inputArg, explicitOutput, pagesStr, password string, angle int, toStdout bool) error {
-	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	pages, err := parseAndValidatePages(pagesStr, inputFile, password)
-	if err != nil {
-		return err
-	}
-
-	// Handle stdout output
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-rotate-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
+func rotateDryRun(args []string, explicitOutput, pagesStr, password string, angle int) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would rotate: stdin by %d degrees", angle)
+			continue
 		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(explicitOutput, inputArg, "_rotated")
+
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would rotate: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_rotated")
+		pageDesc := "all pages"
+		if pagesStr != "" {
+			pageDesc = "pages " + pagesStr
+		}
+
+		cli.DryRunPrint("Would rotate: %s (%d pages)", inputFile, info.Pages)
+		cli.DryRunPrint("  Angle: %d degrees", angle)
+		cli.DryRunPrint("  Pages: %s", pageDesc)
+		cli.DryRunPrint("  Output: %s", output)
+	}
+	return nil
+}
+
+func rotateWithStdio(inputArg, explicitOutput, pagesStr, password string, angle int, toStdout bool) error {
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_rotated",
+		Operation:      "rotate",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
+	if err != nil {
+		return err
+	}
+
+	pages, err := parseAndValidatePages(pagesStr, input, password)
+	if err != nil {
+		return err
+	}
+
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
 	}
 
-	if err := pdf.Rotate(inputFile, output, angle, pages, password); err != nil {
-		return util.WrapError("rotating pages", inputArg, err)
+	if err := pdf.Rotate(input, output, angle, pages, password); err != nil {
+		return pdferrors.WrapError("rotating pages", inputArg, err)
 	}
 
-	if toStdout {
-		return util.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Rotated by %d degrees to %s\n", angle, output)
+	if !toStdout {
+		fmt.Fprintf(os.Stderr, "Rotated by %d degrees to %s\n", angle, output)
+	}
 	return nil
 }
 
 func rotateFile(inputFile, explicitOutput, pagesStr, password string, angle int) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -131,7 +161,7 @@ func rotateFile(inputFile, explicitOutput, pagesStr, password string, angle int)
 	cli.PrintVerbose("Rotating %s by %d degrees in %s", pageDesc, angle, inputFile)
 
 	if err := pdf.Rotate(inputFile, output, angle, pages, password); err != nil {
-		return util.WrapError("rotating pages", inputFile, err)
+		return pdferrors.WrapError("rotating pages", inputFile, err)
 	}
 
 	fmt.Printf("Rotated %s by %d degrees to %s\n", pageDesc, angle, output)

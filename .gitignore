@@ -16,3 +16,6 @@ Thumbs.db
 # Test artifacts
 coverage.out
 coverage.html
+
+# Git worktrees
+.worktrees/

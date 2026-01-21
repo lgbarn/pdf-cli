@@ -93,6 +93,33 @@ deps:
 lint:
 	golangci-lint run
 
+# Lint and fix issues
+.PHONY: lint-fix
+lint-fix:
+	golangci-lint run --fix
+
+# Run all checks (comprehensive pre-commit)
+.PHONY: check-all
+check-all: fmt vet lint test
+
+# Show test coverage percentage
+.PHONY: coverage
+coverage:
+	@GO111MODULE=on $(GOTEST) -coverprofile=coverage.out ./... 2>/dev/null
+	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+
+# Check coverage meets threshold (75%)
+.PHONY: coverage-check
+coverage-check:
+	@GO111MODULE=on $(GOTEST) -coverprofile=coverage.out ./... 2>/dev/null
+	@coverage=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | tr -d '%'); \
+	if [ $$(echo "$$coverage < 75" | bc -l) -eq 1 ]; then \
+		echo "Coverage $$coverage% is below 75% threshold"; \
+		exit 1; \
+	else \
+		echo "Coverage $$coverage% meets 75% threshold"; \
+	fi
+
 # Format code
 .PHONY: fmt
 fmt:
@@ -138,9 +165,13 @@ help:
 	@echo "  make tidy         Tidy dependencies"
 	@echo "  make deps         Download dependencies"
 	@echo "  make lint         Run linter"
+	@echo "  make lint-fix     Run linter with auto-fix"
 	@echo "  make fmt          Format code"
 	@echo "  make vet          Vet code"
 	@echo "  make check        Run all checks (fmt, vet, test)"
+	@echo "  make check-all    Run all checks (fmt, vet, lint, test)"
+	@echo "  make coverage     Show test coverage percentage"
+	@echo "  make coverage-check Check coverage meets 75% threshold"
 	@echo "  make completions  Generate shell completions"
 	@echo "  make version      Show version info"
 	@echo "  make help         Show this help"

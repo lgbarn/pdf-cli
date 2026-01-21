@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
+	"github.com/lgbarn/pdf-cli/internal/output"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -42,20 +44,20 @@ Examples:
 func runInfo(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	format := cli.GetFormat(cmd)
-	formatter := util.NewOutputFormatter(format)
+	formatter := output.NewOutputFormatter(format)
 
 	// Single file: detailed output (supports stdin)
 	if len(args) == 1 {
 		inputArg := args[0]
 
 		// Handle stdin input
-		inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+		inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 		if err != nil {
 			return err
 		}
 		defer cleanup()
 
-		return displaySingleInfo(inputFile, password, formatter, util.IsStdinInput(inputArg))
+		return displaySingleInfo(inputFile, password, formatter, fileio.IsStdinInput(inputArg))
 	}
 
 	// Multiple files: table output
@@ -73,9 +75,9 @@ type InfoOutput struct {
 	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
-func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatter, isStdin bool) error {
+func displaySingleInfo(inputFile, password string, formatter *output.OutputFormatter, isStdin bool) error {
 	if !isStdin {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+		if err := fileio.ValidatePDFFile(inputFile); err != nil {
 			return err
 		}
 	}
@@ -84,7 +86,7 @@ func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatt
 
 	info, err := pdf.GetInfo(inputFile, password)
 	if err != nil {
-		return util.WrapError("reading info", inputFile, err)
+		return pdferrors.WrapError("reading info", inputFile, err)
 	}
 
 	// Structured output (JSON/CSV/TSV)
@@ -92,7 +94,7 @@ func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatt
 		output := InfoOutput{
 			File:      info.FilePath,
 			Size:      info.FileSize,
-			SizeHuman: util.FormatFileSize(info.FileSize),
+			SizeHuman: fileio.FormatFileSize(info.FileSize),
 			Pages:     info.Pages,
 			Version:   info.Version,
 			Encrypted: info.Encrypted,
@@ -121,7 +123,7 @@ func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatt
 
 	// Human-readable output
 	fmt.Printf("File:       %s\n", info.FilePath)
-	fmt.Printf("Size:       %s\n", util.FormatFileSize(info.FileSize))
+	fmt.Printf("Size:       %s\n", fileio.FormatFileSize(info.FileSize))
 	fmt.Printf("Pages:      %d\n", info.Pages)
 	fmt.Printf("Version:    PDF %s\n", info.Version)
 	fmt.Printf("Encrypted:  %t\n", info.Encrypted)
@@ -136,12 +138,12 @@ func displaySingleInfo(inputFile, password string, formatter *util.OutputFormatt
 	return nil
 }
 
-func displayBatchInfo(files []string, password string, formatter *util.OutputFormatter) error {
+func displayBatchInfo(files []string, password string, formatter *output.OutputFormatter) error {
 	// Structured output (JSON/CSV/TSV)
 	if formatter.IsStructured() {
 		var outputs []InfoOutput
 		for _, file := range files {
-			if err := util.ValidatePDFFile(file); err != nil {
+			if err := fileio.ValidatePDFFile(file); err != nil {
 				continue
 			}
 			info, err := pdf.GetInfo(file, password)
@@ -151,7 +153,7 @@ func displayBatchInfo(files []string, password string, formatter *util.OutputFor
 			output := InfoOutput{
 				File:      info.FilePath,
 				Size:      info.FileSize,
-				SizeHuman: util.FormatFileSize(info.FileSize),
+				SizeHuman: fileio.FormatFileSize(info.FileSize),
 				Pages:     info.Pages,
 				Version:   info.Version,
 				Encrypted: info.Encrypted,
@@ -166,7 +168,7 @@ func displayBatchInfo(files []string, password string, formatter *util.OutputFor
 			outputs = append(outputs, output)
 		}
 
-		if formatter.Format == util.FormatJSON {
+		if formatter.Format == output.FormatJSON {
 			return formatter.Print(outputs)
 		}
 
@@ -191,7 +193,7 @@ func displayBatchInfo(files []string, password string, formatter *util.OutputFor
 
 	var hasErrors bool
 	for _, file := range files {
-		if err := util.ValidatePDFFile(file); err != nil {
+		if err := fileio.ValidatePDFFile(file); err != nil {
 			fmt.Printf("%-40s ERROR: %v\n", truncateString(filepath.Base(file), 40), err)
 			hasErrors = true
 			continue
@@ -208,7 +210,7 @@ func displayBatchInfo(files []string, password string, formatter *util.OutputFor
 			truncateString(filepath.Base(file), 40),
 			info.Pages,
 			info.Version,
-			util.FormatFileSize(info.FileSize))
+			fileio.FormatFileSize(info.FileSize))
 	}
 
 	if hasErrors {

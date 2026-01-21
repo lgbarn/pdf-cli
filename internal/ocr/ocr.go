@@ -12,8 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/schollz/progressbar/v3"
 )
@@ -196,13 +197,13 @@ func downloadTessdata(dataDir, lang string) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	bar := util.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
+	bar := progress.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
 	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
 		_ = tmpFile.Close()
 		return err
 	}
 	_ = tmpFile.Close()
-	util.FinishProgressBar(bar)
+	progress.FinishProgressBar(bar)
 
 	return os.Rename(tmpPath, dataFile)
 }
@@ -277,7 +278,7 @@ func findImageFiles(dir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && util.IsImageFile(path) {
+		if !info.IsDir() && fileio.IsImageFile(path) {
 			imageFiles = append(imageFiles, path)
 		}
 		return nil
@@ -308,9 +309,9 @@ func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, 
 func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = util.NewProgressBar("OCR processing", len(imageFiles), 1)
+		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
-	defer util.FinishProgressBar(bar)
+	defer progress.FinishProgressBar(bar)
 
 	ctx := context.Background()
 	texts := make([]string, 0, len(imageFiles))
@@ -331,9 +332,9 @@ func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool)
 func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = util.NewProgressBar("OCR processing", len(imageFiles), 1)
+		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
-	defer util.FinishProgressBar(bar)
+	defer progress.FinishProgressBar(bar)
 
 	ctx := context.Background()
 	results := make(chan imageResult, len(imageFiles))

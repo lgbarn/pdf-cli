@@ -2,11 +2,12 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -44,21 +45,34 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
 	toStdout := cli.GetStdout(cmd)
+	explicitOutput := cli.GetOutput(cmd)
 
-	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	// Handle dry-run mode early
+	if cli.IsDryRun() {
+		return extractDryRun(inputArg, explicitOutput, pagesStr, password)
+	}
+
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_extracted",
+		Operation:      "extract",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
-	if !util.IsStdinInput(inputArg) {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+	if !fileio.IsStdinInput(inputArg) {
+		if err := fileio.ValidatePDFFile(input); err != nil {
 			return err
 		}
 	}
 
-	pages, err := parseAndValidatePages(pagesStr, inputFile, password)
+	pages, err := parseAndValidatePages(pagesStr, input, password)
 	if err != nil {
 		return err
 	}
@@ -67,20 +81,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no pages specified")
 	}
 
-	// Handle stdout output
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-extract-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(cli.GetOutput(cmd), inputArg, "_extracted")
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
@@ -88,14 +89,35 @@ func runExtract(cmd *cobra.Command, args []string) error {
 
 	cli.PrintVerbose("Extracting pages %s from %s to %s", pagesStr, inputArg, output)
 
-	if err := pdf.ExtractPages(inputFile, output, pages, password); err != nil {
-		return util.WrapError("extracting pages", inputArg, err)
+	if err := pdf.ExtractPages(input, output, pages, password); err != nil {
+		return pdferrors.WrapError("extracting pages", inputArg, err)
 	}
 
-	if toStdout {
-		return util.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Printf("Extracted %d pages to %s\n", len(pages), output)
+	if !toStdout {
+		fmt.Printf("Extracted %d pages to %s\n", len(pages), output)
+	}
+	return nil
+}
+
+func extractDryRun(inputArg, explicitOutput, pagesStr, password string) error {
+	if fileio.IsStdinInput(inputArg) {
+		cli.DryRunPrint("Would extract pages %s from: stdin", pagesStr)
+		return nil
+	}
+
+	info, err := pdf.GetInfo(inputArg, password)
+	if err != nil {
+		cli.DryRunPrint("Would extract pages %s from: %s (unable to read info)", pagesStr, inputArg)
+		return nil
+	}
+
+	output := outputOrDefault(explicitOutput, inputArg, "_extracted")
+	cli.DryRunPrint("Would extract from: %s (%d pages total)", inputArg, info.Pages)
+	cli.DryRunPrint("  Pages: %s", pagesStr)
+	cli.DryRunPrint("  Output: %s", output)
 	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 )
 
 func TestParseLanguages(t *testing.T) {
@@ -55,12 +55,12 @@ func TestIsImageFile(t *testing.T) {
 	nonImageFiles := []string{"document.pdf", "file.txt", "noext", "/path/to/file.doc"}
 
 	for _, path := range imageFiles {
-		if !util.IsImageFile(path) {
+		if !fileio.IsImageFile(path) {
 			t.Errorf("IsImageFile(%q) = false, want true", path)
 		}
 	}
 	for _, path := range nonImageFiles {
-		if util.IsImageFile(path) {
+		if fileio.IsImageFile(path) {
 			t.Errorf("IsImageFile(%q) = true, want false", path)
 		}
 	}

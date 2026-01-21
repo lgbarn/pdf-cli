@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -38,10 +39,10 @@ func runCombineImages(cmd *cobra.Command, args []string) error {
 
 	// Validate all input files exist and are images
 	for _, img := range args {
-		if !util.FileExists(img) {
+		if !fileio.FileExists(img) {
 			return fmt.Errorf("image file not found: %s", img)
 		}
-		if !util.IsImageFile(img) {
+		if !fileio.IsImageFile(img) {
 			return fmt.Errorf("not a supported image format: %s (supported: png, jpg, jpeg, tif, tiff)", img)
 		}
 	}
@@ -53,7 +54,7 @@ func runCombineImages(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Creating PDF from %d images...", len(args))
 
 	if err := pdf.CreatePDFFromImages(args, output, pageSize); err != nil {
-		return util.WrapError("creating PDF from images", output, err)
+		return pdferrors.WrapError("creating PDF from images", output, err)
 	}
 
 	fmt.Printf("Created %s from %d image(s)\n", output, len(args))

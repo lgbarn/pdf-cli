@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,7 @@ func runImages(cmd *cobra.Command, args []string) error {
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
 
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -46,7 +47,7 @@ func runImages(cmd *cobra.Command, args []string) error {
 		outputDir = "."
 	}
 
-	if err := util.EnsureDir(outputDir); err != nil {
+	if err := fileio.EnsureDir(outputDir); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -58,7 +59,7 @@ func runImages(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Extracting images from %s to %s", inputFile, outputDir)
 
 	if err := pdf.ExtractImages(inputFile, outputDir, pages, password); err != nil {
-		return util.WrapError("extracting images", inputFile, err)
+		return pdferrors.WrapError("extracting images", inputFile, err)
 	}
 
 	fmt.Printf("Images extracted to %s\n", outputDir)

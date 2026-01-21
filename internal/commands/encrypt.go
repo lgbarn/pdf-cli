@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -49,8 +51,13 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("password is required for encryption")
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return encryptDryRun(args, output, ownerPassword != "")
+	}
+
 	// Handle stdin/stdout for single file
-	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return encryptWithStdio(args[0], output, userPassword, ownerPassword, toStdout)
 	}
 
@@ -63,47 +70,66 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	})
 }
 
+func encryptDryRun(args []string, explicitOutput string, hasOwnerPassword bool) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would encrypt: stdin")
+			continue
+		}
+
+		info, err := pdf.GetInfo(inputFile, "")
+		if err != nil {
+			cli.DryRunPrint("Would encrypt: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_encrypted")
+		cli.DryRunPrint("Would encrypt: %s (%d pages)", inputFile, info.Pages)
+		cli.DryRunPrint("  Output: %s", output)
+		if hasOwnerPassword {
+			cli.DryRunPrint("  Owner password: set")
+		}
+	}
+	return nil
+}
+
 func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword string, toStdout bool) error {
-	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_encrypted",
+		Operation:      "encrypt",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
-	// Handle stdout output
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-encrypt-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(explicitOutput, inputArg, "_encrypted")
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
 	}
 
-	if err := pdf.Encrypt(inputFile, output, userPassword, ownerPassword); err != nil {
-		return util.WrapError("encrypting file", inputArg, err)
+	if err := pdf.Encrypt(input, output, userPassword, ownerPassword); err != nil {
+		return pdferrors.WrapError("encrypting file", inputArg, err)
 	}
 
-	if toStdout {
-		return util.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Encrypted to %s\n", output)
+	if !toStdout {
+		fmt.Fprintf(os.Stderr, "Encrypted to %s\n", output)
+	}
 	return nil
 }
 
 func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -116,7 +142,7 @@ func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) 
 	cli.PrintVerbose("Encrypting %s to %s", inputFile, output)
 
 	if err := pdf.Encrypt(inputFile, output, userPassword, ownerPassword); err != nil {
-		return util.WrapError("encrypting file", inputFile, err)
+		return pdferrors.WrapError("encrypting file", inputFile, err)
 	}
 
 	fmt.Printf("Encrypted %s to %s\n", inputFile, output)

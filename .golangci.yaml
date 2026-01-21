@@ -6,7 +6,93 @@ run:
 linters:
   default: none
   enable:
+    # Original linters
     - govet
     - ineffassign
     - staticcheck
     - unused
+    # New linters
+    - misspell
+    - gocritic
+    - revive
+    - errcheck
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+      disabled-checks:
+        - ifElseChain
+        - whyNoLint
+        - octalLiteral
+        - importShadow
+        - deferInLoop
+        - httpNoBody
+        - unnamedResult
+        - paramTypeCombine
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: increment-decrement
+        - name: var-naming
+        - name: package-comments
+          disabled: true
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+
+    misspell:
+      locale: US
+
+  exclusions:
+    rules:
+      # Exclude errcheck for common cleanup patterns
+      - linters:
+          - errcheck
+        text: "Error return value of .*(Close|Remove|RemoveAll).*is not checked"
+      # Exclude errcheck for fmt print functions (errors rarely meaningful)
+      - linters:
+          - errcheck
+        text: "Error return value of .*fmt\\.(Fprint|Fprintf|Fprintln).*is not checked"
+      # Exclude errcheck in test files for convenience
+      - linters:
+          - errcheck
+        path: "_test\\.go"
+      # Exclude package-comments rule from revive
+      - linters:
+          - revive
+        text: "package-comments"
+      # Exclude exported comments rule from revive (too noisy for CLI tools)
+      - linters:
+          - revive
+        text: "exported:"
+      # Exclude unused-parameter in test files
+      - linters:
+          - revive
+        text: "unused-parameter"
+        path: "_test\\.go"
+      # Exclude var-naming for common package names like 'util'
+      - linters:
+          - revive
+        text: "avoid meaningless package names"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
