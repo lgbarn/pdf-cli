@@ -663,7 +663,7 @@ func ValidatePDFA(path, level, password string) (*PDFAValidationResult, error) {
 // Note: pdfcpu has limited PDF/A conversion capabilities. This performs optimization
 // which may help with some PDF/A requirements, but full conversion requires
 // specialized tools like Ghostscript or Adobe Acrobat.
-func ConvertToPDFA(input, output, level, password string) error {
+func ConvertToPDFA(input, output, _ /* level */, password string) error {
 	return api.OptimizeFile(input, output, NewConfig(password))
 }
 
