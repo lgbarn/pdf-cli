@@ -189,14 +189,36 @@ func viewBatchMetadata(files []string, password string, formatter *output.Output
 	return nil
 }
 
-func setMetadata(inputFile, output, password, title, author, subject, keywords, creator string) error {
+func setMetadata(inputFile, outputFile, password, title, author, subject, keywords, creator string) error {
 	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
-	output = outputOrDefault(output, inputFile, "_updated")
+	outputFile = outputOrDefault(outputFile, inputFile, "_updated")
 
-	if err := checkOutputFile(output); err != nil {
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		cli.DryRunPrint("Would set metadata on: %s", inputFile)
+		if title != "" {
+			cli.DryRunPrint("  Title: \"%s\"", title)
+		}
+		if author != "" {
+			cli.DryRunPrint("  Author: \"%s\"", author)
+		}
+		if subject != "" {
+			cli.DryRunPrint("  Subject: \"%s\"", subject)
+		}
+		if keywords != "" {
+			cli.DryRunPrint("  Keywords: \"%s\"", keywords)
+		}
+		if creator != "" {
+			cli.DryRunPrint("  Creator: \"%s\"", creator)
+		}
+		cli.DryRunPrint("  Output: %s", outputFile)
+		return nil
+	}
+
+	if err := checkOutputFile(outputFile); err != nil {
 		return err
 	}
 
@@ -210,11 +232,11 @@ func setMetadata(inputFile, output, password, title, author, subject, keywords, 
 
 	cli.PrintVerbose("Setting metadata on %s", inputFile)
 
-	if err := pdf.SetMetadata(inputFile, output, meta, password); err != nil {
+	if err := pdf.SetMetadata(inputFile, outputFile, meta, password); err != nil {
 		return pdferrors.WrapError("setting metadata", inputFile, err)
 	}
 
-	fmt.Printf("Metadata updated in %s\n", output)
+	fmt.Printf("Metadata updated in %s\n", outputFile)
 	return nil
 }
 

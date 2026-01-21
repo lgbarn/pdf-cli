@@ -49,6 +49,11 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("password is required for decryption")
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return decryptDryRun(args, output, password)
+	}
+
 	// Handle stdin/stdout for single file
 	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return decryptWithStdio(args[0], output, password, toStdout)
@@ -61,6 +66,27 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return decryptFile(inputFile, output, password)
 	})
+}
+
+func decryptDryRun(args []string, explicitOutput, password string) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would decrypt: stdin")
+			continue
+		}
+
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would decrypt: %s (unable to read info - may need password)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_decrypted")
+		cli.DryRunPrint("Would decrypt: %s (%d pages)", inputFile, info.Pages)
+		cli.DryRunPrint("  Encrypted: %t", info.Encrypted)
+		cli.DryRunPrint("  Output: %s", output)
+	}
+	return nil
 }
 
 func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {

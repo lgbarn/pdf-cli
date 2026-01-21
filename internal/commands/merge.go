@@ -41,6 +41,23 @@ func runMerge(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		totalPages := 0
+		cli.DryRunPrint("Would merge %d files:", len(args))
+		for _, f := range args {
+			info, err := pdf.GetInfo(f, password)
+			if err == nil {
+				cli.DryRunPrint("  - %s (%d pages)", f, info.Pages)
+				totalPages += info.Pages
+			} else {
+				cli.DryRunPrint("  - %s (unable to read info)", f)
+			}
+		}
+		cli.DryRunPrint("Output: %s (%d pages total)", output, totalPages)
+		return nil
+	}
+
 	if err := checkOutputFile(output); err != nil {
 		return err
 	}

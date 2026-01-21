@@ -51,6 +51,11 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("password is required for encryption")
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return encryptDryRun(args, output, ownerPassword != "")
+	}
+
 	// Handle stdin/stdout for single file
 	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return encryptWithStdio(args[0], output, userPassword, ownerPassword, toStdout)
@@ -63,6 +68,29 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return encryptFile(inputFile, output, userPassword, ownerPassword)
 	})
+}
+
+func encryptDryRun(args []string, explicitOutput string, hasOwnerPassword bool) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would encrypt: stdin")
+			continue
+		}
+
+		info, err := pdf.GetInfo(inputFile, "")
+		if err != nil {
+			cli.DryRunPrint("Would encrypt: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_encrypted")
+		cli.DryRunPrint("Would encrypt: %s (%d pages)", inputFile, info.Pages)
+		cli.DryRunPrint("  Output: %s", output)
+		if hasOwnerPassword {
+			cli.DryRunPrint("  Owner password: set")
+		}
+	}
+	return nil
 }
 
 func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword string, toStdout bool) error {

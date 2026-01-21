@@ -52,6 +52,21 @@ func runSplit(cmd *cobra.Command, args []string) error {
 		outputDir = filepath.Dir(inputFile)
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would split: %s (unable to read info)", inputFile)
+		} else {
+			outputFiles := (info.Pages + pagesPerFile - 1) / pagesPerFile
+			cli.DryRunPrint("Would split: %s (%d pages)", inputFile, info.Pages)
+			cli.DryRunPrint("Pages per file: %d", pagesPerFile)
+			cli.DryRunPrint("Output directory: %s", outputDir)
+			cli.DryRunPrint("Result: ~%d output files", outputFiles)
+		}
+		return nil
+	}
+
 	// Ensure output directory exists
 	if err := fileio.EnsureDir(outputDir); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)

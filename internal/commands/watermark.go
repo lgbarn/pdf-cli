@@ -60,6 +60,11 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("image file not found: %s", image)
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return watermarkDryRun(args, output, pagesStr, password, text, image)
+	}
+
 	if err := validateBatchOutput(args, output, "_watermarked"); err != nil {
 		return err
 	}
@@ -67,6 +72,32 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return watermarkFile(inputFile, output, pagesStr, password, text, image)
 	})
+}
+
+func watermarkDryRun(args []string, explicitOutput, pagesStr, password, text, image string) error {
+	for _, inputFile := range args {
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would watermark: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_watermarked")
+		pageDesc := "all pages"
+		if pagesStr != "" {
+			pageDesc = "pages " + pagesStr
+		}
+
+		cli.DryRunPrint("Would watermark: %s (%d pages)", inputFile, info.Pages)
+		if text != "" {
+			cli.DryRunPrint("  Text: \"%s\"", text)
+		} else {
+			cli.DryRunPrint("  Image: %s", image)
+		}
+		cli.DryRunPrint("  Pages: %s", pageDesc)
+		cli.DryRunPrint("  Output: %s", output)
+	}
+	return nil
 }
 
 func watermarkFile(inputFile, explicitOutput, pagesStr, password, text, image string) error {

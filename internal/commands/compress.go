@@ -46,6 +46,11 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return compressDryRun(args, output, password)
+	}
+
 	// Handle stdin/stdout for single file
 	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return compressWithStdio(args[0], output, password, toStdout)
@@ -58,6 +63,27 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return compressFile(inputFile, output, password)
 	})
+}
+
+func compressDryRun(args []string, explicitOutput, password string) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would compress: stdin")
+			continue
+		}
+
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would compress: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_compressed")
+		cli.DryRunPrint("Would compress: %s", inputFile)
+		cli.DryRunPrint("  Size: %s (%d pages)", fileio.FormatFileSize(info.FileSize), info.Pages)
+		cli.DryRunPrint("  Output: %s", output)
+	}
+	return nil
 }
 
 func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {

@@ -52,6 +52,11 @@ func runRotate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid rotation angle: %d (must be 90, 180, or 270)", angle)
 	}
 
+	// Handle dry-run mode
+	if cli.IsDryRun() {
+		return rotateDryRun(args, output, pagesStr, password, angle)
+	}
+
 	// Handle stdin/stdout for single file
 	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return rotateWithStdio(args[0], output, pagesStr, password, angle, toStdout)
@@ -64,6 +69,33 @@ func runRotate(cmd *cobra.Command, args []string) error {
 	return processBatch(args, func(inputFile string) error {
 		return rotateFile(inputFile, output, pagesStr, password, angle)
 	})
+}
+
+func rotateDryRun(args []string, explicitOutput, pagesStr, password string, angle int) error {
+	for _, inputFile := range args {
+		if fileio.IsStdinInput(inputFile) {
+			cli.DryRunPrint("Would rotate: stdin by %d degrees", angle)
+			continue
+		}
+
+		info, err := pdf.GetInfo(inputFile, password)
+		if err != nil {
+			cli.DryRunPrint("Would rotate: %s (unable to read info)", inputFile)
+			continue
+		}
+
+		output := outputOrDefault(explicitOutput, inputFile, "_rotated")
+		pageDesc := "all pages"
+		if pagesStr != "" {
+			pageDesc = "pages " + pagesStr
+		}
+
+		cli.DryRunPrint("Would rotate: %s (%d pages)", inputFile, info.Pages)
+		cli.DryRunPrint("  Angle: %d degrees", angle)
+		cli.DryRunPrint("  Pages: %s", pageDesc)
+		cli.DryRunPrint("  Output: %s", output)
+	}
+	return nil
 }
 
 func rotateWithStdio(inputArg, explicitOutput, pagesStr, password string, angle int, toStdout bool) error {

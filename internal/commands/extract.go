@@ -45,10 +45,16 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	pagesStr := cli.GetPages(cmd)
 	password := cli.GetPassword(cmd)
 	toStdout := cli.GetStdout(cmd)
+	explicitOutput := cli.GetOutput(cmd)
+
+	// Handle dry-run mode early
+	if cli.IsDryRun() {
+		return extractDryRun(inputArg, explicitOutput, pagesStr, password)
+	}
 
 	handler := &patterns.StdioHandler{
 		InputArg:       inputArg,
-		ExplicitOutput: cli.GetOutput(cmd),
+		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
 		DefaultSuffix:  "_extracted",
 		Operation:      "extract",
@@ -94,5 +100,24 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	if !toStdout {
 		fmt.Printf("Extracted %d pages to %s\n", len(pages), output)
 	}
+	return nil
+}
+
+func extractDryRun(inputArg, explicitOutput, pagesStr, password string) error {
+	if fileio.IsStdinInput(inputArg) {
+		cli.DryRunPrint("Would extract pages %s from: stdin", pagesStr)
+		return nil
+	}
+
+	info, err := pdf.GetInfo(inputArg, password)
+	if err != nil {
+		cli.DryRunPrint("Would extract pages %s from: %s (unable to read info)", pagesStr, inputArg)
+		return nil
+	}
+
+	output := outputOrDefault(explicitOutput, inputArg, "_extracted")
+	cli.DryRunPrint("Would extract from: %s (%d pages total)", inputArg, info.Pages)
+	cli.DryRunPrint("  Pages: %s", pagesStr)
+	cli.DryRunPrint("  Output: %s", output)
 	return nil
 }

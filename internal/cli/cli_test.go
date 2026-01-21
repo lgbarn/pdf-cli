@@ -357,3 +357,70 @@ func TestForceFlagShorthand(t *testing.T) {
 		t.Errorf("force flag shorthand = %q, want %q", forceFlag.Shorthand, "f")
 	}
 }
+
+func TestIsDryRun(t *testing.T) {
+	cmd := GetRootCmd()
+
+	// Reset dry-run flag
+	if err := cmd.PersistentFlags().Set("dry-run", "false"); err != nil {
+		t.Fatalf("Failed to reset dry-run flag: %v", err)
+	}
+
+	// Test default (off)
+	if IsDryRun() {
+		t.Error("IsDryRun() should be false by default")
+	}
+
+	// Test dry-run on
+	if err := cmd.PersistentFlags().Set("dry-run", "true"); err != nil {
+		t.Fatalf("Failed to set dry-run flag: %v", err)
+	}
+	if !IsDryRun() {
+		t.Error("IsDryRun() should be true after setting flag")
+	}
+
+	// Reset for other tests
+	_ = cmd.PersistentFlags().Set("dry-run", "false")
+}
+
+func TestDryRunFlagExists(t *testing.T) {
+	cmd := GetRootCmd()
+
+	dryRunFlag := cmd.PersistentFlags().Lookup("dry-run")
+	if dryRunFlag == nil {
+		t.Fatal("dry-run flag not found")
+	}
+
+	if dryRunFlag.DefValue != "false" {
+		t.Errorf("dry-run flag default = %q, want %q", dryRunFlag.DefValue, "false")
+	}
+
+	if dryRunFlag.Usage != "Show what would be done without executing" {
+		t.Errorf("dry-run flag usage = %q", dryRunFlag.Usage)
+	}
+}
+
+func TestDryRunPrint(t *testing.T) {
+	// Capture stderr
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	DryRunPrint("would do %s with %d items", "action", 5)
+
+	w.Close()
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	os.Stderr = oldStderr
+
+	output := buf.String()
+	if !strings.Contains(output, "[dry-run]") {
+		t.Errorf("DryRunPrint() should contain [dry-run] prefix, got %q", output)
+	}
+	if !strings.Contains(output, "would do action with 5 items") {
+		t.Errorf("DryRunPrint() should contain formatted message, got %q", output)
+	}
+	if !strings.HasSuffix(output, "\n") {
+		t.Errorf("DryRunPrint() should end with newline, got %q", output)
+	}
+}

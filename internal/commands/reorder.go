@@ -50,6 +50,11 @@ func runReorder(cmd *cobra.Command, args []string) error {
 	toStdout := cli.GetStdout(cmd)
 	sequence, _ := cmd.Flags().GetString("sequence")
 
+	// Handle dry-run mode early
+	if cli.IsDryRun() {
+		return reorderDryRun(inputArg, explicitOutput, sequence, password)
+	}
+
 	handler := &patterns.StdioHandler{
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
@@ -100,5 +105,35 @@ func runReorder(cmd *cobra.Command, args []string) error {
 	if !toStdout {
 		fmt.Printf("Reordered PDF saved to %s (%d pages)\n", output, len(pageList))
 	}
+	return nil
+}
+
+func reorderDryRun(inputArg, explicitOutput, sequence, password string) error {
+	if fileio.IsStdinInput(inputArg) {
+		cli.DryRunPrint("Would reorder: stdin")
+		cli.DryRunPrint("  Sequence: %s", sequence)
+		return nil
+	}
+
+	info, err := pdf.GetInfo(inputArg, password)
+	if err != nil {
+		cli.DryRunPrint("Would reorder: %s (unable to read info)", inputArg)
+		cli.DryRunPrint("  Sequence: %s", sequence)
+		return nil
+	}
+
+	pageCount := info.Pages
+	pageList, err := pages.ParseReorderSequence(sequence, pageCount)
+	if err != nil {
+		cli.DryRunPrint("Would reorder: %s (%d pages)", inputArg, pageCount)
+		cli.DryRunPrint("  Sequence: %s (invalid: %v)", sequence, err)
+		return nil
+	}
+
+	output := outputOrDefault(explicitOutput, inputArg, "_reordered")
+	cli.DryRunPrint("Would reorder: %s (%d pages)", inputArg, pageCount)
+	cli.DryRunPrint("  Sequence: %s", sequence)
+	cli.DryRunPrint("  Result: %d pages in order: %v", len(pageList), pageList)
+	cli.DryRunPrint("  Output: %s", output)
 	return nil
 }
