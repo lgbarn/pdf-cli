@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,7 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	}
 
 	// Handle stdin/stdout for single file
-	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return encryptWithStdio(args[0], output, userPassword, ownerPassword, toStdout)
 	}
 
@@ -65,7 +66,7 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 
 func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword string, toStdout bool) error {
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
@@ -91,11 +92,11 @@ func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword stri
 	}
 
 	if err := pdf.Encrypt(inputFile, output, userPassword, ownerPassword); err != nil {
-		return util.WrapError("encrypting file", inputArg, err)
+		return pdferrors.WrapError("encrypting file", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(output)
+		return fileio.WriteToStdout(output)
 	}
 
 	fmt.Fprintf(os.Stderr, "Encrypted to %s\n", output)
@@ -103,7 +104,7 @@ func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword stri
 }
 
 func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -116,7 +117,7 @@ func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) 
 	cli.PrintVerbose("Encrypting %s to %s", inputFile, output)
 
 	if err := pdf.Encrypt(inputFile, output, userPassword, ownerPassword); err != nil {
-		return util.WrapError("encrypting file", inputFile, err)
+		return pdferrors.WrapError("encrypting file", inputFile, err)
 	}
 
 	fmt.Printf("Encrypted %s to %s\n", inputFile, output)

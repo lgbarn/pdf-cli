@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
+	"github.com/lgbarn/pdf-cli/internal/pages"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -49,24 +51,24 @@ func runReorder(cmd *cobra.Command, args []string) error {
 	sequence, _ := cmd.Flags().GetString("sequence")
 
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
-	if !util.IsStdinInput(inputArg) {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+	if !fileio.IsStdinInput(inputArg) {
+		if err := fileio.ValidatePDFFile(inputFile); err != nil {
 			return err
 		}
 	}
 
 	pageCount, err := pdf.PageCount(inputFile, password)
 	if err != nil {
-		return util.WrapError("reading file", inputArg, err)
+		return pdferrors.WrapError("reading file", inputArg, err)
 	}
 
-	pages, err := util.ParseReorderSequence(sequence, pageCount)
+	pages, err := pages.ParseReorderSequence(sequence, pageCount)
 	if err != nil {
 		return fmt.Errorf("invalid sequence: %w", err)
 	}
@@ -94,11 +96,11 @@ func runReorder(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Page order: %v", pages)
 
 	if err := pdf.ExtractPages(inputFile, actualOutput, pages, password); err != nil {
-		return util.WrapError("reordering pages", inputArg, err)
+		return pdferrors.WrapError("reordering pages", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(actualOutput)
+		return fileio.WriteToStdout(actualOutput)
 	}
 
 	fmt.Printf("Reordered PDF saved to %s (%d pages)\n", actualOutput, len(pages))

@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +37,7 @@ func runMerge(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	password := cli.GetPassword(cmd)
 
-	if err := util.ValidatePDFFiles(args); err != nil {
+	if err := fileio.ValidatePDFFiles(args); err != nil {
 		return err
 	}
 
@@ -47,7 +48,7 @@ func runMerge(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Merging %d files into %s", len(args), output)
 
 	if err := pdf.MergeWithProgress(args, output, password, cli.Progress()); err != nil {
-		return util.WrapError("merging files", output, err)
+		return pdferrors.WrapError("merging files", output, err)
 	}
 
 	fmt.Printf("Merged %d files into %s\n", len(args), output)

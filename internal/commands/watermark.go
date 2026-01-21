@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +56,7 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot specify both --text and --image")
 	}
 
-	if image != "" && !util.FileExists(image) {
+	if image != "" && !fileio.FileExists(image) {
 		return fmt.Errorf("image file not found: %s", image)
 	}
 
@@ -69,7 +70,7 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 }
 
 func watermarkFile(inputFile, explicitOutput, pagesStr, password, text, image string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -87,12 +88,12 @@ func watermarkFile(inputFile, explicitOutput, pagesStr, password, text, image st
 	if text != "" {
 		cli.PrintVerbose("Adding text watermark '%s' to %s", text, inputFile)
 		if err := pdf.AddWatermark(inputFile, output, text, pages, password); err != nil {
-			return util.WrapError("adding watermark", inputFile, err)
+			return pdferrors.WrapError("adding watermark", inputFile, err)
 		}
 	} else {
 		cli.PrintVerbose("Adding image watermark '%s' to %s", image, inputFile)
 		if err := pdf.AddImageWatermark(inputFile, output, image, pages, password); err != nil {
-			return util.WrapError("adding watermark", inputFile, err)
+			return pdferrors.WrapError("adding watermark", inputFile, err)
 		}
 	}
 

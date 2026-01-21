@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -122,7 +122,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 	}
 
 	// For larger number of files with progress, merge incrementally
-	bar := util.NewProgressBar("Merging PDFs", len(inputs), 0)
+	bar := progress.NewProgressBar("Merging PDFs", len(inputs), 0)
 
 	// Create temp file for intermediate results
 	tmpFile, err := os.CreateTemp("", "pdf-merge-*.pdf")
@@ -156,7 +156,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 		_ = bar.Add(1)
 	}
 
-	util.FinishProgressBar(bar)
+	progress.FinishProgressBar(bar)
 
 	// Move final result to output
 	return os.Rename(tmpPath, output)
@@ -186,7 +186,7 @@ func SplitWithProgress(input, outputDir string, pageCount int, password string, 
 
 	// Calculate number of output files
 	numOutputFiles := (totalPages + pageCount - 1) / pageCount
-	bar := util.NewProgressBar("Splitting PDF", numOutputFiles, 0)
+	bar := progress.NewProgressBar("Splitting PDF", numOutputFiles, 0)
 
 	// Get base name for output files
 	baseName := filepath.Base(input)
@@ -222,7 +222,7 @@ func SplitWithProgress(input, outputDir string, pageCount int, password string, 
 		_ = bar.Add(1)
 	}
 
-	util.FinishProgressBar(bar)
+	progress.FinishProgressBar(bar)
 	return nil
 }
 
@@ -311,9 +311,9 @@ func extractTextPrimary(input string, pages []int, showProgress bool) (string, e
 func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = util.NewProgressBar("Extracting text", len(pages), 5)
+		bar = progress.NewProgressBar("Extracting text", len(pages), 5)
 	}
-	defer util.FinishProgressBar(bar)
+	defer progress.FinishProgressBar(bar)
 
 	var result strings.Builder
 	for _, pageNum := range pages {
@@ -357,9 +357,9 @@ func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgre
 
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = util.NewProgressBar("Extracting text", len(pages), 5)
+		bar = progress.NewProgressBar("Extracting text", len(pages), 5)
 	}
-	defer util.FinishProgressBar(bar)
+	defer progress.FinishProgressBar(bar)
 
 	results := make(chan pageResult, len(pages))
 

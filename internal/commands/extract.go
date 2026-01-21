@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -46,14 +47,14 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	toStdout := cli.GetStdout(cmd)
 
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
-	if !util.IsStdinInput(inputArg) {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+	if !fileio.IsStdinInput(inputArg) {
+		if err := fileio.ValidatePDFFile(inputFile); err != nil {
 			return err
 		}
 	}
@@ -89,11 +90,11 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Extracting pages %s from %s to %s", pagesStr, inputArg, output)
 
 	if err := pdf.ExtractPages(inputFile, output, pages, password); err != nil {
-		return util.WrapError("extracting pages", inputArg, err)
+		return pdferrors.WrapError("extracting pages", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(output)
+		return fileio.WriteToStdout(output)
 	}
 
 	fmt.Printf("Extracted %d pages to %s\n", len(pages), output)

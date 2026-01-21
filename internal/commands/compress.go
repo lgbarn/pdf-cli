@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	toStdout := cli.GetStdout(cmd)
 
 	// Handle stdin/stdout for single file
-	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return compressWithStdio(args[0], output, password, toStdout)
 	}
 
@@ -60,7 +61,7 @@ func runCompress(cmd *cobra.Command, args []string) error {
 
 func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
@@ -86,24 +87,24 @@ func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool)
 	}
 
 	if err := pdf.Compress(inputFile, output, password); err != nil {
-		return util.WrapError("compressing file", inputArg, err)
+		return pdferrors.WrapError("compressing file", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(output)
+		return fileio.WriteToStdout(output)
 	}
 
-	newSize, _ := util.GetFileSize(output)
-	fmt.Fprintf(os.Stderr, "Compressed to %s (%s)\n", output, util.FormatFileSize(newSize))
+	newSize, _ := fileio.GetFileSize(output)
+	fmt.Fprintf(os.Stderr, "Compressed to %s (%s)\n", output, fileio.FormatFileSize(newSize))
 	return nil
 }
 
 func compressFile(inputFile, explicitOutput, password string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
-	originalSize, _ := util.GetFileSize(inputFile)
+	originalSize, _ := fileio.GetFileSize(inputFile)
 	output := outputOrDefault(explicitOutput, inputFile, "_compressed")
 
 	if err := checkOutputFile(output); err != nil {
@@ -113,18 +114,18 @@ func compressFile(inputFile, explicitOutput, password string) error {
 	cli.PrintVerbose("Compressing %s to %s", inputFile, output)
 
 	if err := pdf.Compress(inputFile, output, password); err != nil {
-		return util.WrapError("compressing file", inputFile, err)
+		return pdferrors.WrapError("compressing file", inputFile, err)
 	}
 
-	newSize, _ := util.GetFileSize(output)
+	newSize, _ := fileio.GetFileSize(output)
 	savings := originalSize - newSize
 	savingsPercent := float64(savings) / float64(originalSize) * 100
 
 	fmt.Printf("Compressed %s to %s\n", inputFile, output)
-	fmt.Printf("Original:   %s\n", util.FormatFileSize(originalSize))
-	fmt.Printf("Compressed: %s\n", util.FormatFileSize(newSize))
+	fmt.Printf("Original:   %s\n", fileio.FormatFileSize(originalSize))
+	fmt.Printf("Compressed: %s\n", fileio.FormatFileSize(newSize))
 	if savings > 0 {
-		fmt.Printf("Saved:      %s (%.1f%%)\n", util.FormatFileSize(savings), savingsPercent)
+		fmt.Printf("Saved:      %s (%.1f%%)\n", fileio.FormatFileSize(savings), savingsPercent)
 	} else {
 		fmt.Println("Note: File size increased (already optimized)")
 	}

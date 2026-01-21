@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
+	"github.com/lgbarn/pdf-cli/internal/output"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -99,9 +101,9 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	level, _ := cmd.Flags().GetString("level")
 	format := cli.GetFormat(cmd)
-	formatter := util.NewOutputFormatter(format)
+	formatter := output.NewOutputFormatter(format)
 
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -112,7 +114,7 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 
 	result, err := pdf.ValidatePDFA(inputFile, level, password)
 	if err != nil {
-		return util.WrapError("validating PDF/A", inputFile, err)
+		return pdferrors.WrapError("validating PDF/A", inputFile, err)
 	}
 
 	// Structured output (JSON)
@@ -159,14 +161,14 @@ func runPdfaConvert(cmd *cobra.Command, args []string) error {
 	level, _ := cmd.Flags().GetString("level")
 
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
-	if !util.IsStdinInput(inputArg) {
-		if err := util.ValidatePDFFile(inputFile); err != nil {
+	if !fileio.IsStdinInput(inputArg) {
+		if err := fileio.ValidatePDFFile(inputFile); err != nil {
 			return err
 		}
 	}
@@ -193,11 +195,11 @@ func runPdfaConvert(cmd *cobra.Command, args []string) error {
 	cli.PrintVerbose("Converting %s to PDF/A-%s format", inputArg, level)
 
 	if err := pdf.ConvertToPDFA(inputFile, actualOutput, level, password); err != nil {
-		return util.WrapError("converting to PDF/A", inputArg, err)
+		return pdferrors.WrapError("converting to PDF/A", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(actualOutput)
+		return fileio.WriteToStdout(actualOutput)
 	}
 
 	fmt.Printf("PDF optimized and saved to %s\n", actualOutput)

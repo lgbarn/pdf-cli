@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +43,7 @@ func runSplit(cmd *cobra.Command, args []string) error {
 	pagesPerFile, _ := cmd.Flags().GetInt("pages")
 
 	// Validate input file
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -52,14 +53,14 @@ func runSplit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure output directory exists
-	if err := util.EnsureDir(outputDir); err != nil {
+	if err := fileio.EnsureDir(outputDir); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	cli.PrintVerbose("Splitting %s into %s (%d pages per file)", inputFile, outputDir, pagesPerFile)
 
 	if err := pdf.SplitWithProgress(inputFile, outputDir, pagesPerFile, password, cli.Progress()); err != nil {
-		return util.WrapError("splitting file", inputFile, err)
+		return pdferrors.WrapError("splitting file", inputFile, err)
 	}
 
 	fmt.Printf("Split %s into %s\n", inputFile, outputDir)

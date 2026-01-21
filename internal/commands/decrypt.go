@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
-	"github.com/lgbarn/pdf-cli/internal/util"
+	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,7 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 	}
 
 	// Handle stdin/stdout for single file
-	if len(args) == 1 && (util.IsStdinInput(args[0]) || toStdout) {
+	if len(args) == 1 && (fileio.IsStdinInput(args[0]) || toStdout) {
 		return decryptWithStdio(args[0], output, password, toStdout)
 	}
 
@@ -63,7 +64,7 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 
 func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {
 	// Handle stdin input
-	inputFile, cleanup, err := util.ResolveInputPath(inputArg)
+	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
 	if err != nil {
 		return err
 	}
@@ -89,11 +90,11 @@ func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) 
 	}
 
 	if err := pdf.Decrypt(inputFile, output, password); err != nil {
-		return util.WrapError("decrypting file", inputArg, err)
+		return pdferrors.WrapError("decrypting file", inputArg, err)
 	}
 
 	if toStdout {
-		return util.WriteToStdout(output)
+		return fileio.WriteToStdout(output)
 	}
 
 	fmt.Fprintf(os.Stderr, "Decrypted to %s\n", output)
@@ -101,7 +102,7 @@ func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) 
 }
 
 func decryptFile(inputFile, explicitOutput, password string) error {
-	if err := util.ValidatePDFFile(inputFile); err != nil {
+	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err
 	}
 
@@ -114,7 +115,7 @@ func decryptFile(inputFile, explicitOutput, password string) error {
 	cli.PrintVerbose("Decrypting %s to %s", inputFile, output)
 
 	if err := pdf.Decrypt(inputFile, output, password); err != nil {
-		return util.WrapError("decrypting file", inputFile, err)
+		return pdferrors.WrapError("decrypting file", inputFile, err)
 	}
 
 	fmt.Printf("Decrypted %s to %s\n", inputFile, output)
