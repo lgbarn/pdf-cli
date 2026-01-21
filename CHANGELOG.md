@@ -5,6 +5,60 @@ All notable changes to pdf-cli are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-21
+
+### Added
+- **Configuration file support**: Optional YAML config at `~/.config/pdf-cli/config.yaml`
+  - Set default values for verbose, force, progress flags
+  - Configure OCR language and backend preferences
+  - Environment variable overrides with `PDF_CLI_` prefix
+- **Structured logging**: New `--log-level` and `--log-format` flags
+  - Levels: `debug`, `info`, `warn`, `error`, `silent` (default)
+  - Formats: `text` (default), `json`
+  - Uses Go 1.21+ `log/slog` for structured output
+- **Dry-run mode**: New `--dry-run` flag for all modifying commands
+  - Preview operations without making changes
+  - Shows what files would be created/modified
+  - Useful for scripting and validation
+- **CI coverage enforcement**: GitHub Actions fails if coverage drops below 75%
+
+### Changed
+- **Architecture refactoring**: Comprehensive reorganization for maintainability
+  - Split monolithic `util/` package into focused packages:
+    - `fileio/` - File operations and stdio utilities
+    - `pages/` - Page range parsing and validation
+    - `output/` - Output formatting (JSON, CSV, TSV)
+    - `pdferrors/` - Error handling with context and hints
+    - `progress/` - Progress bar utilities
+  - Split `pdf.go` (689 LOC) into focused modules:
+    - `metadata.go` - GetInfo, PageCount, GetMetadata, SetMetadata
+    - `transform.go` - Merge, Split, Rotate, Compress, ExtractPages
+    - `encryption.go` - Encrypt, Decrypt
+    - `text.go` - ExtractText, ExtractTextWithProgress
+    - `watermark.go` - AddWatermark, AddImageWatermark
+    - `validation.go` - Validate, ValidatePDFA, ConvertToPDFA
+  - Created `StdioHandler` pattern for consistent stdin/stdout handling
+- **Test coverage improvements**:
+  - Commands package: 60.7% → 82.8%
+  - PDF package: 57.9% → 85.6%
+  - Overall: 69.6% → 81.5%
+  - All packages now meet 75%+ threshold
+- **Enhanced linting**: Added 8 additional linters to `.golangci.yaml`
+  - misspell, gocritic, revive, errcheck
+  - Stricter code quality enforcement
+
+### Documentation
+- Added `docs/architecture.md` with dependency graphs and extension points
+- Added `CONTRIBUTING.md` with development guidelines
+- Updated README with new features and project structure
+
+### Internal
+- Added `internal/config/` for configuration file support
+- Added `internal/logging/` for structured logging
+- Added `internal/commands/patterns/` for reusable command patterns
+- Added `internal/testing/` for mock infrastructure
+- New Makefile targets: `lint-fix`, `check-all`, `coverage`, `coverage-check`
+
 ## [1.4.0] - 2026-01-20
 
 ### Added
@@ -141,6 +195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Addressed all Gosec static analysis findings
 - Secure handling of encrypted PDFs
 
+[1.5.0]: https://github.com/lgbarn/pdf-cli/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/lgbarn/pdf-cli/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/lgbarn/pdf-cli/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/lgbarn/pdf-cli/compare/v1.3.0...v1.3.1

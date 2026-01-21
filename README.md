@@ -15,6 +15,7 @@ A fast, lightweight command-line tool for everyday PDF operations. No GUI needed
 - [Commands](#commands)
 - [Usage Examples](#usage-examples)
 - [Global Options](#global-options)
+- [Configuration](#configuration)
 - [Shell Completion](#shell-completion)
 - [Building from Source](#building-from-source)
 - [Troubleshooting](#troubleshooting)
@@ -440,8 +441,38 @@ These options work with all commands:
 | `--force` | `-f` | Overwrite existing files without prompting |
 | `--progress` | | Show progress bar for long operations |
 | `--password` | `-P` | Password for encrypted input PDFs |
+| `--dry-run` | | Preview what would happen without making changes |
+| `--log-level` | | Set logging level: `debug`, `info`, `warn`, `error`, `silent` (default: silent) |
+| `--log-format` | | Set log format: `text` or `json` (default: text) |
 | `--help` | `-h` | Show help for any command |
 | `--version` | | Display version information |
+
+### Dry-Run Mode
+
+Preview operations without making any changes:
+
+```bash
+# See what files would be created
+pdf compress *.pdf --dry-run
+
+# Preview merge operation
+pdf merge -o combined.pdf *.pdf --dry-run
+
+# Check encryption without modifying files
+pdf encrypt document.pdf --password secret --dry-run
+```
+
+### Logging
+
+Enable structured logging for debugging or monitoring:
+
+```bash
+# Debug logging to see detailed operations
+pdf compress large.pdf --log-level debug
+
+# JSON logging for log aggregation
+pdf merge -o out.pdf *.pdf --log-level info --log-format json
+```
 
 ### Command-Specific Options
 
@@ -459,6 +490,54 @@ Most commands accept a `--password` flag for reading encrypted PDFs:
 pdf info secure.pdf --password mysecret
 pdf extract secure.pdf -p 1-5 -o pages.pdf --password mysecret
 ```
+
+## Configuration
+
+pdf-cli supports an optional configuration file for setting default values.
+
+### Config File Location
+
+The config file is loaded from (in order of precedence):
+1. `$XDG_CONFIG_HOME/pdf-cli/config.yaml`
+2. `~/.config/pdf-cli/config.yaml`
+
+### Example Configuration
+
+```yaml
+# ~/.config/pdf-cli/config.yaml
+
+defaults:
+  verbose: false
+  force: false
+  progress: true
+
+compress:
+  # No specific defaults
+
+encrypt:
+  # Default encryption settings
+
+ocr:
+  language: "eng"
+  backend: "auto"  # auto, native, or wasm
+```
+
+### Environment Variables
+
+All config options can be overridden with environment variables using the `PDF_CLI_` prefix:
+
+```bash
+# Override verbose mode
+export PDF_CLI_VERBOSE=true
+
+# Override OCR language
+export PDF_CLI_OCR_LANGUAGE=eng+fra
+
+# Override OCR backend
+export PDF_CLI_OCR_BACKEND=native
+```
+
+Environment variables take precedence over config file values.
 
 ## Shell Completion
 
@@ -527,23 +606,42 @@ make clean
 
 ```
 pdf-cli/
-├── cmd/pdf/           # Application entry point
+├── cmd/pdf/              # Application entry point
 ├── internal/
-│   ├── cli/           # CLI framework and flags
-│   ├── commands/      # Individual command implementations
-│   ├── ocr/           # OCR text extraction (native + WASM backends)
-│   │   ├── backend.go # Backend interface and types
-│   │   ├── detect.go  # Native Tesseract detection
-│   │   ├── native.go  # Native Tesseract backend (CLI-based)
-│   │   ├── wasm.go    # WASM Tesseract backend (gogosseract)
-│   │   └── ocr.go     # Engine with backend selection
-│   ├── pdf/           # PDF processing wrapper
-│   └── util/          # Utilities (errors, files, page parsing)
-├── testdata/          # Test PDF files
-├── .github/workflows/ # CI/CD pipelines
-├── Makefile           # Build automation
+│   ├── cli/              # CLI framework and flags
+│   ├── commands/         # Individual command implementations
+│   │   └── patterns/     # Reusable command patterns (StdioHandler)
+│   ├── config/           # Configuration file support
+│   ├── fileio/           # File operations and stdio utilities
+│   ├── logging/          # Structured logging with slog
+│   ├── ocr/              # OCR text extraction (native + WASM backends)
+│   │   ├── backend.go    # Backend interface and types
+│   │   ├── detect.go     # Native Tesseract detection
+│   │   ├── native.go     # Native Tesseract backend
+│   │   ├── wasm.go       # WASM Tesseract backend
+│   │   └── ocr.go        # Engine with backend selection
+│   ├── output/           # Output formatting (JSON, CSV, TSV)
+│   ├── pages/            # Page range parsing and validation
+│   ├── pdf/              # PDF processing (modular design)
+│   │   ├── metadata.go   # Info, page count, metadata
+│   │   ├── transform.go  # Merge, split, rotate, compress
+│   │   ├── encryption.go # Encrypt, decrypt
+│   │   ├── text.go       # Text extraction
+│   │   ├── watermark.go  # Watermarking
+│   │   └── validation.go # PDF/A validation
+│   ├── pdferrors/        # Error handling with context
+│   ├── progress/         # Progress bar utilities
+│   └── testing/          # Test infrastructure and mocks
+├── docs/
+│   └── architecture.md   # Architecture documentation
+├── testdata/             # Test PDF files
+├── .github/workflows/    # CI/CD pipelines
+├── Makefile              # Build automation
+├── CONTRIBUTING.md       # Contribution guidelines
 └── README.md
 ```
+
+For detailed architecture information, see [docs/architecture.md](docs/architecture.md).
 
 ## Troubleshooting
 
@@ -624,21 +722,23 @@ This significantly improves performance for batch operations.
 
 ## Contributing
 
-Contributions are welcome! Here's how to get started:
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+Quick start:
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and add tests
-4. Run the test suite: `make test`
+4. Run the full check suite: `make check-all`
 5. Commit your changes: `git commit -m 'Add amazing feature'`
 6. Push to your fork: `git push origin feature/amazing-feature`
 7. Open a Pull Request
 
-Please ensure your code:
-- Passes all existing tests
-- Includes tests for new functionality
-- Follows the existing code style
-- Updates documentation as needed
+Code requirements:
+- All tests pass (`make test`)
+- Linter passes (`make lint`)
+- Coverage meets 75% threshold (`make coverage-check`)
+- Documentation updated as needed
 
 ## Dependencies
 
@@ -649,6 +749,7 @@ This project uses the following open-source libraries:
 - [gogosseract](https://github.com/danlock/gogosseract) - WASM-based OCR (no external dependencies)
 - [progressbar](https://github.com/schollz/progressbar) - Progress bar display
 - [cobra](https://github.com/spf13/cobra) - CLI framework
+- [yaml.v3](https://gopkg.in/yaml.v3) - YAML configuration parsing
 
 ## License
 
