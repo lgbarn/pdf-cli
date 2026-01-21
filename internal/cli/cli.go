@@ -54,6 +54,15 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", cfg.Defaults.Verbose, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "Overwrite existing files without prompting")
 	rootCmd.PersistentFlags().Bool("progress", cfg.Defaults.ShowProgress, "Show progress bar for long operations")
+	rootCmd.PersistentFlags().Bool("dry-run", false, "Show what would be done without executing")
+
+	// Add logging flags
+	AddLoggingFlags(rootCmd)
+
+	// Initialize logging before any command runs
+	rootCmd.PersistentPreRun = func(_ *cobra.Command, _ []string) {
+		InitLogging()
+	}
 }
 
 // Execute runs the root command
@@ -87,6 +96,17 @@ func Force() bool {
 func Progress() bool {
 	p, _ := rootCmd.PersistentFlags().GetBool("progress")
 	return p
+}
+
+// IsDryRun returns whether dry-run mode is enabled
+func IsDryRun() bool {
+	d, _ := rootCmd.PersistentFlags().GetBool("dry-run")
+	return d
+}
+
+// DryRunPrint prints a dry-run message to stderr
+func DryRunPrint(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "[dry-run] "+format+"\n", args...)
 }
 
 // PrintVerbose prints a message if verbose mode is enabled
