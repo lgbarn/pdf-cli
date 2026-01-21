@@ -11,37 +11,45 @@ cmd/pdf/              Entry point
 internal/
 ├── cli/              CLI framework (Cobra wrapper, flags, output)
 ├── commands/         Command implementations (14 commands)
-├── pdf/              PDF operations (wrapper around pdfcpu)
+│   └── patterns/     Reusable command patterns (StdioHandler)
+├── config/           Configuration file support
+├── fileio/           File operations and stdio utilities
+├── logging/          Structured logging with slog
 ├── ocr/              OCR engine with pluggable backends
-├── util/             Shared utilities (files, pages, errors, output)
+├── output/           Output formatting (JSON, CSV, TSV, human)
+├── pages/            Page range parsing and validation
+├── pdf/              PDF operations (wrapper around pdfcpu)
+├── pdferrors/        Error handling with context and hints
+├── progress/         Progress bar utilities
 └── testing/          Test infrastructure (mocks, fixtures)
 ```
 
 ## Dependency Graph
 
 ```
-                    cmd/pdf/main.go
-                          │
-                          ▼
-                    internal/cli
-                          │
-              ┌───────────┼───────────┐
-              ▼           ▼           ▼
-         commands/      (flags)    (output)
-              │
-    ┌─────────┼─────────┬─────────┐
-    ▼         ▼         ▼         ▼
-  pdf/      ocr/      util/      cli/
-    │         │
-    ▼         ▼
- pdfcpu   gogosseract
+                      cmd/pdf/main.go
+                            │
+                            ▼
+                      internal/cli
+                            │
+                ┌───────────┼───────────┐
+                ▼           ▼           ▼
+           commands/     config/    logging/
+                │
+    ┌───────────┼───────────┬───────────┐
+    ▼           ▼           ▼           ▼
+  pdf/        ocr/      fileio/     pages/
+    │           │           │           │
+    ▼           ▼           ▼           ▼
+ pdfcpu   gogosseract   pdferrors/  output/
 ```
 
 **Key principles:**
 - No circular dependencies
 - Commands depend on core packages, not vice versa
-- util/ is a leaf package with no internal dependencies
+- Leaf packages (fileio, pages, output, pdferrors, progress) have minimal dependencies
 - External dependencies isolated in pdf/ and ocr/
+- config/ and logging/ integrate with cli/ for global state
 
 ## Package Responsibilities
 
@@ -69,12 +77,38 @@ internal/
 - Language data management
 - Image-to-text conversion
 
-### util/
+### fileio/
 - File operations and validation
+- Stdin/stdout utilities
+- File size formatting
+- Temporary file management
+
+### pages/
 - Page range parsing (supports "1-5,7,end-1")
-- Error wrapping with context
+- Page number validation
+- Reorder sequence parsing
+
+### output/
 - Output formatting (JSON, CSV, TSV, human)
-- Progress bar utilities
+- Table formatting utilities
+
+### pdferrors/
+- PDFError type with operation, file, cause, and hint
+- Error wrapping with context
+- User-friendly error messages
+
+### progress/
+- Progress bar utilities for long operations
+
+### config/
+- YAML configuration file support (~/.config/pdf-cli/config.yaml)
+- Environment variable overrides (PDF_CLI_*)
+- Default values per command
+
+### logging/
+- Structured logging with slog (Go 1.21+)
+- Multiple formats (text, JSON)
+- Multiple levels (debug, info, warn, error, silent)
 
 ### testing/
 - Mock implementations for pdf/ and ocr/
@@ -112,11 +146,11 @@ internal/
 
 ## Error Handling
 
-All errors use `util.WrapError()` for consistent formatting:
+All errors use `pdferrors.WrapError()` for consistent formatting:
 - Operation context (what was being done)
 - File context (which file)
 - Underlying error
-- User-friendly hints for common issues
+- User-friendly hints for common issues (e.g., password hints for encrypted PDFs)
 
 ## Testing Strategy
 
