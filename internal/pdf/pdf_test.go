@@ -1741,3 +1741,600 @@ func TestValidateValid(t *testing.T) {
 		t.Errorf("Validate() error = %v", err)
 	}
 }
+
+// Additional tests for 75%+ coverage
+
+// Test encryption with separate owner password
+func TestEncryptWithOwnerPassword(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	encrypted := filepath.Join(tmpDir, "encrypted_owner.pdf")
+	userPW := "user123"
+	ownerPW := "owner456"
+
+	// Encrypt with both user and owner passwords
+	err = Encrypt(pdfFile, encrypted, userPW, ownerPW)
+	if err != nil {
+		t.Fatalf("Encrypt() with owner password error = %v", err)
+	}
+
+	// Verify encrypted file exists
+	if _, err := os.Stat(encrypted); os.IsNotExist(err) {
+		t.Fatal("Encrypt() did not create output file")
+	}
+
+	// Verify we can decrypt with owner password
+	decrypted := filepath.Join(tmpDir, "decrypted.pdf")
+	err = Decrypt(encrypted, decrypted, ownerPW)
+	if err != nil {
+		t.Fatalf("Decrypt() with owner password error = %v", err)
+	}
+}
+
+// Test MergeWithProgress with many files (triggers incremental merge)
+func TestMergeWithProgressManyFiles(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a list of 5 files to trigger incremental merge path
+	inputs := make([]string, 5)
+	for i := 0; i < 5; i++ {
+		inputs[i] = pdfFile
+	}
+
+	output := filepath.Join(tmpDir, "merged_many.pdf")
+	err = MergeWithProgress(inputs, output, "", true)
+	if err != nil {
+		t.Fatalf("MergeWithProgress() with many files error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("MergeWithProgress() did not create output file")
+	}
+
+	// Verify page count
+	origCount, _ := PageCount(pdfFile, "")
+	mergedCount, _ := PageCount(output, "")
+	if mergedCount != origCount*5 {
+		t.Errorf("Merged PDF has %d pages, want %d", mergedCount, origCount*5)
+	}
+}
+
+// Test MergeWithProgress error handling for non-existent first file
+func TestMergeWithProgressNonExistentFirst(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+	inputs := []string{"/nonexistent/first.pdf", samplePDF()}
+
+	err = MergeWithProgress(inputs, output, "", true)
+	if err == nil {
+		t.Error("MergeWithProgress() expected error for non-existent first file")
+	}
+}
+
+// Test SetMetadata with all fields including Creator and Producer
+func TestSetMetadataAllFields(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	output := filepath.Join(tmpDir, "metadata_all.pdf")
+	meta := &Metadata{
+		Title:    "Full Test Title",
+		Author:   "Full Test Author",
+		Subject:  "Full Test Subject",
+		Keywords: "full, test, keywords",
+		Creator:  "Full Test Creator",
+		Producer: "Full Test Producer",
+	}
+
+	err = SetMetadata(pdfFile, output, meta, "")
+	if err != nil {
+		t.Fatalf("SetMetadata() with all fields error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("SetMetadata() did not create output file")
+	}
+}
+
+// Test extractTextPrimary with specific pages (sorted pages path)
+func TestExtractTextPrimaryWithSpecificPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Get page count first
+	count, err := PageCount(pdfFile, "")
+	if err != nil {
+		t.Fatalf("PageCount() error = %v", err)
+	}
+
+	if count < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	// Test with unsorted pages to trigger sort path
+	pages := []int{1}
+	if count >= 2 {
+		pages = []int{2, 1} // Unsorted to trigger sort
+	}
+
+	text, err := ExtractTextWithProgress(pdfFile, pages, "", false)
+	if err != nil {
+		t.Fatalf("ExtractTextWithProgress() with specific pages error = %v", err)
+	}
+	_ = text
+}
+
+// Test extractPageText with invalid page numbers
+func TestExtractPageTextInvalidPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable by ledongthuc/pdf: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+
+	// Test with page number < 1
+	text := extractPageText(r, 0, totalPages)
+	if text != "" {
+		t.Error("extractPageText() should return empty for page 0")
+	}
+
+	// Test with page number < 1
+	text = extractPageText(r, -1, totalPages)
+	if text != "" {
+		t.Error("extractPageText() should return empty for negative page")
+	}
+}
+
+// Test parseTextFromPDFContent with ET markers
+func TestParseTextFromPDFContentWithET(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "text followed by ET",
+			content: "(Hello) Tj ET (World) Tj",
+			want:    "Hello\nWorld",
+		},
+		{
+			name:    "multiple ET markers",
+			content: "(Line1) Tj ET (Line2) Tj ET (Line3) Tj",
+			want:    "Line1\nLine2\nLine3",
+		},
+		{
+			name:    "octal escape",
+			content: "(Test\\101) Tj",
+			want:    "Test01", // Octal escape skips backslash, keeps digits
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseTextFromPDFContent(tt.content)
+			if got != tt.want {
+				t.Errorf("parseTextFromPDFContent() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test extractParenString with unclosed parenthesis
+func TestExtractParenStringUnclosed(t *testing.T) {
+	content := "(Hello World"
+	got, end := extractParenString(content, 0)
+
+	// Should extract what's available
+	if got != "Hello World" {
+		t.Errorf("extractParenString() unclosed = %q, want %q", got, "Hello World")
+	}
+	if end != len(content) {
+		t.Errorf("extractParenString() end = %d, want %d", end, len(content))
+	}
+}
+
+// Test extractParenString when not starting with parenthesis
+func TestExtractParenStringNotParenthesis(t *testing.T) {
+	content := "Hello World"
+	got, end := extractParenString(content, 0)
+
+	if got != "" {
+		t.Errorf("extractParenString() not paren = %q, want empty", got)
+	}
+	if end != 0 {
+		t.Errorf("extractParenString() end = %d, want 0", end)
+	}
+}
+
+// Test SplitWithProgress with large PDF (triggers progress bar path)
+func TestSplitWithProgressLargePDF(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// First, create a larger PDF by merging multiple copies
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Merge 6 copies to create a PDF with more pages
+	largePDF := filepath.Join(tmpDir, "large.pdf")
+	inputs := make([]string, 6)
+	for i := 0; i < 6; i++ {
+		inputs[i] = pdfFile
+	}
+	err = Merge(inputs, largePDF, "")
+	if err != nil {
+		t.Fatalf("Merge() error = %v", err)
+	}
+
+	// Now test SplitWithProgress with showProgress=true
+	splitDir := filepath.Join(tmpDir, "split")
+	os.MkdirAll(splitDir, 0755)
+
+	err = SplitWithProgress(largePDF, splitDir, 1, "", true)
+	if err != nil {
+		t.Fatalf("SplitWithProgress() error = %v", err)
+	}
+
+	// Verify files were created
+	files, _ := os.ReadDir(splitDir)
+	pdfCount := 0
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".pdf") {
+			pdfCount++
+		}
+	}
+	if pdfCount == 0 {
+		t.Error("SplitWithProgress() did not create any files")
+	}
+}
+
+// Test SplitWithProgress with multi-page chunks
+func TestSplitWithProgressMultiPageChunks(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Create a larger PDF
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	largePDF := filepath.Join(tmpDir, "large.pdf")
+	inputs := make([]string, 8)
+	for i := 0; i < 8; i++ {
+		inputs[i] = pdfFile
+	}
+	err = Merge(inputs, largePDF, "")
+	if err != nil {
+		t.Fatalf("Merge() error = %v", err)
+	}
+
+	// Split with 3-page chunks and progress
+	splitDir := filepath.Join(tmpDir, "split")
+	os.MkdirAll(splitDir, 0755)
+
+	err = SplitWithProgress(largePDF, splitDir, 3, "", true)
+	if err != nil {
+		t.Fatalf("SplitWithProgress() with chunks error = %v", err)
+	}
+
+	// Verify files were created
+	files, _ := os.ReadDir(splitDir)
+	pdfCount := 0
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".pdf") {
+			pdfCount++
+		}
+	}
+	if pdfCount == 0 {
+		t.Error("SplitWithProgress() did not create any files")
+	}
+}
+
+// Test CreatePDFFromImages with default page size handling
+func TestCreatePDFFromImagesDefaultPageSize(t *testing.T) {
+	testImage := filepath.Join(testdataDir(), "test_image.png")
+	if _, err := os.Stat(testImage); os.IsNotExist(err) {
+		t.Skip("test_image.png not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Test with custom page size (not A4 or Letter)
+	output := filepath.Join(tmpDir, "custom_size.pdf")
+	err = CreatePDFFromImages([]string{testImage}, output, "Legal")
+	if err != nil {
+		t.Fatalf("CreatePDFFromImages() with custom size error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("CreatePDFFromImages() did not create output file")
+	}
+}
+
+// Test extractPagesSequential with progress
+func TestExtractPagesSequentialWithProgress(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	pages := []int{1}
+	// Test with showProgress=true
+	text, err := extractPagesSequential(r, pages, totalPages, true)
+	if err != nil {
+		t.Fatalf("extractPagesSequential() with progress error = %v", err)
+	}
+	_ = text
+}
+
+// Test extractPagesParallel with progress
+func TestExtractPagesParallelWithProgress(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	f, r, err := pdf.Open(pdfFile)
+	if err != nil {
+		t.Skipf("PDF not parseable: %v", err)
+	}
+	defer f.Close()
+
+	totalPages := r.NumPage()
+	if totalPages < 1 {
+		t.Skip("PDF has no pages")
+	}
+
+	pages := []int{1}
+	// Test with showProgress=true
+	text, err := extractPagesParallel(r, pages, totalPages, true)
+	if err != nil {
+		t.Fatalf("extractPagesParallel() with progress error = %v", err)
+	}
+	_ = text
+}
+
+// Test ValidatePDFA with invalid PDF (triggers the error path)
+func TestValidatePDFAInvalidPDF(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create an invalid PDF file
+	invalidPDF := filepath.Join(tmpDir, "invalid.pdf")
+	err = os.WriteFile(invalidPDF, []byte("not a valid pdf"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write invalid PDF: %v", err)
+	}
+
+	result, err := ValidatePDFA(invalidPDF, "1b", "")
+	// Either returns error or result with IsValid=false
+	if err == nil && result != nil && result.IsValid {
+		t.Error("ValidatePDFA() should report invalid for invalid PDF")
+	}
+}
+
+// Test extractTextFallback is triggered when primary fails
+func TestExtractTextFallbackPath(t *testing.T) {
+	// Create an empty temp dir to simulate no text extraction
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Test with non-existent file to trigger error path
+	_, err = ExtractText("/nonexistent/file.pdf", nil, "")
+	if err == nil {
+		t.Error("ExtractText() expected error for non-existent file")
+	}
+}
+
+// Test ExtractTextWithProgress with many pages (triggers parallel extraction)
+func TestExtractTextWithProgressManyPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	// Create a large PDF for testing parallel extraction
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Merge multiple copies to get more than 5 pages
+	largePDF := filepath.Join(tmpDir, "large.pdf")
+	inputs := make([]string, 6)
+	for i := 0; i < 6; i++ {
+		inputs[i] = pdfFile
+	}
+	err = Merge(inputs, largePDF, "")
+	if err != nil {
+		t.Fatalf("Merge() error = %v", err)
+	}
+
+	// Test extraction on larger PDF (should trigger parallel extraction)
+	text, err := ExtractTextWithProgress(largePDF, nil, "", true)
+	if err != nil {
+		t.Fatalf("ExtractTextWithProgress() error = %v", err)
+	}
+	_ = text
+}
+
+// Test MergeWithProgress without progress flag but with many files
+func TestMergeWithProgressNoFlag(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	inputs := make([]string, 5)
+	for i := 0; i < 5; i++ {
+		inputs[i] = pdfFile
+	}
+
+	output := filepath.Join(tmpDir, "merged.pdf")
+	// showProgress=false should use standard merge even with many files
+	err = MergeWithProgress(inputs, output, "", false)
+	if err != nil {
+		t.Fatalf("MergeWithProgress() without progress error = %v", err)
+	}
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		t.Error("MergeWithProgress() did not create output file")
+	}
+}
+
+// Test extractParenString with deeply nested parentheses
+func TestExtractParenStringDeepNesting(t *testing.T) {
+	content := "(a(b(c)d)e)"
+	got, end := extractParenString(content, 0)
+
+	if got != "a(b(c)d)e" {
+		t.Errorf("extractParenString() deep nesting = %q, want %q", got, "a(b(c)d)e")
+	}
+	if end != len(content) {
+		t.Errorf("extractParenString() end = %d, want %d", end, len(content))
+	}
+}
+
+// Test ExtractImages with specific pages
+func TestExtractImagesWithPages(t *testing.T) {
+	pdfFile := samplePDF()
+	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
+		t.Skip("sample.pdf not found in testdata")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Extract images from specific pages
+	err = ExtractImages(pdfFile, tmpDir, []int{1}, "")
+	// This may succeed or fail depending on the PDF content
+	_ = err
+}
+
+// Test SplitWithProgress error handling for non-existent file
+func TestSplitWithProgressNonExistent(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "pdf-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = SplitWithProgress("/nonexistent/file.pdf", tmpDir, 1, "", true)
+	if err == nil {
+		t.Error("SplitWithProgress() expected error for non-existent file")
+	}
+}
+
+// Test parseTextFromPDFContent handles various edge cases
+func TestParseTextFromPDFContentEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "only spaces in parens",
+			content: "(   ) Tj",
+			want:    "",
+		},
+		{
+			name:    "newline in text",
+			content: "(Line1\\nLine2) Tj",
+			want:    "Line1\nLine2",
+		},
+		{
+			name:    "content with no parentheses",
+			content: "BT /F1 12 Tf ET",
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseTextFromPDFContent(tt.content)
+			if strings.TrimSpace(got) != strings.TrimSpace(tt.want) {
+				t.Errorf("parseTextFromPDFContent() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
