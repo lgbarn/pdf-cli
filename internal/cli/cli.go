@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lgbarn/pdf-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -46,10 +47,13 @@ Examples:
 }
 
 func init() {
+	// Load configuration early
+	cfg := config.Get()
+
 	rootCmd.SetVersionTemplate(fmt.Sprintf("pdf-cli version %s\ncommit: %s\nbuilt: %s\n", version, commit, buildDate))
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", cfg.Defaults.Verbose, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "Overwrite existing files without prompting")
-	rootCmd.PersistentFlags().Bool("progress", false, "Show progress bar for long operations")
+	rootCmd.PersistentFlags().Bool("progress", cfg.Defaults.ShowProgress, "Show progress bar for long operations")
 }
 
 // Execute runs the root command

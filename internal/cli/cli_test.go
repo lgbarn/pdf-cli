@@ -102,14 +102,13 @@ func TestForce(t *testing.T) {
 func TestProgress(t *testing.T) {
 	cmd := GetRootCmd()
 
-	// Reset progress flag
+	// Test that Progress() returns flag value correctly
+	// Default is true from config.Defaults.ShowProgress
 	if err := cmd.PersistentFlags().Set("progress", "false"); err != nil {
-		t.Fatalf("Failed to reset progress flag: %v", err)
+		t.Fatalf("Failed to set progress flag: %v", err)
 	}
-
-	// Test default (off)
 	if Progress() {
-		t.Error("Progress() should be false by default")
+		t.Error("Progress() should be false after setting flag to false")
 	}
 
 	// Test progress on
@@ -132,8 +131,9 @@ func TestProgressFlagExists(t *testing.T) {
 		t.Fatal("progress flag not found")
 	}
 
-	if progressFlag.DefValue != "false" {
-		t.Errorf("progress flag default = %q, want %q", progressFlag.DefValue, "false")
+	// Default comes from config.Defaults.ShowProgress which is true
+	if progressFlag.DefValue != "true" {
+		t.Errorf("progress flag default = %q, want %q", progressFlag.DefValue, "true")
 	}
 }
 
