@@ -118,6 +118,6 @@ jobs:
           cache: true
 
       - name: Run Gosec
-        uses: securego/gosec@master
+        uses: securego/gosec@v2.21.4
         with:
           args: -exclude-dir=testdata ./...
