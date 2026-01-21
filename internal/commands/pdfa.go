@@ -2,9 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/output"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -155,56 +155,52 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 
 func runPdfaConvert(cmd *cobra.Command, args []string) error {
 	inputArg := args[0]
-	output := cli.GetOutput(cmd)
+	explicitOutput := cli.GetOutput(cmd)
 	password := cli.GetPassword(cmd)
 	toStdout := cli.GetStdout(cmd)
 	level, _ := cmd.Flags().GetString("level")
 
-	// Handle stdin input
-	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_pdfa",
+		Operation:      "pdfa",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
 	if !fileio.IsStdinInput(inputArg) {
-		if err := fileio.ValidatePDFFile(inputFile); err != nil {
+		if err := fileio.ValidatePDFFile(input); err != nil {
 			return err
 		}
 	}
 
-	// Handle stdout output
-	var actualOutput string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-pdfa-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		actualOutput = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(actualOutput) }
-		defer outputCleanup()
-	} else {
-		actualOutput = outputOrDefault(output, inputArg, "_pdfa")
-		if err := checkOutputFile(actualOutput); err != nil {
+	if !toStdout {
+		if err := checkOutputFile(output); err != nil {
 			return err
 		}
 	}
 
 	cli.PrintVerbose("Converting %s to PDF/A-%s format", inputArg, level)
 
-	if err := pdf.ConvertToPDFA(inputFile, actualOutput, level, password); err != nil {
+	if err := pdf.ConvertToPDFA(input, output, level, password); err != nil {
 		return pdferrors.WrapError("converting to PDF/A", inputArg, err)
 	}
 
-	if toStdout {
-		return fileio.WriteToStdout(actualOutput)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Printf("PDF optimized and saved to %s\n", actualOutput)
-	fmt.Println("\nNote: Full PDF/A conversion may require specialized tools.")
-	fmt.Println("Consider using veraPDF to validate the output.")
+	if !toStdout {
+		fmt.Printf("PDF optimized and saved to %s\n", output)
+		fmt.Println("\nNote: Full PDF/A conversion may require specialized tools.")
+		fmt.Println("Consider using veraPDF to validate the output.")
+	}
 
 	return nil
 }

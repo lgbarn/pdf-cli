@@ -2,9 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/pdferrors"
@@ -46,20 +46,27 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	password := cli.GetPassword(cmd)
 	toStdout := cli.GetStdout(cmd)
 
-	// Handle stdin input
-	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: cli.GetOutput(cmd),
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_extracted",
+		Operation:      "extract",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
 	if !fileio.IsStdinInput(inputArg) {
-		if err := fileio.ValidatePDFFile(inputFile); err != nil {
+		if err := fileio.ValidatePDFFile(input); err != nil {
 			return err
 		}
 	}
 
-	pages, err := parseAndValidatePages(pagesStr, inputFile, password)
+	pages, err := parseAndValidatePages(pagesStr, input, password)
 	if err != nil {
 		return err
 	}
@@ -68,20 +75,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no pages specified")
 	}
 
-	// Handle stdout output
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-extract-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(cli.GetOutput(cmd), inputArg, "_extracted")
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
@@ -89,14 +83,16 @@ func runExtract(cmd *cobra.Command, args []string) error {
 
 	cli.PrintVerbose("Extracting pages %s from %s to %s", pagesStr, inputArg, output)
 
-	if err := pdf.ExtractPages(inputFile, output, pages, password); err != nil {
+	if err := pdf.ExtractPages(input, output, pages, password); err != nil {
 		return pdferrors.WrapError("extracting pages", inputArg, err)
 	}
 
-	if toStdout {
-		return fileio.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Printf("Extracted %d pages to %s\n", len(pages), output)
+	if !toStdout {
+		fmt.Printf("Extracted %d pages to %s\n", len(pages), output)
+	}
 	return nil
 }

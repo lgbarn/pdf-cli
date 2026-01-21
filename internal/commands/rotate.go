@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/pdferrors"
@@ -66,46 +67,42 @@ func runRotate(cmd *cobra.Command, args []string) error {
 }
 
 func rotateWithStdio(inputArg, explicitOutput, pagesStr, password string, angle int, toStdout bool) error {
-	// Handle stdin input
-	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_rotated",
+		Operation:      "rotate",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
-	pages, err := parseAndValidatePages(pagesStr, inputFile, password)
+	pages, err := parseAndValidatePages(pagesStr, input, password)
 	if err != nil {
 		return err
 	}
 
-	// Handle stdout output
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-rotate-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(explicitOutput, inputArg, "_rotated")
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
 	}
 
-	if err := pdf.Rotate(inputFile, output, angle, pages, password); err != nil {
+	if err := pdf.Rotate(input, output, angle, pages, password); err != nil {
 		return pdferrors.WrapError("rotating pages", inputArg, err)
 	}
 
-	if toStdout {
-		return fileio.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Rotated by %d degrees to %s\n", angle, output)
+	if !toStdout {
+		fmt.Fprintf(os.Stderr, "Rotated by %d degrees to %s\n", angle, output)
+	}
 	return nil
 }
 

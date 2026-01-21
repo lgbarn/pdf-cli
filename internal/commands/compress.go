@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/commands/patterns"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/pdferrors"
@@ -60,42 +61,38 @@ func runCompress(cmd *cobra.Command, args []string) error {
 }
 
 func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool) error {
-	// Handle stdin input
-	inputFile, cleanup, err := fileio.ResolveInputPath(inputArg)
+	handler := &patterns.StdioHandler{
+		InputArg:       inputArg,
+		ExplicitOutput: explicitOutput,
+		ToStdout:       toStdout,
+		DefaultSuffix:  "_compressed",
+		Operation:      "compress",
+	}
+	defer handler.Cleanup()
+
+	input, output, err := handler.Setup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
-	// Create temp output for stdout case
-	var output string
-	var outputCleanup func()
-	if toStdout {
-		tmpFile, err := os.CreateTemp("", "pdf-cli-compress-*.pdf")
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		output = tmpFile.Name()
-		_ = tmpFile.Close()
-		outputCleanup = func() { _ = os.Remove(output) }
-		defer outputCleanup()
-	} else {
-		output = outputOrDefault(explicitOutput, inputArg, "_compressed")
+	if !toStdout {
 		if err := checkOutputFile(output); err != nil {
 			return err
 		}
 	}
 
-	if err := pdf.Compress(inputFile, output, password); err != nil {
+	if err := pdf.Compress(input, output, password); err != nil {
 		return pdferrors.WrapError("compressing file", inputArg, err)
 	}
 
-	if toStdout {
-		return fileio.WriteToStdout(output)
+	if err := handler.Finalize(); err != nil {
+		return err
 	}
 
-	newSize, _ := fileio.GetFileSize(output)
-	fmt.Fprintf(os.Stderr, "Compressed to %s (%s)\n", output, fileio.FormatFileSize(newSize))
+	if !toStdout {
+		newSize, _ := fileio.GetFileSize(output)
+		fmt.Fprintf(os.Stderr, "Compressed to %s (%s)\n", output, fileio.FormatFileSize(newSize))
+	}
 	return nil
 }
 
