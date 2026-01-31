@@ -133,7 +133,7 @@ func (e *Engine) EnsureTessdata() error {
 	for _, lang := range parseLanguages(e.lang) {
 		dataFile := filepath.Join(e.dataDir, lang+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := downloadTessdata(e.dataDir, lang); err != nil {
+			if err := downloadTessdata(context.TODO(), e.dataDir, lang); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", lang, err)
 			}
 		}
@@ -166,13 +166,13 @@ func primaryLanguage(lang string) string {
 	return lang
 }
 
-func downloadTessdata(dataDir, lang string) error {
+func downloadTessdata(ctx context.Context, dataDir, lang string) error {
 	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
 	dataFile := filepath.Join(dataDir, lang+".traineddata")
 
 	fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -209,7 +209,7 @@ func downloadTessdata(dataDir, lang string) error {
 }
 
 // ExtractTextFromPDF extracts text from a PDF using OCR.
-func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string, showProgress bool) (string, error) {
+func (e *Engine) ExtractTextFromPDF(ctx context.Context, pdfPath string, pages []int, password string, showProgress bool) (string, error) {
 	if e.backend.Name() == "wasm" {
 		if err := e.EnsureTessdata(); err != nil {
 			return "", err
@@ -240,7 +240,7 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 		return "", fmt.Errorf("no images found in PDF - OCR requires image-based PDF")
 	}
 
-	return e.processImages(imageFiles, showProgress)
+	return e.processImages(ctx, imageFiles, showProgress)
 }
 
 func (e *Engine) resolvePages(pdfPath string, pages []int, password string) ([]int, error) {
@@ -298,25 +298,27 @@ type imageResult struct {
 // parallelThreshold is the minimum number of images to trigger parallel processing.
 const parallelThreshold = 5
 
-func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImages(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	// Use sequential processing for small batches or WASM backend (not thread-safe)
 	if len(imageFiles) <= parallelThreshold || e.backend.Name() == "wasm" {
-		return e.processImagesSequential(imageFiles, showProgress)
+		return e.processImagesSequential(ctx, imageFiles, showProgress)
 	}
-	return e.processImagesParallel(imageFiles, showProgress)
+	return e.processImagesParallel(ctx, imageFiles, showProgress)
 }
 
-func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImagesSequential(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
 	defer progress.FinishProgressBar(bar)
 
-	ctx := context.Background()
 	texts := make([]string, 0, len(imageFiles))
 
 	for _, imgPath := range imageFiles {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
 		if err == nil {
 			texts = append(texts, text)
@@ -329,14 +331,13 @@ func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool)
 	return joinNonEmpty(texts, "\n"), nil
 }
 
-func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
 	defer progress.FinishProgressBar(bar)
 
-	ctx := context.Background()
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
@@ -345,6 +346,11 @@ func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (
 
 	var wg sync.WaitGroup
 	for i, imgPath := range imageFiles {
+		if ctx.Err() != nil {
+			// Context canceled, don't launch more work
+			break
+		}
+
 		wg.Add(1)
 		sem <- struct{}{} // Acquire semaphore
 		go func(idx int, path string) {

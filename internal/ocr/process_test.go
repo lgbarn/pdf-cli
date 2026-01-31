@@ -1,6 +1,7 @@
 package ocr
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ func TestProcessImagesSequential(t *testing.T) {
 		lang:    "eng",
 	}
 
-	result, err := engine.processImagesSequential(imageFiles, false)
+	result, err := engine.processImagesSequential(context.Background(), imageFiles, false)
 	if err != nil {
 		t.Fatalf("processImagesSequential() error = %v", err)
 	}
@@ -58,7 +59,7 @@ func TestProcessImagesSequentialEmpty(t *testing.T) {
 		lang:    "eng",
 	}
 
-	result, err := engine.processImagesSequential([]string{}, false)
+	result, err := engine.processImagesSequential(context.Background(), []string{}, false)
 	if err != nil {
 		t.Fatalf("processImagesSequential() error = %v", err)
 	}
@@ -93,7 +94,7 @@ func TestProcessImagesSequentialWithError(t *testing.T) {
 	}
 
 	// processImagesSequential continues even if individual images fail
-	result, err := engine.processImagesSequential(imageFiles, false)
+	result, err := engine.processImagesSequential(context.Background(), imageFiles, false)
 	if err != nil {
 		t.Fatalf("processImagesSequential() error = %v", err)
 	}
@@ -128,7 +129,7 @@ func TestProcessImagesParallel(t *testing.T) {
 		lang:    "eng",
 	}
 
-	result, err := engine.processImagesParallel(imageFiles, false)
+	result, err := engine.processImagesParallel(context.Background(), imageFiles, false)
 	if err != nil {
 		t.Fatalf("processImagesParallel() error = %v", err)
 	}
@@ -177,7 +178,7 @@ func TestProcessImagesRouting(t *testing.T) {
 				lang:    "eng",
 			}
 
-			_, err = engine.processImages(imageFiles, false)
+			_, err = engine.processImages(context.Background(), imageFiles, false)
 			if err != nil {
 				t.Fatalf("processImages() error = %v", err)
 			}
@@ -211,7 +212,7 @@ func TestProcessImagesWithProgress(t *testing.T) {
 	}
 
 	// Test with progress enabled (just verify it doesn't crash)
-	_, err = engine.processImagesSequential(imageFiles, true)
+	_, err = engine.processImagesSequential(context.Background(), imageFiles, true)
 	if err != nil {
 		t.Fatalf("processImagesSequential with progress error = %v", err)
 	}
@@ -336,7 +337,7 @@ func TestExtractTextFromPDFNonExistent(t *testing.T) {
 	}
 
 	// Should fail for non-existent PDF
-	_, err := engine.ExtractTextFromPDF("/nonexistent/file.pdf", []int{1}, "", false)
+	_, err := engine.ExtractTextFromPDF(context.Background(), "/nonexistent/file.pdf", []int{1}, "", false)
 	if err == nil {
 		t.Error("ExtractTextFromPDF with non-existent file should error")
 	}
@@ -356,7 +357,7 @@ func TestExtractTextFromPDFWithWASMBackendEnsureError(t *testing.T) {
 		dataDir: "/invalid/nonexistent/path",
 	}
 
-	_, err = engine.ExtractTextFromPDF("../../testdata/sample.pdf", []int{1}, "", false)
+	_, err = engine.ExtractTextFromPDF(context.Background(), "../../testdata/sample.pdf", []int{1}, "", false)
 	// This may or may not error depending on whether tessdata exists
 	if err != nil {
 		t.Logf("ExtractTextFromPDF with invalid tessdata path error: %v (expected)", err)
@@ -411,7 +412,7 @@ func TestProcessImagesParallelWithError(t *testing.T) {
 	}
 
 	// Should complete even with errors
-	result, err := engine.processImagesParallel(imageFiles, false)
+	result, err := engine.processImagesParallel(context.Background(), imageFiles, false)
 	if err != nil {
 		t.Fatalf("processImagesParallel() error = %v", err)
 	}

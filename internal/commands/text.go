@@ -90,7 +90,7 @@ func runText(cmd *cobra.Command, args []string) error {
 
 		cli.PrintVerbose("Using OCR backend: %s", engine.BackendName())
 
-		text, err = engine.ExtractTextFromPDF(inputFile, pages, password, cli.Progress())
+		text, err = engine.ExtractTextFromPDF(cmd.Context(), inputFile, pages, password, cli.Progress())
 		if err != nil {
 			return pdferrors.WrapError("extracting text with OCR", inputFile, err)
 		}

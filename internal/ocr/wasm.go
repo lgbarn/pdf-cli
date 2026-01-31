@@ -50,7 +50,7 @@ func (w *WASMBackend) EnsureTessdata(lang string) error {
 	for _, l := range parseLanguages(lang) {
 		dataFile := filepath.Join(w.dataDir, l+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := downloadTessdata(w.dataDir, l); err != nil {
+			if err := downloadTessdata(context.TODO(), w.dataDir, l); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", l, err)
 			}
 		}
