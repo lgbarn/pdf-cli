@@ -68,7 +68,7 @@ curl -s https://example.com/doc.pdf | pdf info -
 
 ### Prerequisites
 
-- Go 1.24 or later (for installation via `go install`)
+- Go 1.25 or later (for installation via `go install`)
 
 ### Using Go (Recommended)
 
@@ -576,7 +576,7 @@ pdf completion powershell | Out-String | Invoke-Expression
 
 ### Prerequisites
 
-- Go 1.24 or later
+- Go 1.25 or later
 - Make (optional, for convenience commands)
 
 ### Build Commands
