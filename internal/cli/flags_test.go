@@ -80,6 +80,7 @@ func TestAddFlags(t *testing.T) {
 			flag := cmd.Flags().Lookup(tt.flagName)
 			if flag == nil {
 				t.Fatalf("%s flag not found", tt.flagName)
+				return
 			}
 			if flag.Usage != tt.wantUsage {
 				t.Errorf("usage = %q, want %q", flag.Usage, tt.wantUsage)
@@ -101,6 +102,7 @@ func TestAddFormatFlag(t *testing.T) {
 	flag := cmd.Flags().Lookup("format")
 	if flag == nil {
 		t.Fatal("format flag not found")
+		return
 	}
 	if flag.DefValue != "" {
 		t.Errorf("default = %q, want empty", flag.DefValue)
@@ -117,6 +119,7 @@ func TestAddStdoutFlag(t *testing.T) {
 	flag := cmd.Flags().Lookup("stdout")
 	if flag == nil {
 		t.Fatal("stdout flag not found")
+		return
 	}
 	if flag.DefValue != "false" {
 		t.Errorf("default = %q, want %q", flag.DefValue, "false")
