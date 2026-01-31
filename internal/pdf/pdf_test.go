@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -110,6 +111,7 @@ func TestGetInfo(t *testing.T) {
 
 	if info == nil {
 		t.Fatal("GetInfo() returned nil")
+		return
 	}
 
 	if info.Pages < 1 {
@@ -161,7 +163,7 @@ func TestExtractText(t *testing.T) {
 		t.Skip("sample.pdf not found in testdata")
 	}
 
-	text, err := ExtractText(pdf, nil, "")
+	text, err := ExtractText(context.Background(), pdf, nil, "")
 	if err != nil {
 		t.Fatalf("ExtractText() error = %v", err)
 	}
@@ -185,7 +187,7 @@ func TestExtractTextWithPages(t *testing.T) {
 	}
 
 	if count > 0 {
-		text, err := ExtractText(pdf, []int{1}, "")
+		text, err := ExtractText(context.Background(), pdf, []int{1}, "")
 		if err != nil {
 			t.Fatalf("ExtractText() with pages error = %v", err)
 		}
@@ -756,7 +758,7 @@ func TestExtractPagesSequentialDirect(t *testing.T) {
 	}
 
 	pages := []int{1}
-	text, err := extractPagesSequential(r, pages, totalPages, false)
+	text, err := extractPagesSequential(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesSequential() error = %v", err)
 	}
@@ -788,7 +790,7 @@ func TestExtractPagesSequentialMultiple(t *testing.T) {
 		pages = []int{1, 2}
 	}
 
-	text, err := extractPagesSequential(r, pages, totalPages, false)
+	text, err := extractPagesSequential(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesSequential() multiple pages error = %v", err)
 	}
@@ -811,7 +813,7 @@ func TestExtractPagesSequentialOutOfRange(t *testing.T) {
 	// Request out-of-range pages - should be skipped, not error
 	pages := []int{9999}
 
-	text, err := extractPagesSequential(r, pages, totalPages, false)
+	text, err := extractPagesSequential(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesSequential() out of range error = %v", err)
 	}
@@ -840,7 +842,7 @@ func TestExtractPagesParallelDirect(t *testing.T) {
 	}
 
 	pages := []int{1}
-	text, err := extractPagesParallel(r, pages, totalPages, false)
+	text, err := extractPagesParallel(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesParallel() error = %v", err)
 	}
@@ -870,7 +872,7 @@ func TestExtractPagesParallelMultiple(t *testing.T) {
 		pages = []int{1, 2}
 	}
 
-	text, err := extractPagesParallel(r, pages, totalPages, false)
+	text, err := extractPagesParallel(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesParallel() multiple pages error = %v", err)
 	}
@@ -893,7 +895,7 @@ func TestExtractPagesParallelOutOfRange(t *testing.T) {
 	// Request out-of-range pages - should return empty, not error
 	pages := []int{9999}
 
-	text, err := extractPagesParallel(r, pages, totalPages, false)
+	text, err := extractPagesParallel(context.Background(), r, pages, totalPages, false)
 	if err != nil {
 		t.Fatalf("extractPagesParallel() out of range error = %v", err)
 	}
@@ -1012,7 +1014,7 @@ func TestDecryptNonExistent(t *testing.T) {
 }
 
 func TestExtractTextNonExistent(t *testing.T) {
-	_, err := ExtractText("/nonexistent/file.pdf", nil, "")
+	_, err := ExtractText(context.Background(), "/nonexistent/file.pdf", nil, "")
 	if err == nil {
 		t.Error("ExtractText() expected error for non-existent file")
 	}
@@ -1068,6 +1070,7 @@ func TestValidatePDFA(t *testing.T) {
 
 	if result == nil {
 		t.Fatal("ValidatePDFA() returned nil result")
+		return
 	}
 
 	if result.Level != "1b" {
@@ -1094,6 +1097,7 @@ func TestValidatePDFALevels(t *testing.T) {
 			}
 			if result == nil {
 				t.Fatalf("ValidatePDFA(%q) returned nil", level)
+				return
 			}
 			if result.Level != level {
 				t.Errorf("ValidatePDFA() Level = %q, want %q", result.Level, level)
@@ -1578,7 +1582,7 @@ func TestExtractTextWithProgress(t *testing.T) {
 	}
 
 	// Test with progress enabled
-	text, err := ExtractTextWithProgress(pdfFile, nil, "", true)
+	text, err := ExtractTextWithProgress(context.Background(), pdfFile, nil, "", true)
 	if err != nil {
 		t.Fatalf("ExtractTextWithProgress() error = %v", err)
 	}
@@ -1890,7 +1894,7 @@ func TestExtractTextPrimaryWithSpecificPages(t *testing.T) {
 		pages = []int{2, 1} // Unsorted to trigger sort
 	}
 
-	text, err := ExtractTextWithProgress(pdfFile, pages, "", false)
+	text, err := ExtractTextWithProgress(context.Background(), pdfFile, pages, "", false)
 	if err != nil {
 		t.Fatalf("ExtractTextWithProgress() with specific pages error = %v", err)
 	}
@@ -2124,7 +2128,7 @@ func TestExtractPagesSequentialWithProgress(t *testing.T) {
 
 	pages := []int{1}
 	// Test with showProgress=true
-	text, err := extractPagesSequential(r, pages, totalPages, true)
+	text, err := extractPagesSequential(context.Background(), r, pages, totalPages, true)
 	if err != nil {
 		t.Fatalf("extractPagesSequential() with progress error = %v", err)
 	}
@@ -2151,7 +2155,7 @@ func TestExtractPagesParallelWithProgress(t *testing.T) {
 
 	pages := []int{1}
 	// Test with showProgress=true
-	text, err := extractPagesParallel(r, pages, totalPages, true)
+	text, err := extractPagesParallel(context.Background(), r, pages, totalPages, true)
 	if err != nil {
 		t.Fatalf("extractPagesParallel() with progress error = %v", err)
 	}
@@ -2190,7 +2194,7 @@ func TestExtractTextFallbackPath(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Test with non-existent file to trigger error path
-	_, err = ExtractText("/nonexistent/file.pdf", nil, "")
+	_, err = ExtractText(context.Background(), "/nonexistent/file.pdf", nil, "")
 	if err == nil {
 		t.Error("ExtractText() expected error for non-existent file")
 	}
@@ -2222,7 +2226,7 @@ func TestExtractTextWithProgressManyPages(t *testing.T) {
 	}
 
 	// Test extraction on larger PDF (should trigger parallel extraction)
-	text, err := ExtractTextWithProgress(largePDF, nil, "", true)
+	text, err := ExtractTextWithProgress(context.Background(), largePDF, nil, "", true)
 	if err != nil {
 		t.Fatalf("ExtractTextWithProgress() error = %v", err)
 	}

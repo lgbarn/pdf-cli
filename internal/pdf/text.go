@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,24 +15,24 @@ import (
 )
 
 // ExtractText extracts text content from a PDF
-func ExtractText(input string, pages []int, password string) (string, error) {
-	return ExtractTextWithProgress(input, pages, password, false)
+func ExtractText(ctx context.Context, input string, pages []int, password string) (string, error) {
+	return ExtractTextWithProgress(ctx, input, pages, password, false)
 }
 
 // ExtractTextWithProgress extracts text content from a PDF with optional progress bar
-func ExtractTextWithProgress(input string, pages []int, password string, showProgress bool) (string, error) {
+func ExtractTextWithProgress(ctx context.Context, input string, pages []int, password string, showProgress bool) (string, error) {
 	// Try using ledongthuc/pdf first for better text extraction
-	text, err := extractTextPrimary(input, pages, showProgress)
+	text, err := extractTextPrimary(ctx, input, pages, showProgress)
 	if err == nil && strings.TrimSpace(text) != "" {
 		return text, nil
 	}
 
 	// Fall back to parsing pdfcpu content extraction
-	return extractTextFallback(input, pages, password)
+	return extractTextFallback(ctx, input, pages, password)
 }
 
 // extractTextPrimary uses the ledongthuc/pdf library for text extraction
-func extractTextPrimary(input string, pages []int, showProgress bool) (string, error) {
+func extractTextPrimary(ctx context.Context, input string, pages []int, showProgress bool) (string, error) {
 	f, r, err := pdf.Open(input)
 	if err != nil {
 		return "", err
@@ -56,14 +57,14 @@ func extractTextPrimary(input string, pages []int, showProgress bool) (string, e
 
 	// Use parallel extraction for larger page counts
 	if len(pages) > 5 {
-		return extractPagesParallel(r, pages, totalPages, showProgress)
+		return extractPagesParallel(ctx, r, pages, totalPages, showProgress)
 	}
 
-	return extractPagesSequential(r, pages, totalPages, showProgress)
+	return extractPagesSequential(ctx, r, pages, totalPages, showProgress)
 }
 
 // extractPagesSequential extracts text from pages sequentially
-func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
+func extractPagesSequential(ctx context.Context, r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = progress.NewProgressBar("Extracting text", len(pages), 5)
@@ -72,6 +73,9 @@ func extractPagesSequential(r *pdf.Reader, pages []int, totalPages int, showProg
 
 	var result strings.Builder
 	for _, pageNum := range pages {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		text := extractPageText(r, pageNum, totalPages)
 		if text != "" {
 			if result.Len() > 0 {
@@ -104,7 +108,7 @@ func extractPageText(r *pdf.Reader, pageNum, totalPages int) string {
 }
 
 // extractPagesParallel extracts text from pages in parallel
-func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
+func extractPagesParallel(ctx context.Context, r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	type pageResult struct {
 		pageNum int
 		text    string
@@ -119,6 +123,10 @@ func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgre
 	results := make(chan pageResult, len(pages))
 
 	for _, pageNum := range pages {
+		if ctx.Err() != nil {
+			// Context canceled, don't launch more work
+			break
+		}
 		go func(pn int) {
 			results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
 		}(pageNum)
@@ -150,7 +158,11 @@ func extractPagesParallel(r *pdf.Reader, pages []int, totalPages int, showProgre
 }
 
 // extractTextFallback parses text from pdfcpu's raw content extraction
-func extractTextFallback(input string, pages []int, password string) (string, error) {
+func extractTextFallback(ctx context.Context, input string, pages []int, password string) (string, error) {
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
 	tmpDir, err := os.MkdirTemp("", "pdf-cli-text-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)

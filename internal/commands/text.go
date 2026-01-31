@@ -97,7 +97,7 @@ func runText(cmd *cobra.Command, args []string) error {
 	} else {
 		cli.PrintVerbose("Extracting text from %s", inputFile)
 
-		text, err = pdf.ExtractTextWithProgress(inputFile, pages, password, cli.Progress())
+		text, err = pdf.ExtractTextWithProgress(cmd.Context(), inputFile, pages, password, cli.Progress())
 		if err != nil {
 			return pdferrors.WrapError("extracting text", inputFile, err)
 		}
