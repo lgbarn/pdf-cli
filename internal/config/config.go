@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -140,21 +141,35 @@ func Save(cfg *Config) error {
 
 // global holds the loaded configuration
 var global *Config
+var globalMu sync.RWMutex
 
 // Get returns the global configuration, loading it if necessary.
 func Get() *Config {
-	if global == nil {
-		var err error
-		global, err = Load()
-		if err != nil {
-			// Fall back to defaults on error
-			global = DefaultConfig()
-		}
+	globalMu.RLock()
+	if global != nil {
+		defer globalMu.RUnlock()
+		return global
+	}
+	globalMu.RUnlock()
+
+	globalMu.Lock()
+	defer globalMu.Unlock()
+
+	if global != nil {
+		return global
+	}
+
+	var err error
+	global, err = Load()
+	if err != nil {
+		global = DefaultConfig()
 	}
 	return global
 }
 
 // Reset clears the global config (useful for testing).
 func Reset() {
+	globalMu.Lock()
+	defer globalMu.Unlock()
 	global = nil
 }
