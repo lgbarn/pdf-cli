@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
+	"github.com/lgbarn/pdf-cli/internal/config"
 	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/schollz/progressbar/v3"
@@ -64,7 +65,12 @@ func extractTextPrimary(ctx context.Context, input string, pages []int, showProg
 	}
 
 	// Use parallel extraction for larger page counts
-	if len(pages) > ParallelThreshold {
+	cfg := config.Get()
+	threshold := cfg.Performance.TextParallelThreshold
+	if threshold <= 0 {
+		threshold = ParallelThreshold
+	}
+	if len(pages) > threshold {
 		return extractPagesParallel(ctx, r, pages, totalPages, showProgress)
 	}
 

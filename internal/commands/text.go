@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/config"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/ocr"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -94,9 +95,12 @@ func runText(cmd *cobra.Command, args []string) error {
 		backendType := ocr.ParseBackendType(ocrBackend)
 		cli.PrintVerbose("Extracting text from %s using OCR (language: %s, backend: %s)", inputFile, ocrLang, ocrBackend)
 
+		cfg := config.Get()
 		engine, err := ocr.NewEngineWithOptions(ocr.EngineOptions{
-			Lang:        ocrLang,
-			BackendType: backendType,
+			Lang:              ocrLang,
+			BackendType:       backendType,
+			ParallelThreshold: cfg.Performance.OCRParallelThreshold,
+			MaxWorkers:        cfg.Performance.MaxWorkers,
 		})
 		if err != nil {
 			return pdferrors.WrapError("initializing OCR", inputFile, err)

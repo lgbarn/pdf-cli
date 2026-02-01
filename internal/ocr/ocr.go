@@ -41,17 +41,21 @@ const (
 
 // EngineOptions contains options for creating an OCR engine.
 type EngineOptions struct {
-	Lang        string
-	DataDir     string
-	BackendType BackendType
+	Lang              string
+	DataDir           string
+	BackendType       BackendType
+	ParallelThreshold int // minimum images to trigger parallel processing (0 = use default)
+	MaxWorkers        int // maximum concurrent workers (0 = use default)
 }
 
 // Engine provides OCR capabilities with configurable backend.
 type Engine struct {
-	dataDir     string
-	lang        string
-	backendType BackendType
-	backend     Backend
+	dataDir           string
+	lang              string
+	backendType       BackendType
+	backend           Backend
+	parallelThreshold int
+	maxWorkers        int
 }
 
 // NewEngine creates a new OCR engine with auto backend selection.
@@ -78,10 +82,22 @@ func NewEngineWithOptions(opts EngineOptions) (*Engine, error) {
 		lang = "eng"
 	}
 
+	parallelThreshold := opts.ParallelThreshold
+	if parallelThreshold <= 0 {
+		parallelThreshold = DefaultParallelThreshold
+	}
+
+	maxWorkers := opts.MaxWorkers
+	if maxWorkers <= 0 {
+		maxWorkers = DefaultMaxWorkers
+	}
+
 	engine := &Engine{
-		dataDir:     dataDir,
-		lang:        lang,
-		backendType: opts.BackendType,
+		dataDir:           dataDir,
+		lang:              lang,
+		backendType:       opts.BackendType,
+		parallelThreshold: parallelThreshold,
+		maxWorkers:        maxWorkers,
 	}
 
 	backend, err := engine.selectBackend()
@@ -181,12 +197,12 @@ func primaryLanguage(lang string) string {
 	return lang
 }
 
-func downloadTessdata(ctx context.Context, dataDir, lang string) error {
+func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
 	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
 	dataFile := filepath.Join(dataDir, lang+".traineddata")
 
 	// Sanitize the data file path to prevent directory traversal
-	dataFile, err := fileio.SanitizePath(dataFile)
+	dataFile, err = fileio.SanitizePath(dataFile)
 	if err != nil {
 		return fmt.Errorf("invalid data file path: %w", err)
 	}
@@ -226,7 +242,14 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) error {
 		_ = tmpFile.Close()
 		return err
 	}
-	_ = tmpFile.Close()
+
+	// On success path, use defer with named return to catch close errors
+	defer func() {
+		if cerr := tmpFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close temp file: %w", cerr)
+		}
+	}()
+
 	progress.FinishProgressBar(bar)
 
 	// Verify checksum if known
@@ -340,7 +363,7 @@ type imageResult struct {
 
 func (e *Engine) processImages(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	// Use sequential processing for small batches or WASM backend (not thread-safe)
-	if len(imageFiles) <= DefaultParallelThreshold || e.backend.Name() == "wasm" {
+	if len(imageFiles) <= e.parallelThreshold || e.backend.Name() == "wasm" {
 		return e.processImagesSequential(ctx, imageFiles, showProgress)
 	}
 	return e.processImagesParallel(ctx, imageFiles, showProgress)
@@ -388,7 +411,7 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
-	workers := min(runtime.NumCPU(), DefaultMaxWorkers)
+	workers := min(runtime.NumCPU(), e.maxWorkers)
 	sem := make(chan struct{}, workers)
 
 	var wg sync.WaitGroup

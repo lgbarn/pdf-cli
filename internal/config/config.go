@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/lgbarn/pdf-cli/internal/fileio"
@@ -11,10 +12,11 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	Defaults DefaultsConfig `yaml:"defaults"`
-	Compress CompressConfig `yaml:"compress"`
-	Encrypt  EncryptConfig  `yaml:"encrypt"`
-	OCR      OCRConfig      `yaml:"ocr"`
+	Defaults    DefaultsConfig    `yaml:"defaults"`
+	Compress    CompressConfig    `yaml:"compress"`
+	Encrypt     EncryptConfig     `yaml:"encrypt"`
+	OCR         OCRConfig         `yaml:"ocr"`
+	Performance PerformanceConfig `yaml:"performance"`
 }
 
 // DefaultsConfig holds default settings.
@@ -40,6 +42,31 @@ type OCRConfig struct {
 	Backend  string `yaml:"backend"`  // auto, native, wasm
 }
 
+// PerformanceConfig holds performance-related settings.
+type PerformanceConfig struct {
+	OCRParallelThreshold  int `yaml:"ocr_parallel_threshold"`
+	TextParallelThreshold int `yaml:"text_parallel_threshold"`
+	MaxWorkers            int `yaml:"max_workers"`
+}
+
+// DefaultPerformanceConfig returns a PerformanceConfig with defaults adapted to CPU count.
+func DefaultPerformanceConfig() PerformanceConfig {
+	numCPU := runtime.NumCPU()
+	maxWorkers := numCPU
+	if maxWorkers > 8 {
+		maxWorkers = 8
+	}
+	threshold := numCPU / 2
+	if threshold < 5 {
+		threshold = 5
+	}
+	return PerformanceConfig{
+		OCRParallelThreshold:  threshold,
+		TextParallelThreshold: threshold,
+		MaxWorkers:            maxWorkers,
+	}
+}
+
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() *Config {
 	return &Config{
@@ -58,6 +85,7 @@ func DefaultConfig() *Config {
 			Language: "eng",
 			Backend:  "auto",
 		},
+		Performance: DefaultPerformanceConfig(),
 	}
 }
 
