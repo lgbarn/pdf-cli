@@ -223,34 +223,28 @@ func IsImageFile(path string) bool {
 }
 
 // SanitizePath cleans a file path and validates it against directory traversal attacks.
-// For relative paths, converts to absolute first to properly validate.
-// Returns an error if the path attempts directory traversal outside the working directory.
+// It returns an error if the cleaned path still contains ".." components.
+// This prevents attacks like "../../etc/passwd" from accessing unintended files.
+//
+// Special cases:
+//   - stdin marker "-" is always allowed and returned as-is
+//   - Absolute paths are allowed after validation
+//   - Relative paths are allowed if they don't contain ".." after cleaning
 func SanitizePath(path string) (string, error) {
 	if path == "-" {
 		return path, nil
 	}
 
-	cleaned := filepath.Clean(path)
-
-	// For relative paths that might contain .., convert to absolute to properly validate
-	// This allows legitimate relative paths like ../../testdata/file.pdf while still
-	// preventing malicious absolute paths like /tmp/../../etc/passwd
-	if !filepath.IsAbs(cleaned) && strings.Contains(cleaned, "..") {
-		absPath, err := filepath.Abs(cleaned)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve path: %w", err)
-		}
-		cleaned = absPath
-	}
-
-	// Check for directory traversal in the final cleaned path
-	parts := strings.Split(cleaned, string(filepath.Separator))
-	for _, part := range parts {
+	// Check for ".." components in the original path before cleaning.
+	// filepath.Clean resolves ".." in absolute paths (e.g., /tmp/../../etc -> /etc),
+	// so checking only the cleaned result would miss traversal attempts.
+	for _, part := range strings.Split(path, "/") {
 		if part == ".." {
 			return "", fmt.Errorf("path contains directory traversal: %s", path)
 		}
 	}
 
+	cleaned := filepath.Clean(path)
 	return cleaned, nil
 }
 

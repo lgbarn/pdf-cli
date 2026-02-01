@@ -8,9 +8,14 @@ import (
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 )
 
-// testdataDir returns the path to the testdata directory
+// testdataDir returns the absolute path to the testdata directory
 func testdataDir() string {
-	return filepath.Join("..", "..", "testdata")
+	// Use absolute path to avoid triggering path sanitization on ".." components
+	abs, err := filepath.Abs(filepath.Join("..", "..", "testdata"))
+	if err != nil {
+		return filepath.Join("..", "..", "testdata")
+	}
+	return abs
 }
 
 // samplePDF returns the path to the sample PDF file
