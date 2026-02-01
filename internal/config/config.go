@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"sync"
 
 	"github.com/lgbarn/pdf-cli/internal/fileio"
@@ -144,6 +145,21 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if env := os.Getenv("PDF_CLI_OCR_BACKEND"); env != "" {
 		cfg.OCR.Backend = env
+	}
+	if env := os.Getenv("PDF_CLI_PERF_OCR_THRESHOLD"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.OCRParallelThreshold = v
+		}
+	}
+	if env := os.Getenv("PDF_CLI_PERF_TEXT_THRESHOLD"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.TextParallelThreshold = v
+		}
+	}
+	if env := os.Getenv("PDF_CLI_PERF_MAX_WORKERS"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.MaxWorkers = v
+		}
 	}
 }
 

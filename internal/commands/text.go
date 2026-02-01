@@ -135,7 +135,7 @@ func runText(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := os.WriteFile(output, []byte(text), 0600); err != nil {
+	if err := os.WriteFile(output, []byte(text), fileio.DefaultFilePerm); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 	fmt.Printf("Extracted text saved to %s\n", output)

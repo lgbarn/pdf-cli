@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cleanup"
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -48,7 +49,7 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 	if err != nil {
 		return fmt.Errorf("failed to read first file: %w", err)
 	}
-	if err := os.WriteFile(tmpPath, firstContent, 0600); err != nil {
+	if err := os.WriteFile(tmpPath, firstContent, fileio.DefaultFilePerm); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 	_ = bar.Add(1)
