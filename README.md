@@ -243,24 +243,38 @@ curl -s https://example.com/doc.pdf | pdf compress - --stdout > local.pdf
 ### Encrypt a PDF
 
 ```bash
-# Add password protection
-pdf encrypt document.pdf --password mysecret -o secure.pdf
+# Add password protection (prompts interactively)
+pdf encrypt document.pdf -o secure.pdf
+
+# Using a password file (recommended for scripts)
+pdf encrypt document.pdf --password-file pass.txt -o secure.pdf
+
+# Using environment variable
+export PDF_CLI_PASSWORD=mysecret
+pdf encrypt document.pdf -o secure.pdf
 
 # Set separate user and owner passwords
-pdf encrypt document.pdf --password userpass --owner-password ownerpass -o secure.pdf
+pdf encrypt document.pdf --password-file user.txt --owner-password ownerpass -o secure.pdf
 
 # Batch encrypt multiple PDFs (output: *_encrypted.pdf)
-pdf encrypt *.pdf --password mysecret
+pdf encrypt *.pdf --password-file pass.txt
 ```
 
 ### Decrypt a PDF
 
 ```bash
-# Decrypt a single file
-pdf decrypt secure.pdf --password mysecret -o unlocked.pdf
+# Decrypt a single file (prompts interactively)
+pdf decrypt secure.pdf -o unlocked.pdf
+
+# Using a password file (recommended for scripts)
+pdf decrypt secure.pdf --password-file pass.txt -o unlocked.pdf
+
+# Using environment variable
+export PDF_CLI_PASSWORD=mysecret
+pdf decrypt secure.pdf -o unlocked.pdf
 
 # Batch decrypt multiple PDFs (output: *_decrypted.pdf)
-pdf decrypt *.pdf --password mysecret
+pdf decrypt *.pdf --password-file pass.txt
 ```
 
 ### Extract Text
@@ -312,6 +326,11 @@ pdf text scanned.pdf --ocr --ocr-backend=auto
 - `auto` (default): Uses native Tesseract if installed, otherwise falls back to WASM
 - `native`: Requires system Tesseract installation but provides better quality/speed
 - `wasm`: Built-in, no external dependencies, downloads tessdata on first use (~15MB/language)
+
+**OCR Reliability:**
+- Tessdata downloads include SHA256 checksum verification for integrity
+- Automatic retry with exponential backoff on network failures
+- Corrupted downloads are detected and re-attempted
 
 ### Extract Images
 
@@ -440,7 +459,8 @@ These options work with all commands:
 | `--verbose` | `-v` | Show detailed output during operations |
 | `--force` | `-f` | Overwrite existing files without prompting |
 | `--progress` | | Show progress bar for long operations |
-| `--password` | `-P` | Password for encrypted input PDFs |
+| `--password-file` | | Path to file containing password for encrypted PDFs |
+| `--password` | `-P` | Password for encrypted PDFs (deprecated, use --password-file) |
 | `--dry-run` | | Preview what would happen without making changes |
 | `--log-level` | | Set logging level: `debug`, `info`, `warn`, `error`, `silent` (default: silent) |
 | `--log-format` | | Set log format: `text` or `json` (default: text) |
@@ -484,11 +504,44 @@ pdf merge -o out.pdf *.pdf --log-level info --log-format json
 
 ### Working with Encrypted PDFs
 
-Most commands accept a `--password` flag for reading encrypted PDFs:
+pdf-cli provides multiple secure ways to handle passwords for encrypted PDFs:
 
+**1. Interactive prompt (recommended for manual use):**
+```bash
+pdf info secure.pdf
+# Prompts: Enter password:
+```
+
+**2. Password file (recommended for scripts/automation):**
+```bash
+pdf info secure.pdf --password-file /path/to/password.txt
+```
+
+**3. Environment variable:**
+```bash
+export PDF_CLI_PASSWORD=mysecret
+pdf info secure.pdf
+```
+
+**4. Command-line flag (deprecated, shows warning):**
 ```bash
 pdf info secure.pdf --password mysecret
-pdf extract secure.pdf -p 1-5 -o pages.pdf --password mysecret
+# WARNING: --password flag exposes passwords in process listings
+```
+
+Password sources are checked in the above order. The first available source is used.
+
+**Examples:**
+```bash
+# Read encrypted PDF info
+pdf info secure.pdf --password-file pass.txt
+
+# Extract pages from encrypted PDF
+pdf extract secure.pdf -p 1-5 -o pages.pdf --password-file pass.txt
+
+# Batch processing with environment variable
+export PDF_CLI_PASSWORD=mysecret
+pdf compress *.pdf
 ```
 
 ## Configuration
@@ -535,6 +588,21 @@ export PDF_CLI_OCR_LANGUAGE=eng+fra
 
 # Override OCR backend
 export PDF_CLI_OCR_BACKEND=native
+
+# Password for encrypted PDFs
+export PDF_CLI_PASSWORD=mysecret
+```
+
+**Performance tuning:**
+```bash
+# OCR threshold (parallel processing triggered when page count exceeds this)
+export PDF_CLI_PERF_OCR_THRESHOLD=5
+
+# Text extraction threshold (parallel processing for pages above this)
+export PDF_CLI_PERF_TEXT_THRESHOLD=5
+
+# Maximum concurrent workers (default: runtime.NumCPU())
+export PDF_CLI_PERF_MAX_WORKERS=8
 ```
 
 Environment variables take precedence over config file values.
@@ -611,6 +679,7 @@ pdf-cli/
 │   ├── cli/              # CLI framework and flags
 │   ├── commands/         # Individual command implementations
 │   │   └── patterns/     # Reusable command patterns (StdioHandler)
+│   ├── cleanup/          # Signal-based temp file cleanup registry
 │   ├── config/           # Configuration file support
 │   ├── fileio/           # File operations and stdio utilities
 │   ├── logging/          # Structured logging with slog
@@ -631,6 +700,7 @@ pdf-cli/
 │   │   └── validation.go # PDF/A validation
 │   ├── pdferrors/        # Error handling with context
 │   ├── progress/         # Progress bar utilities
+│   ├── retry/            # Exponential backoff retry logic
 │   └── testing/          # Test infrastructure and mocks
 ├── docs/
 │   └── architecture.md   # Architecture documentation
@@ -666,10 +736,18 @@ chmod 644 document.pdf  # Make readable
 
 ### "encrypted PDF requires password"
 
-The PDF is password-protected. Use the `--password` flag:
+The PDF is password-protected. Use one of the secure password methods:
 
 ```bash
-pdf info document.pdf --password yourpassword
+# Interactive prompt (recommended)
+pdf info document.pdf
+
+# Password file (recommended for scripts)
+pdf info document.pdf --password-file pass.txt
+
+# Environment variable
+export PDF_CLI_PASSWORD=yourpassword
+pdf info document.pdf
 ```
 
 ### "no text extracted" from a PDF
