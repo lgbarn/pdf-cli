@@ -2,6 +2,8 @@ package ocr
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -203,13 +205,34 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
+	// Create SHA256 hasher to verify download integrity
+	hasher := sha256.New()
+
 	bar := progress.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
-	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
+	if _, err := io.Copy(io.MultiWriter(tmpFile, bar, hasher), resp.Body); err != nil {
 		_ = tmpFile.Close()
 		return err
 	}
 	_ = tmpFile.Close()
 	progress.FinishProgressBar(bar)
+
+	// Verify checksum if known
+	computedHash := hex.EncodeToString(hasher.Sum(nil))
+	if expectedHash := GetChecksum(lang); expectedHash != "" {
+		if computedHash != expectedHash {
+			return fmt.Errorf(
+				"checksum verification failed for %s.traineddata\n  Expected: %s\n  Got:      %s\n"+
+					"This may indicate a corrupted download or supply chain attack",
+				lang, expectedHash, computedHash,
+			)
+		}
+		fmt.Fprintf(os.Stderr, "Checksum verified for %s.traineddata\n", lang)
+	} else {
+		fmt.Fprintf(os.Stderr,
+			"WARNING: No checksum available for language '%s'. Computed SHA256: %s\n",
+			lang, computedHash,
+		)
+	}
 
 	return os.Rename(tmpPath, dataFile)
 }
