@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 )
 
 const (
@@ -14,6 +16,9 @@ const (
 
 	// DefaultFilePerm is the default permission for creating files.
 	DefaultFilePerm = 0600
+
+	// ParallelValidationThreshold is the minimum number of files to trigger parallel validation.
+	ParallelValidationThreshold = 3
 )
 
 // FileExists checks if a file exists
@@ -58,9 +63,11 @@ func AtomicWrite(path string, data []byte) error {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
+	unregisterTmp := cleanup.Register(tmpPath)
 
 	// Clean up temp file on error
 	defer func() {
+		unregisterTmp()
 		if tmpFile != nil {
 			_ = tmpFile.Close()
 			_ = os.Remove(tmpPath)
@@ -90,7 +97,7 @@ func AtomicWrite(path string, data []byte) error {
 }
 
 // CopyFile copies a file from src to dst
-func CopyFile(src, dst string) error {
+func CopyFile(src, dst string) (err error) {
 	// Sanitize paths to prevent directory traversal
 	cleanSrc, err := SanitizePath(src)
 	if err != nil {
@@ -115,7 +122,11 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer func() { _ = dstFile.Close() }()
+	defer func() {
+		if cerr := dstFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close destination file: %w", cerr)
+		}
+	}()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
@@ -145,7 +156,7 @@ func ValidatePDFFiles(paths []string) error {
 	}
 
 	// For small number of files, use sequential validation
-	if len(paths) <= 3 {
+	if len(paths) <= ParallelValidationThreshold {
 		for _, path := range paths {
 			if err := ValidatePDFFile(path); err != nil {
 				return err

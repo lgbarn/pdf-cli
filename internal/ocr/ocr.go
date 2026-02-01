@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/progress"
@@ -232,6 +233,8 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
 		return err
 	}
 	tmpPath := tmpFile.Name()
+	unregisterTmp := cleanup.Register(tmpPath)
+	defer unregisterTmp()
 	defer os.Remove(tmpPath)
 
 	// Create SHA256 hasher to verify download integrity
@@ -285,6 +288,8 @@ func (e *Engine) ExtractTextFromPDF(ctx context.Context, pdfPath string, pages [
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
+	unregisterDir := cleanup.Register(tmpDir)
+	defer unregisterDir()
 	defer os.RemoveAll(tmpDir)
 
 	pages, err = e.resolvePages(pdfPath, pages, password)

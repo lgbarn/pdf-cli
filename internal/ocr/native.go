@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 )
 
 // NativeBackend implements Backend using system-installed Tesseract.
@@ -52,11 +54,15 @@ func (n *NativeBackend) ProcessImage(ctx context.Context, imagePath, lang string
 	}
 	tmpPath := tmpFile.Name()
 	_ = tmpFile.Close()
+	unregisterTmp := cleanup.Register(tmpPath)
+	defer unregisterTmp()
 	defer os.Remove(tmpPath)
 
 	// Tesseract adds .txt extension automatically
 	outputBase := strings.TrimSuffix(tmpPath, ".txt")
 	resultPath := outputBase + ".txt"
+	unregisterResult := cleanup.Register(resultPath)
+	defer unregisterResult()
 	defer os.Remove(resultPath)
 
 	args := n.buildArgs(imagePath, outputBase, lang)

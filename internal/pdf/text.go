@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/config"
 	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -181,6 +182,8 @@ func extractTextFallback(ctx context.Context, input string, pages []int, passwor
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
+	unregisterDir := cleanup.Register(tmpDir)
+	defer unregisterDir()
 	defer os.RemoveAll(tmpDir)
 
 	if err := api.ExtractContentFile(input, tmpDir, pagesToStrings(pages), NewConfig(password)); err != nil {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	signalcleanup "github.com/lgbarn/pdf-cli/internal/cleanup"
 	"golang.org/x/term"
 )
 
@@ -35,7 +36,9 @@ func ReadFromStdin() (path string, cleanup func(), err error) {
 	}
 
 	tmpPath := tmpFile.Name()
+	unregisterTmp := signalcleanup.Register(tmpPath)
 	cleanup = func() {
+		unregisterTmp()
 		_ = os.Remove(tmpPath)
 	}
 

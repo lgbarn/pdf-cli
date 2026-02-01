@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 )
 
@@ -41,7 +42,11 @@ func (h *StdioHandler) Setup() (input, output string, err error) {
 		}
 		h.outputPath = tmpFile.Name()
 		_ = tmpFile.Close()
-		h.outputCleanup = func() { _ = os.Remove(h.outputPath) }
+		unregisterTmp := cleanup.Register(h.outputPath)
+		h.outputCleanup = func() {
+			unregisterTmp()
+			_ = os.Remove(h.outputPath)
+		}
 	case h.ExplicitOutput != "":
 		h.outputPath = h.ExplicitOutput
 		h.outputCleanup = func() {}

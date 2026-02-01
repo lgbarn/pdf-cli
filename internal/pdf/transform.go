@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -38,6 +39,8 @@ func MergeWithProgress(inputs []string, output, password string, showProgress bo
 	}
 	tmpPath := tmpFile.Name()
 	_ = tmpFile.Close()
+	unregisterTmp := cleanup.Register(tmpPath)
+	defer unregisterTmp()
 	defer os.Remove(tmpPath)
 
 	// Copy first file to temp
