@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,14 @@ func ReadPassword(cmd *cobra.Command, promptMsg string) (string, error) {
 	if cmd.Flags().Lookup("password-file") != nil {
 		passwordFile, _ := cmd.Flags().GetString("password-file")
 		if passwordFile != "" {
-			data, err := os.ReadFile(passwordFile)
+			// Sanitize password file path against directory traversal
+			for _, part := range strings.Split(passwordFile, "/") {
+				if part == ".." {
+					return "", fmt.Errorf("invalid password file path: contains directory traversal")
+				}
+			}
+			passwordFile = filepath.Clean(passwordFile)
+			data, err := os.ReadFile(passwordFile) // #nosec G304 -- path sanitized above
 			if err != nil {
 				return "", fmt.Errorf("failed to read password file: %w", err)
 			}
