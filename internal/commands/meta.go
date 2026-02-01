@@ -46,20 +46,15 @@ Examples:
 }
 
 func runMeta(cmd *cobra.Command, args []string) error {
-	// Sanitize input paths
-	sanitizedArgs, err := fileio.SanitizePaths(args)
+	args, err := sanitizeInputArgs(args)
 	if err != nil {
-		return fmt.Errorf("invalid file path: %w", err)
+		return err
 	}
-	args = sanitizedArgs
 
 	outputFile := cli.GetOutput(cmd)
-	// Sanitize output path if provided
-	if outputFile != "" {
-		outputFile, err = fileio.SanitizePath(outputFile)
-		if err != nil {
-			return fmt.Errorf("invalid output path: %w", err)
-		}
+	outputFile, err = sanitizeOutputPath(outputFile)
+	if err != nil {
+		return err
 	}
 
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")

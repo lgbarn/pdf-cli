@@ -56,12 +56,9 @@ func runText(cmd *cobra.Command, args []string) error {
 	inputArg := sanitizedPath
 
 	output := cli.GetOutput(cmd)
-	// Sanitize output path if provided
-	if output != "" {
-		output, err = fileio.SanitizePath(output)
-		if err != nil {
-			return fmt.Errorf("invalid output path: %w", err)
-		}
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
 	}
 
 	pagesStr := cli.GetPages(cmd)

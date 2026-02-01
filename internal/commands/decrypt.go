@@ -41,12 +41,10 @@ Examples:
 }
 
 func runDecrypt(cmd *cobra.Command, args []string) error {
-	// Sanitize input paths
-	sanitizedArgs, err := fileio.SanitizePaths(args)
+	args, err := sanitizeInputArgs(args)
 	if err != nil {
-		return fmt.Errorf("invalid file path: %w", err)
+		return err
 	}
-	args = sanitizedArgs
 
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
@@ -59,12 +57,9 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
 
-	// Sanitize output path
-	if output != "" && output != "-" {
-		output, err = fileio.SanitizePath(output)
-		if err != nil {
-			return fmt.Errorf("invalid output path: %w", err)
-		}
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
 	}
 
 	// Handle dry-run mode

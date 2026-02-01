@@ -35,18 +35,15 @@ Examples:
 }
 
 func runMerge(cmd *cobra.Command, args []string) error {
-	// Sanitize input paths
-	sanitizedArgs, err := fileio.SanitizePaths(args)
+	args, err := sanitizeInputArgs(args)
 	if err != nil {
-		return fmt.Errorf("invalid file path: %w", err)
+		return err
 	}
-	args = sanitizedArgs
 
 	output := cli.GetOutput(cmd)
-	// Sanitize output path
-	output, err = fileio.SanitizePath(output)
+	output, err = sanitizeOutputPath(output)
 	if err != nil {
-		return fmt.Errorf("invalid output path: %w", err)
+		return err
 	}
 
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
