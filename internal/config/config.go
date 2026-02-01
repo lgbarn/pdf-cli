@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"gopkg.in/yaml.v3"
 )
 
@@ -127,7 +128,7 @@ func Save(cfg *Config) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, fileio.DefaultDirPerm); err != nil {
 		return err
 	}
 
@@ -136,7 +137,7 @@ func Save(cfg *Config) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0600)
+	return os.WriteFile(path, data, fileio.DefaultFilePerm)
 }
 
 // global holds the loaded configuration

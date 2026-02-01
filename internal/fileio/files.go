@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+const (
+	// DefaultDirPerm is the default permission for creating directories.
+	DefaultDirPerm = 0750
+
+	// DefaultFilePerm is the default permission for creating files.
+	DefaultFilePerm = 0600
+)
+
 // FileExists checks if a file exists
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
@@ -25,7 +33,7 @@ func IsDir(path string) bool {
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0750)
+	return os.MkdirAll(path, DefaultDirPerm)
 }
 
 // EnsureParentDir creates the parent directory of a file path if it doesn't exist

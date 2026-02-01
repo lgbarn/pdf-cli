@@ -14,6 +14,14 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
+const (
+	// ParallelThreshold is the minimum number of pages to trigger parallel processing.
+	ParallelThreshold = 5
+
+	// ProgressUpdateInterval is the interval for updating the progress bar (number of pages).
+	ProgressUpdateInterval = 5
+)
+
 // ExtractText extracts text content from a PDF
 func ExtractText(ctx context.Context, input string, pages []int, password string) (string, error) {
 	return ExtractTextWithProgress(ctx, input, pages, password, false)
@@ -56,7 +64,7 @@ func extractTextPrimary(ctx context.Context, input string, pages []int, showProg
 	}
 
 	// Use parallel extraction for larger page counts
-	if len(pages) > 5 {
+	if len(pages) > ParallelThreshold {
 		return extractPagesParallel(ctx, r, pages, totalPages, showProgress)
 	}
 
@@ -67,7 +75,7 @@ func extractTextPrimary(ctx context.Context, input string, pages []int, showProg
 func extractPagesSequential(ctx context.Context, r *pdf.Reader, pages []int, totalPages int, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = progress.NewProgressBar("Extracting text", len(pages), 5)
+		bar = progress.NewProgressBar("Extracting text", len(pages), ProgressUpdateInterval)
 	}
 	defer progress.FinishProgressBar(bar)
 
@@ -116,7 +124,7 @@ func extractPagesParallel(ctx context.Context, r *pdf.Reader, pages []int, total
 
 	var bar *progressbar.ProgressBar
 	if showProgress {
-		bar = progress.NewProgressBar("Extracting text", len(pages), 5)
+		bar = progress.NewProgressBar("Extracting text", len(pages), ProgressUpdateInterval)
 	}
 	defer progress.FinishProgressBar(bar)
 
