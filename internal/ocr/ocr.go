@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +25,18 @@ import (
 const (
 	// TessdataURL is the base URL for downloading tessdata files.
 	TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
+
+	// DefaultParallelThreshold is the minimum number of images to trigger parallel processing.
+	DefaultParallelThreshold = 5
+
+	// DefaultMaxWorkers is the maximum number of concurrent workers for parallel processing.
+	DefaultMaxWorkers = 8
+
+	// DefaultDownloadTimeout is the timeout for downloading tessdata files.
+	DefaultDownloadTimeout = 5 * time.Minute
+
+	// DefaultDataDirPerm is the default permission for tessdata directory.
+	DefaultDataDirPerm = 0750
 )
 
 // EngineOptions contains options for creating an OCR engine.
@@ -123,7 +136,7 @@ func getDataDir() (string, error) {
 	}
 
 	dataDir := filepath.Join(configDir, "pdf-cli", "tessdata")
-	if err := os.MkdirAll(dataDir, 0750); err != nil {
+	if err := os.MkdirAll(dataDir, DefaultDataDirPerm); err != nil {
 		return "", err
 	}
 
@@ -180,7 +193,7 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) error {
 
 	fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, DefaultDownloadTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -322,14 +335,12 @@ func findImageFiles(dir string) ([]string, error) {
 type imageResult struct {
 	index int
 	text  string
+	err   error
 }
-
-// parallelThreshold is the minimum number of images to trigger parallel processing.
-const parallelThreshold = 5
 
 func (e *Engine) processImages(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	// Use sequential processing for small batches or WASM backend (not thread-safe)
-	if len(imageFiles) <= parallelThreshold || e.backend.Name() == "wasm" {
+	if len(imageFiles) <= DefaultParallelThreshold || e.backend.Name() == "wasm" {
 		return e.processImagesSequential(ctx, imageFiles, showProgress)
 	}
 	return e.processImagesParallel(ctx, imageFiles, showProgress)
@@ -343,18 +354,25 @@ func (e *Engine) processImagesSequential(ctx context.Context, imageFiles []strin
 	defer progress.FinishProgressBar(bar)
 
 	texts := make([]string, 0, len(imageFiles))
+	var errs []error
 
-	for _, imgPath := range imageFiles {
+	for i, imgPath := range imageFiles {
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
 		text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
-		if err == nil {
+		if err != nil {
+			errs = append(errs, fmt.Errorf("image %d: %w", i, err))
+		} else {
 			texts = append(texts, text)
 		}
 		if bar != nil {
 			_ = bar.Add(1)
 		}
+	}
+
+	if len(errs) > 0 {
+		return "", errors.Join(errs...)
 	}
 
 	return joinNonEmpty(texts, "\n"), nil
@@ -370,7 +388,7 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
-	workers := min(runtime.NumCPU(), 8)
+	workers := min(runtime.NumCPU(), DefaultMaxWorkers)
 	sem := make(chan struct{}, workers)
 
 	var wg sync.WaitGroup
@@ -385,8 +403,8 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 		go func(idx int, path string) {
 			defer wg.Done()
 			defer func() { <-sem }() // Release semaphore
-			text, _ := e.backend.ProcessImage(ctx, path, e.lang)
-			results <- imageResult{index: idx, text: text}
+			text, err := e.backend.ProcessImage(ctx, path, e.lang)
+			results <- imageResult{index: idx, text: text, err: err}
 		}(i, imgPath)
 	}
 
@@ -398,11 +416,19 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 
 	// Collect results in order using a slice
 	texts := make([]string, len(imageFiles))
+	var errs []error
 	for res := range results {
 		texts[res.index] = res.text
+		if res.err != nil {
+			errs = append(errs, fmt.Errorf("image %d: %w", res.index, res.err))
+		}
 		if bar != nil {
 			_ = bar.Add(1)
 		}
+	}
+
+	if len(errs) > 0 {
+		return "", errors.Join(errs...)
 	}
 
 	return joinNonEmpty(texts, "\n"), nil

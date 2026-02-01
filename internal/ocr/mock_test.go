@@ -14,6 +14,8 @@ type mockBackend struct {
 	processErr   error
 	closeErr     error
 	processCalls int32 // atomic counter for thread safety
+	// errorIndices maps image path to error - allows per-image error simulation
+	errorIndices map[string]error
 }
 
 func (m *mockBackend) Name() string {
@@ -28,6 +30,12 @@ func (m *mockBackend) ProcessImage(ctx context.Context, imagePath, lang string) 
 	atomic.AddInt32(&m.processCalls, 1)
 	if ctx.Err() != nil {
 		return "", ctx.Err()
+	}
+	// Check for per-image error
+	if m.errorIndices != nil {
+		if err, exists := m.errorIndices[imagePath]; exists {
+			return "", err
+		}
 	}
 	return m.processOut, m.processErr
 }
@@ -59,6 +67,12 @@ func (m *mockBackend) withError(err error) *mockBackend {
 // withCloseError sets the error for Close.
 func (m *mockBackend) withCloseError(err error) *mockBackend {
 	m.closeErr = err
+	return m
+}
+
+// withErrorIndices sets per-image errors for ProcessImage.
+func (m *mockBackend) withErrorIndices(errorIndices map[string]error) *mockBackend {
+	m.errorIndices = errorIndices
 	return m
 }
 

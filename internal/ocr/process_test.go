@@ -2,6 +2,7 @@ package ocr
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,10 +94,14 @@ func TestProcessImagesSequentialWithError(t *testing.T) {
 		lang:    "eng",
 	}
 
-	// processImagesSequential continues even if individual images fail
+	// processImagesSequential now collects and returns all errors
 	result, err := engine.processImagesSequential(context.Background(), imageFiles, false)
-	if err != nil {
-		t.Fatalf("processImagesSequential() error = %v", err)
+	if err == nil {
+		t.Fatalf("processImagesSequential() expected error, got nil")
+	}
+	// Error should mention the image index
+	if !strings.Contains(err.Error(), "image 0") {
+		t.Errorf("error should mention image 0: %v", err)
 	}
 	// Result should be empty since processing failed
 	if result != "" {
@@ -411,10 +416,18 @@ func TestProcessImagesParallelWithError(t *testing.T) {
 		lang:    "eng",
 	}
 
-	// Should complete even with errors
+	// processImagesParallel now collects and returns all errors
 	result, err := engine.processImagesParallel(context.Background(), imageFiles, false)
-	if err != nil {
-		t.Fatalf("processImagesParallel() error = %v", err)
+	if err == nil {
+		t.Fatalf("processImagesParallel() expected error, got nil")
+	}
+
+	// Error should mention multiple image indices
+	errStr := err.Error()
+	for i := 0; i < imageCount; i++ {
+		if !strings.Contains(errStr, fmt.Sprintf("image %d", i)) {
+			t.Errorf("error should mention image %d: %v", i, err)
+		}
 	}
 
 	// Result should be empty since all processing failed

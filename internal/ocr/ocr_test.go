@@ -202,3 +202,79 @@ func TestDownloadTessdataPathSanitization(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessImagesParallelErrorPropagation(t *testing.T) {
+	backend := newMockBackend("mock", true).
+		withOutput("test text").
+		withErrorIndices(map[string]error{
+			"img1.png": context.DeadlineExceeded,
+			"img3.png": context.DeadlineExceeded,
+		})
+
+	engine := &Engine{
+		lang:    "eng",
+		backend: backend,
+	}
+
+	imagePaths := []string{"img0.png", "img1.png", "img2.png", "img3.png", "img4.png"}
+
+	ctx := context.Background()
+	text, err := engine.processImagesParallel(ctx, imagePaths, false)
+
+	// Should return error joined from multiple failures
+	if err == nil {
+		t.Fatal("Expected error from failed images, got nil")
+	}
+
+	// Error should mention both failed images
+	errStr := err.Error()
+	if !strings.Contains(errStr, "image 1") {
+		t.Errorf("Error should mention image 1: %v", err)
+	}
+	if !strings.Contains(errStr, "image 3") {
+		t.Errorf("Error should mention image 3: %v", err)
+	}
+
+	// Text should still be empty when errors occur
+	if text != "" {
+		t.Errorf("Expected empty text with errors, got: %q", text)
+	}
+}
+
+func TestProcessImagesSequentialErrorPropagation(t *testing.T) {
+	backend := newMockBackend("mock", true).
+		withOutput("test text").
+		withErrorIndices(map[string]error{
+			"img0.png": context.DeadlineExceeded,
+			"img2.png": context.DeadlineExceeded,
+		})
+
+	engine := &Engine{
+		lang:    "eng",
+		backend: backend,
+	}
+
+	imagePaths := []string{"img0.png", "img1.png", "img2.png"}
+
+	ctx := context.Background()
+	text, err := engine.processImagesSequential(ctx, imagePaths, false)
+
+	// Should return error joined from multiple failures
+	if err == nil {
+		t.Fatal("Expected error from failed images, got nil")
+	}
+
+	// Error should mention both failed images
+	errStr := err.Error()
+	if !strings.Contains(errStr, "image 0") {
+		t.Errorf("Error should mention image 0: %v", err)
+	}
+	if !strings.Contains(errStr, "image 2") {
+		t.Errorf("Error should mention image 2: %v", err)
+	}
+
+	// Text should still be empty when errors occur
+	if text != "" {
+		t.Errorf("Expected empty text with errors, got: %q", text)
+	}
+}

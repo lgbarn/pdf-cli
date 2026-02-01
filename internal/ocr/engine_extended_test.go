@@ -6,6 +6,9 @@ import (
 	"testing"
 )
 
+// parallelThreshold is an alias for test compatibility
+const parallelThreshold = DefaultParallelThreshold
+
 func TestEnsureTessdata(t *testing.T) {
 	// Create a temp directory for tessdata
 	tmpDir, err := os.MkdirTemp("", "tessdata-ensure-*")
