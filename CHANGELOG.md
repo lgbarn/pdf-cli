@@ -5,6 +5,39 @@ All notable changes to pdf-cli are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-31
+
+### Breaking Changes
+- **Secure password input**: Passwords for `encrypt`/`decrypt` commands are no longer accepted
+  via `--password` CLI flag (visible in `ps aux` and shell history). Use stdin prompt, `PDF_CLI_PASSWORD`
+  environment variable, or `--password-file` instead.
+
+### Security
+- **Path traversal protection**: All file path inputs sanitized against directory traversal attacks (R3)
+- **Download integrity verification**: SHA256 checksum verification for tessdata downloads (R2)
+- **Password exposure eliminated**: Passwords no longer visible in process listings (R1)
+
+### Added
+- **Retry logic with exponential backoff** for tessdata network downloads (R12)
+- **Signal-based temp file cleanup** on crash/interrupt via signal handlers (R11)
+- **Portable coverage checking**: Go-based coverage script replaces `bc`/`awk` dependency (R16)
+- **Configurable parallelism thresholds**: Adaptive to system resources (R17)
+
+### Fixed
+- **Thread-safe globals**: `config.Get()` and `logging.Get()` use `sync.Once`; safe under concurrent access (R4)
+- **Context propagation**: All long-running operations accept `context.Context` for cancellation (R5)
+- **Parallel error collection**: All errors surfaced from parallel processing, no silent drops (R6)
+- **File close errors**: Checked and propagated, especially for write operations (R8)
+
+### Changed
+- **Go 1.25** required (up from 1.22)
+- **All 21 dependencies updated** to latest compatible versions (R7)
+- **Magic numbers replaced** with named constants throughout codebase (R14)
+- **Logging consolidated** to `log/slog` (R15)
+- **Documentation aligned**: README and `docs/architecture.md` reflect current code (R13)
+- **Large test files split** into focused files under 500 lines (R10)
+- **CI**: gosec updated to v2.22.11 for Go 1.24+ compatibility
+
 ## [1.5.0] - 2026-01-21
 
 ### Added
@@ -195,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Addressed all Gosec static analysis findings
 - Secure handling of encrypted PDFs
 
+[2.0.0]: https://github.com/lgbarn/pdf-cli/compare/v1.4.0...v2.0.0
 [1.5.0]: https://github.com/lgbarn/pdf-cli/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/lgbarn/pdf-cli/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/lgbarn/pdf-cli/compare/v1.3.1...v1.3.2
