@@ -16,9 +16,9 @@ func init() {
 	cli.AddCommand(encryptCmd)
 	cli.AddOutputFlag(encryptCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(encryptCmd, "User password (required)")
+	cli.AddPasswordFileFlag(encryptCmd, "")
 	cli.AddStdoutFlag(encryptCmd)
 	encryptCmd.Flags().String("owner-password", "", "Owner password (defaults to user password)")
-	_ = encryptCmd.MarkFlagRequired("password")
 }
 
 var encryptCmd = &cobra.Command{
@@ -42,14 +42,17 @@ Examples:
 }
 
 func runEncrypt(cmd *cobra.Command, args []string) error {
-	userPassword := cli.GetPassword(cmd)
+	userPassword, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
+	if userPassword == "" {
+		return fmt.Errorf("password is required (use --password-file, PDF_CLI_PASSWORD env var, or interactive prompt)")
+	}
+
 	ownerPassword, _ := cmd.Flags().GetString("owner-password")
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
-
-	if userPassword == "" {
-		return fmt.Errorf("password is required for encryption")
-	}
 
 	// Handle dry-run mode
 	if cli.IsDryRun() {

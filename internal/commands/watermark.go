@@ -15,6 +15,7 @@ func init() {
 	cli.AddOutputFlag(watermarkCmd, "Output file path (only with single file)")
 	cli.AddPagesFlag(watermarkCmd, "Pages to watermark (default: all)")
 	cli.AddPasswordFlag(watermarkCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(watermarkCmd, "")
 	watermarkCmd.Flags().StringP("text", "t", "", "Text watermark content")
 	watermarkCmd.Flags().StringP("image", "i", "", "Image file for image watermark")
 }
@@ -44,7 +45,10 @@ Examples:
 
 func runWatermark(cmd *cobra.Command, args []string) error {
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	output := cli.GetOutput(cmd)
 	text, _ := cmd.Flags().GetString("text")
 	image, _ := cmd.Flags().GetString("image")

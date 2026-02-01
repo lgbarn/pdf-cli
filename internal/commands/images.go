@@ -15,6 +15,7 @@ func init() {
 	cli.AddOutputFlag(imagesCmd, "Output directory for extracted images")
 	cli.AddPagesFlag(imagesCmd, "Pages to extract images from (default: all)")
 	cli.AddPasswordFlag(imagesCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(imagesCmd, "")
 }
 
 var imagesCmd = &cobra.Command{
@@ -36,7 +37,10 @@ Examples:
 func runImages(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 
 	if err := fileio.ValidatePDFFile(inputFile); err != nil {
 		return err

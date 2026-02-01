@@ -18,11 +18,13 @@ func init() {
 	pdfaCmd.AddCommand(pdfaConvertCmd)
 
 	cli.AddPasswordFlag(pdfaValidateCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(pdfaValidateCmd, "")
 	cli.AddFormatFlag(pdfaValidateCmd)
 	pdfaValidateCmd.Flags().String("level", "", "PDF/A level to validate: 1b, 2b, 3b (default: any)")
 
 	cli.AddOutputFlag(pdfaConvertCmd, "Output file path")
 	cli.AddPasswordFlag(pdfaConvertCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(pdfaConvertCmd, "")
 	cli.AddStdoutFlag(pdfaConvertCmd)
 	pdfaConvertCmd.Flags().String("level", "2b", "Target PDF/A level: 1b, 2b, 3b")
 }
@@ -98,7 +100,10 @@ type PDFAValidateOutput struct {
 
 func runPdfaValidate(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	level, _ := cmd.Flags().GetString("level")
 	format := cli.GetFormat(cmd)
 	formatter := output.NewOutputFormatter(format)
@@ -156,7 +161,10 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 func runPdfaConvert(cmd *cobra.Command, args []string) error {
 	inputArg := args[0]
 	explicitOutput := cli.GetOutput(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	toStdout := cli.GetStdout(cmd)
 	level, _ := cmd.Flags().GetString("level")
 

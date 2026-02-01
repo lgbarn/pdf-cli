@@ -15,6 +15,7 @@ func init() {
 	cli.AddCommand(splitCmd)
 	cli.AddOutputFlag(splitCmd, "Output directory for split files")
 	cli.AddPasswordFlag(splitCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(splitCmd, "")
 	splitCmd.Flags().IntP("pages", "n", 1, "Number of pages per output file")
 }
 
@@ -39,7 +40,10 @@ Examples:
 func runSplit(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	outputDir := cli.GetOutput(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	pagesPerFile, _ := cmd.Flags().GetInt("pages")
 
 	// Validate input file

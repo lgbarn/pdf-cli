@@ -16,6 +16,7 @@ func init() {
 	cli.AddOutputFlag(extractCmd, "Output file path")
 	cli.AddPagesFlag(extractCmd, "Pages to extract (e.g., 1-5,7,10-12)")
 	cli.AddPasswordFlag(extractCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(extractCmd, "")
 	cli.AddStdoutFlag(extractCmd)
 	_ = extractCmd.MarkFlagRequired("pages")
 }
@@ -43,7 +44,10 @@ Examples:
 func runExtract(cmd *cobra.Command, args []string) error {
 	inputArg := args[0]
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	toStdout := cli.GetStdout(cmd)
 	explicitOutput := cli.GetOutput(cmd)
 

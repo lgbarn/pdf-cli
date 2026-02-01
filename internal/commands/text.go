@@ -18,6 +18,7 @@ func init() {
 	cli.AddOutputFlag(textCmd, "Output file path (default: stdout)")
 	cli.AddPagesFlag(textCmd, "Pages to extract text from (default: all)")
 	cli.AddPasswordFlag(textCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(textCmd, "")
 	textCmd.Flags().Bool("ocr", false, "Use OCR for image-based PDFs")
 	textCmd.Flags().String("ocr-lang", "eng", "OCR language(s), e.g., 'eng' or 'eng+fra'")
 	textCmd.Flags().String("ocr-backend", "auto", "OCR backend: auto (native if available, else wasm), native, or wasm")
@@ -50,7 +51,10 @@ func runText(cmd *cobra.Command, args []string) error {
 	inputArg := args[0]
 	output := cli.GetOutput(cmd)
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	useOCR, _ := cmd.Flags().GetBool("ocr")
 	ocrLang, _ := cmd.Flags().GetString("ocr-lang")
 	ocrBackend, _ := cmd.Flags().GetString("ocr-backend")

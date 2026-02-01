@@ -35,6 +35,14 @@ func AddPasswordFlag(cmd *cobra.Command, usage string) {
 	cmd.Flags().String("password", "", usage)
 }
 
+// AddPasswordFileFlag adds the --password-file flag to a command.
+func AddPasswordFileFlag(cmd *cobra.Command, usage string) {
+	if usage == "" {
+		usage = "Read password from file (more secure than --password)"
+	}
+	cmd.Flags().String("password-file", "", usage)
+}
+
 // GetOutput gets the output flag value
 func GetOutput(cmd *cobra.Command) string {
 	output, _ := cmd.Flags().GetString("output")
@@ -51,6 +59,11 @@ func GetPages(cmd *cobra.Command) string {
 func GetPassword(cmd *cobra.Command) string {
 	password, _ := cmd.Flags().GetString("password")
 	return password
+}
+
+// GetPasswordSecure reads password securely from multiple sources.
+func GetPasswordSecure(cmd *cobra.Command, promptMsg string) (string, error) {
+	return ReadPassword(cmd, promptMsg)
 }
 
 // AddFormatFlag adds the --format flag to a command for structured output.
