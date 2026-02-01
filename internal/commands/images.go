@@ -35,7 +35,13 @@ Examples:
 }
 
 func runImages(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputFile := sanitizedPath
+
 	pagesStr := cli.GetPages(cmd)
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
@@ -49,6 +55,12 @@ func runImages(cmd *cobra.Command, args []string) error {
 	outputDir := cli.GetOutput(cmd)
 	if outputDir == "" {
 		outputDir = "."
+	}
+
+	// Sanitize output directory path
+	outputDir, err = fileio.SanitizePath(outputDir)
+	if err != nil {
+		return fmt.Errorf("invalid output path: %w", err)
 	}
 
 	if err := fileio.EnsureDir(outputDir); err != nil {

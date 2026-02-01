@@ -42,7 +42,13 @@ Examples:
 }
 
 func runExtract(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	pagesStr := cli.GetPages(cmd)
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
@@ -50,6 +56,14 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	}
 	toStdout := cli.GetStdout(cmd)
 	explicitOutput := cli.GetOutput(cmd)
+
+	// Sanitize output path
+	if explicitOutput != "" && explicitOutput != "-" {
+		explicitOutput, err = fileio.SanitizePath(explicitOutput)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
 
 	// Handle dry-run mode early
 	if cli.IsDryRun() {

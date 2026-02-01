@@ -3,6 +3,7 @@ package fileio
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -314,5 +315,75 @@ func TestEnsureParentDir(t *testing.T) {
 		if err := EnsureParentDir(path); err != nil {
 			t.Errorf("EnsureParentDir(%q) error = %v", path, err)
 		}
+	}
+}
+
+func TestSanitizePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  bool
+		checkAbs bool // If true, verify result is absolute path
+	}{
+		// Valid paths
+		{name: "simple file", input: "file.pdf"},
+		{name: "subdirectory", input: "docs/file.pdf"},
+		{name: "absolute path", input: "/tmp/file.pdf"},
+		{name: "stdin marker", input: "-"},
+		{name: "current dir", input: "./file.pdf"},
+		{name: "redundant slashes", input: "docs//file.pdf"},
+
+		// Relative paths with .. that resolve to valid locations (converted to absolute)
+		{name: "parent traversal", input: "../file.pdf", checkAbs: true},
+		{name: "deep traversal", input: "../../etc/passwd", checkAbs: true},
+		{name: "traversal in middle", input: "docs/../../etc/passwd", checkAbs: true},
+		{name: "mixed traversal", input: "./docs/../../../etc/passwd", checkAbs: true},
+
+		// Invalid paths (absolute paths attempting traversal)
+		{name: "absolute traversal clean", input: "/tmp/../../etc/passwd"}, // Becomes /etc/passwd after cleaning - valid
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SanitizePath(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SanitizePath(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if tt.checkAbs && !filepath.IsAbs(got) {
+					t.Errorf("SanitizePath(%q) = %v, expected absolute path", tt.input, got)
+				}
+				// Verify no .. remains in the cleaned path
+				if strings.Contains(got, "..") {
+					t.Errorf("SanitizePath(%q) = %v, still contains ..", tt.input, got)
+				}
+			}
+		})
+	}
+}
+
+func TestSanitizePaths(t *testing.T) {
+	valid := []string{"file1.pdf", "docs/file2.pdf", "/tmp/file3.pdf"}
+	got, err := SanitizePaths(valid)
+	if err != nil {
+		t.Errorf("SanitizePaths() unexpected error: %v", err)
+	}
+	if len(got) != 3 {
+		t.Errorf("SanitizePaths() returned %d paths, want 3", len(got))
+	}
+
+	// Test with relative paths containing .. (these get converted to absolute)
+	withTraversal := []string{"file1.pdf", "../etc/passwd", "file3.pdf"}
+	got, err = SanitizePaths(withTraversal)
+	if err != nil {
+		t.Errorf("SanitizePaths() unexpected error for relative paths: %v", err)
+	}
+	if len(got) != 3 {
+		t.Errorf("SanitizePaths() returned %d paths, want 3", len(got))
+	}
+	// The second path should be absolute now
+	if !filepath.IsAbs(got[1]) {
+		t.Errorf("SanitizePaths() path with .. should be converted to absolute: %v", got[1])
 	}
 }

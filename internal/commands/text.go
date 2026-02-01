@@ -48,8 +48,22 @@ Examples:
 }
 
 func runText(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	output := cli.GetOutput(cmd)
+	// Sanitize output path if provided
+	if output != "" {
+		output, err = fileio.SanitizePath(output)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
+
 	pagesStr := cli.GetPages(cmd)
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {

@@ -99,7 +99,13 @@ type PDFAValidateOutput struct {
 }
 
 func runPdfaValidate(cmd *cobra.Command, args []string) error {
-	inputFile := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputFile := sanitizedPath
+
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)
@@ -159,8 +165,22 @@ func runPdfaValidate(cmd *cobra.Command, args []string) error {
 }
 
 func runPdfaConvert(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	explicitOutput := cli.GetOutput(cmd)
+	// Sanitize output path
+	if explicitOutput != "" && explicitOutput != "-" {
+		explicitOutput, err = fileio.SanitizePath(explicitOutput)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
+
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)

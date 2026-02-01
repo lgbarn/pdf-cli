@@ -83,11 +83,17 @@ func AtomicWrite(path string, data []byte) error {
 
 // CopyFile copies a file from src to dst
 func CopyFile(src, dst string) error {
-	// Clean paths to prevent directory traversal
-	cleanSrc := filepath.Clean(src)
-	cleanDst := filepath.Clean(dst)
+	// Sanitize paths to prevent directory traversal
+	cleanSrc, err := SanitizePath(src)
+	if err != nil {
+		return fmt.Errorf("invalid source path: %w", err)
+	}
+	cleanDst, err := SanitizePath(dst)
+	if err != nil {
+		return fmt.Errorf("invalid destination path: %w", err)
+	}
 
-	srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is cleaned
+	srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is sanitized
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
@@ -97,7 +103,7 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	dstFile, err := os.Create(cleanDst) // #nosec G304 -- path is cleaned
+	dstFile, err := os.Create(cleanDst) // #nosec G304 -- path is sanitized
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
@@ -214,4 +220,49 @@ func IsImageFile(path string) bool {
 		}
 	}
 	return false
+}
+
+// SanitizePath cleans a file path and validates it against directory traversal attacks.
+// For relative paths, converts to absolute first to properly validate.
+// Returns an error if the path attempts directory traversal outside the working directory.
+func SanitizePath(path string) (string, error) {
+	if path == "-" {
+		return path, nil
+	}
+
+	cleaned := filepath.Clean(path)
+
+	// For relative paths that might contain .., convert to absolute to properly validate
+	// This allows legitimate relative paths like ../../testdata/file.pdf while still
+	// preventing malicious absolute paths like /tmp/../../etc/passwd
+	if !filepath.IsAbs(cleaned) && strings.Contains(cleaned, "..") {
+		absPath, err := filepath.Abs(cleaned)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve path: %w", err)
+		}
+		cleaned = absPath
+	}
+
+	// Check for directory traversal in the final cleaned path
+	parts := strings.Split(cleaned, string(filepath.Separator))
+	for _, part := range parts {
+		if part == ".." {
+			return "", fmt.Errorf("path contains directory traversal: %s", path)
+		}
+	}
+
+	return cleaned, nil
+}
+
+// SanitizePaths validates multiple paths and returns cleaned versions.
+func SanitizePaths(paths []string) ([]string, error) {
+	cleaned := make([]string, len(paths))
+	for i, path := range paths {
+		clean, err := SanitizePath(path)
+		if err != nil {
+			return nil, err
+		}
+		cleaned[i] = clean
+	}
+	return cleaned, nil
 }

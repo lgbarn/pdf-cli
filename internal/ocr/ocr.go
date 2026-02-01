@@ -170,6 +170,12 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) error {
 	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
 	dataFile := filepath.Join(dataDir, lang+".traineddata")
 
+	// Sanitize the data file path to prevent directory traversal
+	dataFile, err := fileio.SanitizePath(dataFile)
+	if err != nil {
+		return fmt.Errorf("invalid data file path: %w", err)
+	}
+
 	fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)

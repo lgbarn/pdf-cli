@@ -43,6 +43,13 @@ Examples:
 }
 
 func runInfo(cmd *cobra.Command, args []string) error {
+	// Sanitize input paths
+	sanitizedArgs, err := fileio.SanitizePaths(args)
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	args = sanitizedArgs
+
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)

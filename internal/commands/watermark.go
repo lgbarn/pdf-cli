@@ -44,6 +44,13 @@ Examples:
 }
 
 func runWatermark(cmd *cobra.Command, args []string) error {
+	// Sanitize input paths
+	sanitizedArgs, err := fileio.SanitizePaths(args)
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	args = sanitizedArgs
+
 	pagesStr := cli.GetPages(cmd)
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
@@ -52,6 +59,22 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 	output := cli.GetOutput(cmd)
 	text, _ := cmd.Flags().GetString("text")
 	image, _ := cmd.Flags().GetString("image")
+
+	// Sanitize output path
+	if output != "" && output != "-" {
+		output, err = fileio.SanitizePath(output)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
+
+	// Sanitize image path if provided
+	if image != "" {
+		image, err = fileio.SanitizePath(image)
+		if err != nil {
+			return fmt.Errorf("invalid image path: %w", err)
+		}
+	}
 
 	if text == "" && image == "" {
 		return fmt.Errorf("must specify either --text or --image for watermark")

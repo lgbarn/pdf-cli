@@ -43,12 +43,27 @@ Examples:
 }
 
 func runCompress(cmd *cobra.Command, args []string) error {
+	// Sanitize input paths
+	sanitizedArgs, err := fileio.SanitizePaths(args)
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	args = sanitizedArgs
+
 	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)
 	}
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
+
+	// Sanitize output path
+	if output != "" && output != "-" {
+		output, err = fileio.SanitizePath(output)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
 
 	// Handle dry-run mode
 	if cli.IsDryRun() {
