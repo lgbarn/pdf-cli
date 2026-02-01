@@ -2,8 +2,14 @@ package ocr
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/lgbarn/pdf-cli/internal/fileio"
@@ -276,5 +282,106 @@ func TestProcessImagesSequentialErrorPropagation(t *testing.T) {
 	// Text should still be empty when errors occur
 	if text != "" {
 		t.Errorf("Expected empty text with errors, got: %q", text)
+	}
+}
+
+func TestDownloadTessdataRetryOnServerError(t *testing.T) {
+	t.Parallel()
+
+	var requestCount atomic.Int32
+	body := []byte("fake tessdata content for testing")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := requestCount.Add(1)
+		if n == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(body)))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+
+	// Temporarily clear known checksums so checksum verification is skipped
+	origChecksums := KnownChecksums
+	KnownChecksums = map[string]string{}
+	defer func() { KnownChecksums = origChecksums }()
+
+	err := downloadTessdataWithBaseURL(context.Background(), tmpDir, "test", server.URL)
+	if err != nil {
+		t.Fatalf("expected success after retry, got: %v", err)
+	}
+
+	count := requestCount.Load()
+	if count != 2 {
+		t.Fatalf("expected 2 requests (1 failure + 1 success), got %d", count)
+	}
+
+	// Verify the file was written
+	data, readErr := os.ReadFile(filepath.Join(tmpDir, "test.traineddata"))
+	if readErr != nil {
+		t.Fatalf("failed to read downloaded file: %v", readErr)
+	}
+	if string(data) != string(body) {
+		t.Fatalf("file content mismatch: got %q, want %q", string(data), string(body))
+	}
+}
+
+func TestDownloadTessdataNoRetryOn404(t *testing.T) {
+	t.Parallel()
+
+	var requestCount atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+
+	err := downloadTessdataWithBaseURL(context.Background(), tmpDir, "test", server.URL)
+	if err == nil {
+		t.Fatal("expected error on 404, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "HTTP 404") {
+		t.Fatalf("expected HTTP 404 in error, got: %v", err)
+	}
+
+	count := requestCount.Load()
+	if count != 1 {
+		t.Fatalf("expected exactly 1 request (no retry on 404), got %d", count)
+	}
+}
+
+func TestDownloadTessdataRetryExhaustion(t *testing.T) {
+	t.Parallel()
+
+	var requestCount atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+
+	err := downloadTessdataWithBaseURL(context.Background(), tmpDir, "test", server.URL)
+	if err == nil {
+		t.Fatal("expected error after exhaustion, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "HTTP 500") {
+		t.Fatalf("expected HTTP 500 in error, got: %v", err)
+	}
+
+	count := requestCount.Load()
+	if count != int32(DefaultRetryAttempts) {
+		t.Fatalf("expected %d requests, got %d", DefaultRetryAttempts, count)
 	}
 }

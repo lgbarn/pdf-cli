@@ -19,6 +19,7 @@ import (
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/progress"
+	"github.com/lgbarn/pdf-cli/internal/retry"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/schollz/progressbar/v3"
 )
@@ -38,6 +39,12 @@ const (
 
 	// DefaultDataDirPerm is the default permission for tessdata directory.
 	DefaultDataDirPerm = 0750
+
+	// DefaultRetryAttempts is the number of retry attempts for downloading tessdata.
+	DefaultRetryAttempts = 3
+
+	// DefaultRetryBaseDelay is the base delay between retry attempts.
+	DefaultRetryBaseDelay = 1 * time.Second
 )
 
 // EngineOptions contains options for creating an OCR engine.
@@ -199,7 +206,11 @@ func primaryLanguage(lang string) string {
 }
 
 func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
-	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
+	return downloadTessdataWithBaseURL(ctx, dataDir, lang, TessdataURL)
+}
+
+func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL string) (err error) {
+	dlURL := fmt.Sprintf("%s/%s.traineddata", baseURL, lang)
 	dataFile := filepath.Join(dataDir, lang+".traineddata")
 
 	// Sanitize the data file path to prevent directory traversal
@@ -213,21 +224,6 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, DefaultDownloadTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
-	}
-
 	tmpFile, err := os.CreateTemp(dataDir, "tessdata-*.tmp")
 	if err != nil {
 		return err
@@ -235,15 +231,66 @@ func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
 	tmpPath := tmpFile.Name()
 	unregisterTmp := cleanup.Register(tmpPath)
 	defer unregisterTmp()
-	defer os.Remove(tmpPath)
+	defer os.Remove(tmpPath) //nolint:errcheck // best-effort cleanup
 
 	// Create SHA256 hasher to verify download integrity
 	hasher := sha256.New()
 
-	bar := progress.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
-	if _, err := io.Copy(io.MultiWriter(tmpFile, bar, hasher), resp.Body); err != nil {
+	// Progress bar created once; may not display perfectly on retries
+	var bar *progressbar.ProgressBar
+
+	retryErr := retry.Do(ctx, retry.Options{
+		MaxAttempts: DefaultRetryAttempts,
+		BaseDelay:   DefaultRetryBaseDelay,
+	}, func(retryCtx context.Context) error {
+		// Reset temp file and hasher for each attempt
+		if _, seekErr := tmpFile.Seek(0, io.SeekStart); seekErr != nil {
+			return retry.Permanent(fmt.Errorf("failed to seek temp file: %w", seekErr))
+		}
+		if truncErr := tmpFile.Truncate(0); truncErr != nil {
+			return retry.Permanent(fmt.Errorf("failed to truncate temp file: %w", truncErr))
+		}
+		hasher.Reset()
+
+		req, reqErr := http.NewRequestWithContext(retryCtx, http.MethodGet, dlURL, nil)
+		if reqErr != nil {
+			return retry.Permanent(reqErr)
+		}
+
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr != nil {
+			// Network error — retryable
+			fmt.Fprintf(os.Stderr, "Download attempt failed: %v\n", doErr)
+			return doErr
+		}
+		defer resp.Body.Close() //nolint:errcheck // response body
+
+		switch {
+		case resp.StatusCode == http.StatusOK:
+			// Success — download the body
+		case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
+			// Retryable server error
+			return fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
+		default:
+			// Other client errors (4xx) — permanent
+			return retry.Permanent(fmt.Errorf("failed to download: HTTP %d", resp.StatusCode))
+		}
+
+		bar = progress.NewBytesProgressBar(
+			fmt.Sprintf("Downloading %s.traineddata", lang),
+			resp.ContentLength,
+		)
+		if _, copyErr := io.Copy(io.MultiWriter(tmpFile, bar, hasher), resp.Body); copyErr != nil {
+			fmt.Fprintf(os.Stderr, "Download attempt failed during copy: %v\n", copyErr)
+			return copyErr
+		}
+
+		return nil
+	})
+
+	if retryErr != nil {
 		_ = tmpFile.Close()
-		return err
+		return retryErr
 	}
 
 	// On success path, use defer with named return to catch close errors
