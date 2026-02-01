@@ -6,14 +6,8 @@ package ocr
 // 1. curl -sL "https://github.com/tesseract-ocr/tessdata_fast/raw/main/LANG.traineddata" -o /tmp/LANG.traineddata
 // 2. sha256sum /tmp/LANG.traineddata (or shasum -a 256 on macOS)
 // 3. Add entry below
-//
-// TODO: The 'eng' checksum below is a placeholder and must be updated with the real checksum.
-// To compute the real checksum, run:
-//
-//	curl -sL "https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata" | shasum -a 256
 var KnownChecksums = map[string]string{
-	// Placeholder checksum - must be updated with real value
-	"eng": "0000000000000000000000000000000000000000000000000000000000000000",
+	"eng": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
 }
 
 // GetChecksum returns the known SHA256 checksum for a language, or empty string if unknown.
