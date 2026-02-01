@@ -363,7 +363,11 @@ type imageResult struct {
 
 func (e *Engine) processImages(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	// Use sequential processing for small batches or WASM backend (not thread-safe)
-	if len(imageFiles) <= e.parallelThreshold || e.backend.Name() == "wasm" {
+	threshold := e.parallelThreshold
+	if threshold <= 0 {
+		threshold = DefaultParallelThreshold
+	}
+	if len(imageFiles) <= threshold || e.backend.Name() == "wasm" {
 		return e.processImagesSequential(ctx, imageFiles, showProgress)
 	}
 	return e.processImagesParallel(ctx, imageFiles, showProgress)
@@ -411,7 +415,11 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
-	workers := min(runtime.NumCPU(), e.maxWorkers)
+	maxW := e.maxWorkers
+	if maxW <= 0 {
+		maxW = DefaultMaxWorkers
+	}
+	workers := min(runtime.NumCPU(), maxW)
 	sem := make(chan struct{}, workers)
 
 	var wg sync.WaitGroup
