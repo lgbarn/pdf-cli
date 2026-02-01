@@ -14,6 +14,7 @@ func TestReorderCommandExists(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Fatal("reorder command is nil")
+		return
 	}
 	if cmd.Use != "reorder <file.pdf>" {
 		t.Errorf("reorder command Use = %q, want %q", cmd.Use, "reorder <file.pdf>")
@@ -25,6 +26,7 @@ func TestReorderFlags(t *testing.T) {
 		flag := reorderCmd.Flags().Lookup("sequence")
 		if flag == nil {
 			t.Fatal("reorder should have --sequence flag")
+			return
 		}
 		if flag.Shorthand != "s" {
 			t.Errorf("--sequence shorthand = %q, want %q", flag.Shorthand, "s")

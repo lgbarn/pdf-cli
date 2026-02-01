@@ -16,6 +16,7 @@ func init() {
 	cli.AddCommand(reorderCmd)
 	cli.AddOutputFlag(reorderCmd, "Output file path")
 	cli.AddPasswordFlag(reorderCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(reorderCmd, "")
 	cli.AddStdoutFlag(reorderCmd)
 	reorderCmd.Flags().StringP("sequence", "s", "", "Page sequence (required)")
 	_ = reorderCmd.MarkFlagRequired("sequence")
@@ -44,9 +45,26 @@ Examples:
 }
 
 func runReorder(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	explicitOutput := cli.GetOutput(cmd)
-	password := cli.GetPassword(cmd)
+	// Sanitize output path
+	if explicitOutput != "" && explicitOutput != "-" {
+		explicitOutput, err = fileio.SanitizePath(explicitOutput)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
+
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	toStdout := cli.GetStdout(cmd)
 	sequence, _ := cmd.Flags().GetString("sequence")
 

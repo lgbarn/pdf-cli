@@ -316,3 +316,58 @@ func TestEnsureParentDir(t *testing.T) {
 		}
 	}
 }
+
+func TestSanitizePath(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		// Valid paths
+		{name: "simple file", input: "file.pdf", want: "file.pdf"},
+		{name: "subdirectory", input: "docs/file.pdf", want: "docs/file.pdf"},
+		{name: "absolute path", input: "/tmp/file.pdf", want: "/tmp/file.pdf"},
+		{name: "stdin marker", input: "-", want: "-"},
+		{name: "current dir", input: "./file.pdf", want: "file.pdf"},
+		{name: "redundant slashes", input: "docs//file.pdf", want: "docs/file.pdf"},
+
+		// Invalid paths (directory traversal)
+		{name: "parent traversal", input: "../file.pdf", wantErr: true},
+		{name: "deep traversal", input: "../../etc/passwd", wantErr: true},
+		{name: "traversal in middle", input: "docs/../../etc/passwd", wantErr: true},
+		{name: "absolute traversal", input: "/tmp/../../etc/passwd", wantErr: true},
+		{name: "mixed traversal", input: "./docs/../../../etc/passwd", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SanitizePath(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SanitizePath(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("SanitizePath(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSanitizePaths(t *testing.T) {
+	valid := []string{"file1.pdf", "docs/file2.pdf", "/tmp/file3.pdf"}
+	got, err := SanitizePaths(valid)
+	if err != nil {
+		t.Errorf("SanitizePaths() unexpected error: %v", err)
+	}
+	if len(got) != 3 {
+		t.Errorf("SanitizePaths() returned %d paths, want 3", len(got))
+	}
+
+	// Test batch with one invalid path
+	invalid := []string{"file1.pdf", "../etc/passwd", "file3.pdf"}
+	_, err = SanitizePaths(invalid)
+	if err == nil {
+		t.Error("SanitizePaths() expected error for traversal, got nil")
+	}
+}

@@ -3,16 +3,21 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
+	"sync"
 
+	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"gopkg.in/yaml.v3"
 )
 
 // Config holds the application configuration.
 type Config struct {
-	Defaults DefaultsConfig `yaml:"defaults"`
-	Compress CompressConfig `yaml:"compress"`
-	Encrypt  EncryptConfig  `yaml:"encrypt"`
-	OCR      OCRConfig      `yaml:"ocr"`
+	Defaults    DefaultsConfig    `yaml:"defaults"`
+	Compress    CompressConfig    `yaml:"compress"`
+	Encrypt     EncryptConfig     `yaml:"encrypt"`
+	OCR         OCRConfig         `yaml:"ocr"`
+	Performance PerformanceConfig `yaml:"performance"`
 }
 
 // DefaultsConfig holds default settings.
@@ -38,6 +43,31 @@ type OCRConfig struct {
 	Backend  string `yaml:"backend"`  // auto, native, wasm
 }
 
+// PerformanceConfig holds performance-related settings.
+type PerformanceConfig struct {
+	OCRParallelThreshold  int `yaml:"ocr_parallel_threshold"`
+	TextParallelThreshold int `yaml:"text_parallel_threshold"`
+	MaxWorkers            int `yaml:"max_workers"`
+}
+
+// DefaultPerformanceConfig returns a PerformanceConfig with defaults adapted to CPU count.
+func DefaultPerformanceConfig() PerformanceConfig {
+	numCPU := runtime.NumCPU()
+	maxWorkers := numCPU
+	if maxWorkers > 8 {
+		maxWorkers = 8
+	}
+	threshold := numCPU / 2
+	if threshold < 5 {
+		threshold = 5
+	}
+	return PerformanceConfig{
+		OCRParallelThreshold:  threshold,
+		TextParallelThreshold: threshold,
+		MaxWorkers:            maxWorkers,
+	}
+}
+
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() *Config {
 	return &Config{
@@ -56,6 +86,7 @@ func DefaultConfig() *Config {
 			Language: "eng",
 			Backend:  "auto",
 		},
+		Performance: DefaultPerformanceConfig(),
 	}
 }
 
@@ -115,6 +146,21 @@ func applyEnvOverrides(cfg *Config) {
 	if env := os.Getenv("PDF_CLI_OCR_BACKEND"); env != "" {
 		cfg.OCR.Backend = env
 	}
+	if env := os.Getenv("PDF_CLI_PERF_OCR_THRESHOLD"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.OCRParallelThreshold = v
+		}
+	}
+	if env := os.Getenv("PDF_CLI_PERF_TEXT_THRESHOLD"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.TextParallelThreshold = v
+		}
+	}
+	if env := os.Getenv("PDF_CLI_PERF_MAX_WORKERS"); env != "" {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+			cfg.Performance.MaxWorkers = v
+		}
+	}
 }
 
 // Save writes the config to the config file.
@@ -126,7 +172,7 @@ func Save(cfg *Config) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, fileio.DefaultDirPerm); err != nil {
 		return err
 	}
 
@@ -135,26 +181,40 @@ func Save(cfg *Config) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0600)
+	return os.WriteFile(path, data, fileio.DefaultFilePerm)
 }
 
 // global holds the loaded configuration
 var global *Config
+var globalMu sync.RWMutex
 
 // Get returns the global configuration, loading it if necessary.
 func Get() *Config {
-	if global == nil {
-		var err error
-		global, err = Load()
-		if err != nil {
-			// Fall back to defaults on error
-			global = DefaultConfig()
-		}
+	globalMu.RLock()
+	if global != nil {
+		defer globalMu.RUnlock()
+		return global
+	}
+	globalMu.RUnlock()
+
+	globalMu.Lock()
+	defer globalMu.Unlock()
+
+	if global != nil {
+		return global
+	}
+
+	var err error
+	global, err = Load()
+	if err != nil {
+		global = DefaultConfig()
 	}
 	return global
 }
 
 // Reset clears the global config (useful for testing).
 func Reset() {
+	globalMu.Lock()
+	defer globalMu.Unlock()
 	global = nil
 }

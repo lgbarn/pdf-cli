@@ -16,6 +16,7 @@ func init() {
 	cli.AddOutputFlag(extractCmd, "Output file path")
 	cli.AddPagesFlag(extractCmd, "Pages to extract (e.g., 1-5,7,10-12)")
 	cli.AddPasswordFlag(extractCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(extractCmd, "")
 	cli.AddStdoutFlag(extractCmd)
 	_ = extractCmd.MarkFlagRequired("pages")
 }
@@ -41,11 +42,28 @@ Examples:
 }
 
 func runExtract(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	toStdout := cli.GetStdout(cmd)
 	explicitOutput := cli.GetOutput(cmd)
+
+	// Sanitize output path
+	if explicitOutput != "" && explicitOutput != "-" {
+		explicitOutput, err = fileio.SanitizePath(explicitOutput)
+		if err != nil {
+			return fmt.Errorf("invalid output path: %w", err)
+		}
+	}
 
 	// Handle dry-run mode early
 	if cli.IsDryRun() {

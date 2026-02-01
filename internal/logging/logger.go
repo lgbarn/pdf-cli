@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Level represents a log level.
@@ -81,9 +82,12 @@ type Logger struct {
 
 // global is the global logger instance.
 var global *Logger
+var globalMu sync.RWMutex
 
 // Init initializes the global logger with the given level and format.
 func Init(level Level, format Format) {
+	globalMu.Lock()
+	defer globalMu.Unlock()
 	global = New(level, format, os.Stderr)
 }
 
@@ -118,14 +122,28 @@ func New(level Level, format Format, w io.Writer) *Logger {
 
 // Get returns the global logger, initializing with defaults if needed.
 func Get() *Logger {
-	if global == nil {
-		Init(LevelSilent, FormatText)
+	globalMu.RLock()
+	if global != nil {
+		defer globalMu.RUnlock()
+		return global
 	}
+	globalMu.RUnlock()
+
+	globalMu.Lock()
+	defer globalMu.Unlock()
+
+	if global != nil {
+		return global
+	}
+
+	global = New(LevelSilent, FormatText, os.Stderr)
 	return global
 }
 
 // Reset resets the global logger (for testing).
 func Reset() {
+	globalMu.Lock()
+	defer globalMu.Unlock()
 	global = nil
 }
 

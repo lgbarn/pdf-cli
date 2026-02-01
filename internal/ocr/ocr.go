@@ -2,6 +2,9 @@ package ocr
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,9 +15,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
 	"github.com/lgbarn/pdf-cli/internal/progress"
+	"github.com/lgbarn/pdf-cli/internal/retry"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/schollz/progressbar/v3"
 )
@@ -22,21 +27,43 @@ import (
 const (
 	// TessdataURL is the base URL for downloading tessdata files.
 	TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
+
+	// DefaultParallelThreshold is the minimum number of images to trigger parallel processing.
+	DefaultParallelThreshold = 5
+
+	// DefaultMaxWorkers is the maximum number of concurrent workers for parallel processing.
+	DefaultMaxWorkers = 8
+
+	// DefaultDownloadTimeout is the timeout for downloading tessdata files.
+	DefaultDownloadTimeout = 5 * time.Minute
+
+	// DefaultDataDirPerm is the default permission for tessdata directory.
+	DefaultDataDirPerm = 0750
+
+	// DefaultRetryAttempts is the number of retry attempts for downloading tessdata.
+	DefaultRetryAttempts = 3
+
+	// DefaultRetryBaseDelay is the base delay between retry attempts.
+	DefaultRetryBaseDelay = 1 * time.Second
 )
 
 // EngineOptions contains options for creating an OCR engine.
 type EngineOptions struct {
-	Lang        string
-	DataDir     string
-	BackendType BackendType
+	Lang              string
+	DataDir           string
+	BackendType       BackendType
+	ParallelThreshold int // minimum images to trigger parallel processing (0 = use default)
+	MaxWorkers        int // maximum concurrent workers (0 = use default)
 }
 
 // Engine provides OCR capabilities with configurable backend.
 type Engine struct {
-	dataDir     string
-	lang        string
-	backendType BackendType
-	backend     Backend
+	dataDir           string
+	lang              string
+	backendType       BackendType
+	backend           Backend
+	parallelThreshold int
+	maxWorkers        int
 }
 
 // NewEngine creates a new OCR engine with auto backend selection.
@@ -63,10 +90,22 @@ func NewEngineWithOptions(opts EngineOptions) (*Engine, error) {
 		lang = "eng"
 	}
 
+	parallelThreshold := opts.ParallelThreshold
+	if parallelThreshold <= 0 {
+		parallelThreshold = DefaultParallelThreshold
+	}
+
+	maxWorkers := opts.MaxWorkers
+	if maxWorkers <= 0 {
+		maxWorkers = DefaultMaxWorkers
+	}
+
 	engine := &Engine{
-		dataDir:     dataDir,
-		lang:        lang,
-		backendType: opts.BackendType,
+		dataDir:           dataDir,
+		lang:              lang,
+		backendType:       opts.BackendType,
+		parallelThreshold: parallelThreshold,
+		maxWorkers:        maxWorkers,
 	}
 
 	backend, err := engine.selectBackend()
@@ -121,7 +160,7 @@ func getDataDir() (string, error) {
 	}
 
 	dataDir := filepath.Join(configDir, "pdf-cli", "tessdata")
-	if err := os.MkdirAll(dataDir, 0750); err != nil {
+	if err := os.MkdirAll(dataDir, DefaultDataDirPerm); err != nil {
 		return "", err
 	}
 
@@ -133,7 +172,7 @@ func (e *Engine) EnsureTessdata() error {
 	for _, lang := range parseLanguages(e.lang) {
 		dataFile := filepath.Join(e.dataDir, lang+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := downloadTessdata(e.dataDir, lang); err != nil {
+			if err := downloadTessdata(context.TODO(), e.dataDir, lang); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", lang, err)
 			}
 		}
@@ -166,50 +205,126 @@ func primaryLanguage(lang string) string {
 	return lang
 }
 
-func downloadTessdata(dataDir, lang string) error {
-	url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
+func downloadTessdata(ctx context.Context, dataDir, lang string) (err error) {
+	return downloadTessdataWithBaseURL(ctx, dataDir, lang, TessdataURL)
+}
+
+func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL string) (err error) {
+	dlURL := fmt.Sprintf("%s/%s.traineddata", baseURL, lang)
 	dataFile := filepath.Join(dataDir, lang+".traineddata")
+
+	// Sanitize the data file path to prevent directory traversal
+	dataFile, err = fileio.SanitizePath(dataFile)
+	if err != nil {
+		return fmt.Errorf("invalid data file path: %w", err)
+	}
 
 	fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, DefaultDownloadTimeout)
 	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
-	}
 
 	tmpFile, err := os.CreateTemp(dataDir, "tessdata-*.tmp")
 	if err != nil {
 		return err
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	unregisterTmp := cleanup.Register(tmpPath)
+	defer unregisterTmp()
+	defer os.Remove(tmpPath) //nolint:errcheck // best-effort cleanup
 
-	bar := progress.NewBytesProgressBar(fmt.Sprintf("Downloading %s.traineddata", lang), resp.ContentLength)
-	if _, err := io.Copy(io.MultiWriter(tmpFile, bar), resp.Body); err != nil {
+	// Create SHA256 hasher to verify download integrity
+	hasher := sha256.New()
+
+	// Progress bar created once; may not display perfectly on retries
+	var bar *progressbar.ProgressBar
+
+	retryErr := retry.Do(ctx, retry.Options{
+		MaxAttempts: DefaultRetryAttempts,
+		BaseDelay:   DefaultRetryBaseDelay,
+	}, func(retryCtx context.Context) error {
+		// Reset temp file and hasher for each attempt
+		if _, seekErr := tmpFile.Seek(0, io.SeekStart); seekErr != nil {
+			return retry.Permanent(fmt.Errorf("failed to seek temp file: %w", seekErr))
+		}
+		if truncErr := tmpFile.Truncate(0); truncErr != nil {
+			return retry.Permanent(fmt.Errorf("failed to truncate temp file: %w", truncErr))
+		}
+		hasher.Reset()
+
+		req, reqErr := http.NewRequestWithContext(retryCtx, http.MethodGet, dlURL, nil)
+		if reqErr != nil {
+			return retry.Permanent(reqErr)
+		}
+
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr != nil {
+			// Network error — retryable
+			fmt.Fprintf(os.Stderr, "Download attempt failed: %v\n", doErr)
+			return doErr
+		}
+		defer resp.Body.Close() //nolint:errcheck // response body
+
+		switch {
+		case resp.StatusCode == http.StatusOK:
+			// Success — download the body
+		case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
+			// Retryable server error
+			return fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
+		default:
+			// Other client errors (4xx) — permanent
+			return retry.Permanent(fmt.Errorf("failed to download: HTTP %d", resp.StatusCode))
+		}
+
+		bar = progress.NewBytesProgressBar(
+			fmt.Sprintf("Downloading %s.traineddata", lang),
+			resp.ContentLength,
+		)
+		if _, copyErr := io.Copy(io.MultiWriter(tmpFile, bar, hasher), resp.Body); copyErr != nil {
+			fmt.Fprintf(os.Stderr, "Download attempt failed during copy: %v\n", copyErr)
+			return copyErr
+		}
+
+		return nil
+	})
+
+	if retryErr != nil {
 		_ = tmpFile.Close()
-		return err
+		return retryErr
 	}
-	_ = tmpFile.Close()
+
+	// On success path, use defer with named return to catch close errors
+	defer func() {
+		if cerr := tmpFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close temp file: %w", cerr)
+		}
+	}()
+
 	progress.FinishProgressBar(bar)
+
+	// Verify checksum if known
+	computedHash := hex.EncodeToString(hasher.Sum(nil))
+	if expectedHash := GetChecksum(lang); expectedHash != "" {
+		if computedHash != expectedHash {
+			return fmt.Errorf(
+				"checksum verification failed for %s.traineddata\n  Expected: %s\n  Got:      %s\n"+
+					"This may indicate a corrupted download or supply chain attack",
+				lang, expectedHash, computedHash,
+			)
+		}
+		fmt.Fprintf(os.Stderr, "Checksum verified for %s.traineddata\n", lang)
+	} else {
+		fmt.Fprintf(os.Stderr,
+			"WARNING: No checksum available for language '%s'. Computed SHA256: %s\n",
+			lang, computedHash,
+		)
+	}
 
 	return os.Rename(tmpPath, dataFile)
 }
 
 // ExtractTextFromPDF extracts text from a PDF using OCR.
-func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string, showProgress bool) (string, error) {
+func (e *Engine) ExtractTextFromPDF(ctx context.Context, pdfPath string, pages []int, password string, showProgress bool) (string, error) {
 	if e.backend.Name() == "wasm" {
 		if err := e.EnsureTessdata(); err != nil {
 			return "", err
@@ -220,6 +335,8 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
+	unregisterDir := cleanup.Register(tmpDir)
+	defer unregisterDir()
 	defer os.RemoveAll(tmpDir)
 
 	pages, err = e.resolvePages(pdfPath, pages, password)
@@ -240,7 +357,7 @@ func (e *Engine) ExtractTextFromPDF(pdfPath string, pages []int, password string
 		return "", fmt.Errorf("no images found in PDF - OCR requires image-based PDF")
 	}
 
-	return e.processImages(imageFiles, showProgress)
+	return e.processImages(ctx, imageFiles, showProgress)
 }
 
 func (e *Engine) resolvePages(pdfPath string, pages []int, password string) ([]int, error) {
@@ -293,32 +410,39 @@ func findImageFiles(dir string) ([]string, error) {
 type imageResult struct {
 	index int
 	text  string
+	err   error
 }
 
-// parallelThreshold is the minimum number of images to trigger parallel processing.
-const parallelThreshold = 5
-
-func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImages(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	// Use sequential processing for small batches or WASM backend (not thread-safe)
-	if len(imageFiles) <= parallelThreshold || e.backend.Name() == "wasm" {
-		return e.processImagesSequential(imageFiles, showProgress)
+	threshold := e.parallelThreshold
+	if threshold <= 0 {
+		threshold = DefaultParallelThreshold
 	}
-	return e.processImagesParallel(imageFiles, showProgress)
+	if len(imageFiles) <= threshold || e.backend.Name() == "wasm" {
+		return e.processImagesSequential(ctx, imageFiles, showProgress)
+	}
+	return e.processImagesParallel(ctx, imageFiles, showProgress)
 }
 
-func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImagesSequential(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
 	defer progress.FinishProgressBar(bar)
 
-	ctx := context.Background()
 	texts := make([]string, 0, len(imageFiles))
+	var errs []error
 
-	for _, imgPath := range imageFiles {
+	for i, imgPath := range imageFiles {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
-		if err == nil {
+		if err != nil {
+			errs = append(errs, fmt.Errorf("image %d: %w", i, err))
+		} else {
 			texts = append(texts, text)
 		}
 		if bar != nil {
@@ -326,32 +450,44 @@ func (e *Engine) processImagesSequential(imageFiles []string, showProgress bool)
 		}
 	}
 
+	if len(errs) > 0 {
+		return "", errors.Join(errs...)
+	}
+
 	return joinNonEmpty(texts, "\n"), nil
 }
 
-func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (string, error) {
+func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string, showProgress bool) (string, error) {
 	var bar *progressbar.ProgressBar
 	if showProgress {
 		bar = progress.NewProgressBar("OCR processing", len(imageFiles), 1)
 	}
 	defer progress.FinishProgressBar(bar)
 
-	ctx := context.Background()
 	results := make(chan imageResult, len(imageFiles))
 
 	// Limit concurrent workers to avoid resource exhaustion
-	workers := min(runtime.NumCPU(), 8)
+	maxW := e.maxWorkers
+	if maxW <= 0 {
+		maxW = DefaultMaxWorkers
+	}
+	workers := min(runtime.NumCPU(), maxW)
 	sem := make(chan struct{}, workers)
 
 	var wg sync.WaitGroup
 	for i, imgPath := range imageFiles {
+		if ctx.Err() != nil {
+			// Context canceled, don't launch more work
+			break
+		}
+
 		wg.Add(1)
 		sem <- struct{}{} // Acquire semaphore
 		go func(idx int, path string) {
 			defer wg.Done()
 			defer func() { <-sem }() // Release semaphore
-			text, _ := e.backend.ProcessImage(ctx, path, e.lang)
-			results <- imageResult{index: idx, text: text}
+			text, err := e.backend.ProcessImage(ctx, path, e.lang)
+			results <- imageResult{index: idx, text: text, err: err}
 		}(i, imgPath)
 	}
 
@@ -363,11 +499,19 @@ func (e *Engine) processImagesParallel(imageFiles []string, showProgress bool) (
 
 	// Collect results in order using a slice
 	texts := make([]string, len(imageFiles))
+	var errs []error
 	for res := range results {
 		texts[res.index] = res.text
+		if res.err != nil {
+			errs = append(errs, fmt.Errorf("image %d: %w", res.index, res.err))
+		}
 		if bar != nil {
 			_ = bar.Add(1)
 		}
+	}
+
+	if len(errs) > 0 {
+		return "", errors.Join(errs...)
 	}
 
 	return joinNonEmpty(texts, "\n"), nil

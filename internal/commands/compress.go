@@ -16,6 +16,7 @@ func init() {
 	cli.AddCommand(compressCmd)
 	cli.AddOutputFlag(compressCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(compressCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(compressCmd, "")
 	cli.AddStdoutFlag(compressCmd)
 }
 
@@ -42,9 +43,22 @@ Examples:
 }
 
 func runCompress(cmd *cobra.Command, args []string) error {
-	password := cli.GetPassword(cmd)
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
+
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
 
 	// Handle dry-run mode
 	if cli.IsDryRun() {

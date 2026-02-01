@@ -34,7 +34,17 @@ Examples:
 }
 
 func runCombineImages(cmd *cobra.Command, args []string) error {
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
 	output := cli.GetOutput(cmd)
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
+
 	pageSize, _ := cmd.Flags().GetString("page-size")
 
 	// Validate all input files exist and are images

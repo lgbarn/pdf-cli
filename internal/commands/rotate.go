@@ -17,6 +17,7 @@ func init() {
 	cli.AddOutputFlag(rotateCmd, "Output file path (only with single file)")
 	cli.AddPagesFlag(rotateCmd, "Pages to rotate (default: all pages)")
 	cli.AddPasswordFlag(rotateCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(rotateCmd, "")
 	cli.AddStdoutFlag(rotateCmd)
 	rotateCmd.Flags().IntP("angle", "a", 90, "Rotation angle (90, 180, or 270)")
 }
@@ -42,10 +43,24 @@ Examples:
 }
 
 func runRotate(cmd *cobra.Command, args []string) error {
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	output := cli.GetOutput(cmd)
 	toStdout := cli.GetStdout(cmd)
+
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
+
 	angle, _ := cmd.Flags().GetInt("angle")
 
 	if angle != 90 && angle != 180 && angle != 270 {

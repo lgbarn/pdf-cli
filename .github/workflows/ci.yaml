@@ -48,17 +48,10 @@ jobs:
       - name: Run tests with coverage
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Check coverage threshold (75%)
+      - name: Check coverage threshold
         run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Total coverage: ${COVERAGE}%"
-          # Use awk for floating point comparison (more portable than bc)
-          if awk "BEGIN {exit !($COVERAGE < 75)}"; then
-            echo "::error::Coverage ${COVERAGE}% is below 75% threshold"
-            exit 1
-          else
-            echo "Coverage ${COVERAGE}% meets 75% threshold"
-          fi
+          go tool cover -func=coverage.out > coverage-summary.txt
+          go run scripts/coverage-check.go coverage-summary.txt 75
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

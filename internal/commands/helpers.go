@@ -61,6 +61,28 @@ func validateBatchOutput(files []string, output, suffix string) error {
 	return nil
 }
 
+// sanitizeInputArgs validates and cleans input file path arguments.
+func sanitizeInputArgs(args []string) ([]string, error) {
+	sanitized, err := fileio.SanitizePaths(args)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file path: %w", err)
+	}
+	return sanitized, nil
+}
+
+// sanitizeOutputPath validates and cleans an output file path from flags.
+// Returns the path unchanged if empty or stdin marker "-".
+func sanitizeOutputPath(output string) (string, error) {
+	if output == "" || output == "-" {
+		return output, nil
+	}
+	cleaned, err := fileio.SanitizePath(output)
+	if err != nil {
+		return "", fmt.Errorf("invalid output path: %w", err)
+	}
+	return cleaned, nil
+}
+
 // processBatch processes multiple files with the given processor function.
 // Each file is processed independently, and all errors are collected and joined.
 func processBatch(files []string, processor func(file string) error) error {

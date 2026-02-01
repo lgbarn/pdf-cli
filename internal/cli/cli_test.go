@@ -27,6 +27,7 @@ func TestGetRootCmd(t *testing.T) {
 	cmd := GetRootCmd()
 	if cmd == nil {
 		t.Fatal("GetRootCmd() returned nil")
+		return
 	}
 	if cmd.Use != "pdf" {
 		t.Errorf("GetRootCmd() Use = %v, want %v", cmd.Use, "pdf")
@@ -129,6 +130,7 @@ func TestProgressFlagExists(t *testing.T) {
 	progressFlag := cmd.PersistentFlags().Lookup("progress")
 	if progressFlag == nil {
 		t.Fatal("progress flag not found")
+		return
 	}
 
 	// Default comes from config.Defaults.ShowProgress which is true
@@ -338,6 +340,7 @@ func TestVerboseFlagShorthand(t *testing.T) {
 	verboseFlag := cmd.PersistentFlags().Lookup("verbose")
 	if verboseFlag == nil {
 		t.Fatal("verbose flag not found")
+		return
 	}
 
 	if verboseFlag.Shorthand != "v" {
@@ -351,6 +354,7 @@ func TestForceFlagShorthand(t *testing.T) {
 	forceFlag := cmd.PersistentFlags().Lookup("force")
 	if forceFlag == nil {
 		t.Fatal("force flag not found")
+		return
 	}
 
 	if forceFlag.Shorthand != "f" {
@@ -389,6 +393,7 @@ func TestDryRunFlagExists(t *testing.T) {
 	dryRunFlag := cmd.PersistentFlags().Lookup("dry-run")
 	if dryRunFlag == nil {
 		t.Fatal("dry-run flag not found")
+		return
 	}
 
 	if dryRunFlag.DefValue != "false" {

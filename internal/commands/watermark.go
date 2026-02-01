@@ -15,6 +15,7 @@ func init() {
 	cli.AddOutputFlag(watermarkCmd, "Output file path (only with single file)")
 	cli.AddPagesFlag(watermarkCmd, "Pages to watermark (default: all)")
 	cli.AddPasswordFlag(watermarkCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(watermarkCmd, "")
 	watermarkCmd.Flags().StringP("text", "t", "", "Text watermark content")
 	watermarkCmd.Flags().StringP("image", "i", "", "Image file for image watermark")
 }
@@ -43,11 +44,32 @@ Examples:
 }
 
 func runWatermark(cmd *cobra.Command, args []string) error {
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	output := cli.GetOutput(cmd)
 	text, _ := cmd.Flags().GetString("text")
 	image, _ := cmd.Flags().GetString("image")
+
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
+
+	// Sanitize image path if provided
+	if image != "" {
+		image, err = fileio.SanitizePath(image)
+		if err != nil {
+			return fmt.Errorf("invalid image path: %w", err)
+		}
+	}
 
 	if text == "" && image == "" {
 		return fmt.Errorf("must specify either --text or --image for watermark")

@@ -17,6 +17,7 @@ import (
 func init() {
 	cli.AddCommand(infoCmd)
 	cli.AddPasswordFlag(infoCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(infoCmd, "")
 	cli.AddFormatFlag(infoCmd)
 }
 
@@ -42,7 +43,16 @@ Examples:
 }
 
 func runInfo(cmd *cobra.Command, args []string) error {
-	password := cli.GetPassword(cmd)
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
+
 	format := cli.GetFormat(cmd)
 	formatter := output.NewOutputFormatter(format)
 

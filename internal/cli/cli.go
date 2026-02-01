@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -68,6 +69,11 @@ func init() {
 // Execute runs the root command
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+// ExecuteContext runs the root command with context
+func ExecuteContext(ctx context.Context) error {
+	return rootCmd.ExecuteContext(ctx)
 }
 
 // GetRootCmd returns the root command for testing

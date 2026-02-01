@@ -14,6 +14,7 @@ func TestPdfaCommandExists(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Fatal("pdfa command is nil")
+		return
 	}
 	if cmd.Use != "pdfa" {
 		t.Errorf("pdfa command Use = %q, want %q", cmd.Use, "pdfa")
@@ -48,6 +49,7 @@ func TestPdfaValidateSubcommand(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Fatal("pdfa validate command is nil")
+		return
 	}
 	if cmd.Use != "validate <file.pdf>" {
 		t.Errorf("pdfa validate command Use = %q, want %q", cmd.Use, "validate <file.pdf>")
@@ -62,6 +64,7 @@ func TestPdfaConvertSubcommand(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Fatal("pdfa convert command is nil")
+		return
 	}
 	if cmd.Use != "convert <file.pdf>" {
 		t.Errorf("pdfa convert command Use = %q, want %q", cmd.Use, "convert <file.pdf>")
@@ -96,6 +99,7 @@ func TestPdfaConvertLevelDefault(t *testing.T) {
 	flag := pdfaConvertCmd.Flags().Lookup("level")
 	if flag == nil {
 		t.Fatal("pdfa convert should have --level flag")
+		return
 	}
 	if flag.DefValue != "2b" {
 		t.Errorf("pdfa convert --level default = %q, want %q", flag.DefValue, "2b")

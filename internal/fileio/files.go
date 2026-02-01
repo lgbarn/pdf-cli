@@ -6,6 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/lgbarn/pdf-cli/internal/cleanup"
+)
+
+const (
+	// DefaultDirPerm is the default permission for creating directories.
+	DefaultDirPerm = 0750
+
+	// DefaultFilePerm is the default permission for creating files.
+	DefaultFilePerm = 0600
+
+	// ParallelValidationThreshold is the minimum number of files to trigger parallel validation.
+	ParallelValidationThreshold = 3
 )
 
 // FileExists checks if a file exists
@@ -25,7 +38,7 @@ func IsDir(path string) bool {
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0750)
+	return os.MkdirAll(path, DefaultDirPerm)
 }
 
 // EnsureParentDir creates the parent directory of a file path if it doesn't exist
@@ -50,9 +63,11 @@ func AtomicWrite(path string, data []byte) error {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
+	unregisterTmp := cleanup.Register(tmpPath)
 
 	// Clean up temp file on error
 	defer func() {
+		unregisterTmp()
 		if tmpFile != nil {
 			_ = tmpFile.Close()
 			_ = os.Remove(tmpPath)
@@ -82,12 +97,18 @@ func AtomicWrite(path string, data []byte) error {
 }
 
 // CopyFile copies a file from src to dst
-func CopyFile(src, dst string) error {
-	// Clean paths to prevent directory traversal
-	cleanSrc := filepath.Clean(src)
-	cleanDst := filepath.Clean(dst)
+func CopyFile(src, dst string) (err error) {
+	// Sanitize paths to prevent directory traversal
+	cleanSrc, err := SanitizePath(src)
+	if err != nil {
+		return fmt.Errorf("invalid source path: %w", err)
+	}
+	cleanDst, err := SanitizePath(dst)
+	if err != nil {
+		return fmt.Errorf("invalid destination path: %w", err)
+	}
 
-	srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is cleaned
+	srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is sanitized
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
@@ -97,11 +118,15 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	dstFile, err := os.Create(cleanDst) // #nosec G304 -- path is cleaned
+	dstFile, err := os.Create(cleanDst) // #nosec G304 -- path is sanitized
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer func() { _ = dstFile.Close() }()
+	defer func() {
+		if cerr := dstFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close destination file: %w", cerr)
+		}
+	}()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
@@ -131,7 +156,7 @@ func ValidatePDFFiles(paths []string) error {
 	}
 
 	// For small number of files, use sequential validation
-	if len(paths) <= 3 {
+	if len(paths) <= ParallelValidationThreshold {
 		for _, path := range paths {
 			if err := ValidatePDFFile(path); err != nil {
 				return err
@@ -214,4 +239,43 @@ func IsImageFile(path string) bool {
 		}
 	}
 	return false
+}
+
+// SanitizePath cleans a file path and validates it against directory traversal attacks.
+// It returns an error if the cleaned path still contains ".." components.
+// This prevents attacks like "../../etc/passwd" from accessing unintended files.
+//
+// Special cases:
+//   - stdin marker "-" is always allowed and returned as-is
+//   - Absolute paths are allowed after validation
+//   - Relative paths are allowed if they don't contain ".." after cleaning
+func SanitizePath(path string) (string, error) {
+	if path == "-" {
+		return path, nil
+	}
+
+	// Check for ".." components in the original path before cleaning.
+	// filepath.Clean resolves ".." in absolute paths (e.g., /tmp/../../etc -> /etc),
+	// so checking only the cleaned result would miss traversal attempts.
+	for _, part := range strings.Split(path, "/") {
+		if part == ".." {
+			return "", fmt.Errorf("path contains directory traversal: %s", path)
+		}
+	}
+
+	cleaned := filepath.Clean(path)
+	return cleaned, nil
+}
+
+// SanitizePaths validates multiple paths and returns cleaned versions.
+func SanitizePaths(paths []string) ([]string, error) {
+	cleaned := make([]string, len(paths))
+	for i, path := range paths {
+		clean, err := SanitizePath(path)
+		if err != nil {
+			return nil, err
+		}
+		cleaned[i] = clean
+	}
+	return cleaned, nil
 }

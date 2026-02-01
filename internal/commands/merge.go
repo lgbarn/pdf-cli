@@ -14,6 +14,7 @@ func init() {
 	cli.AddCommand(mergeCmd)
 	cli.AddOutputFlag(mergeCmd, "Output file path (required)")
 	cli.AddPasswordFlag(mergeCmd, "Password for encrypted input PDFs")
+	cli.AddPasswordFileFlag(mergeCmd, "")
 	_ = mergeCmd.MarkFlagRequired("output")
 }
 
@@ -34,8 +35,21 @@ Examples:
 }
 
 func runMerge(cmd *cobra.Command, args []string) error {
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
 	output := cli.GetOutput(cmd)
-	password := cli.GetPassword(cmd)
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
+
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 
 	if err := fileio.ValidatePDFFiles(args); err != nil {
 		return err

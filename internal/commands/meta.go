@@ -16,6 +16,7 @@ func init() {
 	cli.AddCommand(metaCmd)
 	cli.AddOutputFlag(metaCmd, "Output file path (for setting metadata)")
 	cli.AddPasswordFlag(metaCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(metaCmd, "")
 	cli.AddFormatFlag(metaCmd)
 	metaCmd.Flags().String("title", "", "Set document title")
 	metaCmd.Flags().String("author", "", "Set document author")
@@ -45,8 +46,21 @@ Examples:
 }
 
 func runMeta(cmd *cobra.Command, args []string) error {
+	args, err := sanitizeInputArgs(args)
+	if err != nil {
+		return err
+	}
+
 	outputFile := cli.GetOutput(cmd)
-	password := cli.GetPassword(cmd)
+	outputFile, err = sanitizeOutputPath(outputFile)
+	if err != nil {
+		return err
+	}
+
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	format := cli.GetFormat(cmd)
 	formatter := output.NewOutputFormatter(format)
 

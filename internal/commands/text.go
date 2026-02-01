@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lgbarn/pdf-cli/internal/cli"
+	"github.com/lgbarn/pdf-cli/internal/config"
 	"github.com/lgbarn/pdf-cli/internal/fileio"
 	"github.com/lgbarn/pdf-cli/internal/ocr"
 	"github.com/lgbarn/pdf-cli/internal/pdf"
@@ -18,6 +19,7 @@ func init() {
 	cli.AddOutputFlag(textCmd, "Output file path (default: stdout)")
 	cli.AddPagesFlag(textCmd, "Pages to extract text from (default: all)")
 	cli.AddPasswordFlag(textCmd, "Password for encrypted PDFs")
+	cli.AddPasswordFileFlag(textCmd, "")
 	textCmd.Flags().Bool("ocr", false, "Use OCR for image-based PDFs")
 	textCmd.Flags().String("ocr-lang", "eng", "OCR language(s), e.g., 'eng' or 'eng+fra'")
 	textCmd.Flags().String("ocr-backend", "auto", "OCR backend: auto (native if available, else wasm), native, or wasm")
@@ -47,10 +49,24 @@ Examples:
 }
 
 func runText(cmd *cobra.Command, args []string) error {
-	inputArg := args[0]
+	// Sanitize input path
+	sanitizedPath, err := fileio.SanitizePath(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid file path: %w", err)
+	}
+	inputArg := sanitizedPath
+
 	output := cli.GetOutput(cmd)
+	output, err = sanitizeOutputPath(output)
+	if err != nil {
+		return err
+	}
+
 	pagesStr := cli.GetPages(cmd)
-	password := cli.GetPassword(cmd)
+	password, err := cli.GetPasswordSecure(cmd, "Enter PDF password: ")
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
 	useOCR, _ := cmd.Flags().GetBool("ocr")
 	ocrLang, _ := cmd.Flags().GetString("ocr-lang")
 	ocrBackend, _ := cmd.Flags().GetString("ocr-backend")
@@ -79,9 +95,12 @@ func runText(cmd *cobra.Command, args []string) error {
 		backendType := ocr.ParseBackendType(ocrBackend)
 		cli.PrintVerbose("Extracting text from %s using OCR (language: %s, backend: %s)", inputFile, ocrLang, ocrBackend)
 
+		cfg := config.Get()
 		engine, err := ocr.NewEngineWithOptions(ocr.EngineOptions{
-			Lang:        ocrLang,
-			BackendType: backendType,
+			Lang:              ocrLang,
+			BackendType:       backendType,
+			ParallelThreshold: cfg.Performance.OCRParallelThreshold,
+			MaxWorkers:        cfg.Performance.MaxWorkers,
 		})
 		if err != nil {
 			return pdferrors.WrapError("initializing OCR", inputFile, err)
@@ -90,14 +109,14 @@ func runText(cmd *cobra.Command, args []string) error {
 
 		cli.PrintVerbose("Using OCR backend: %s", engine.BackendName())
 
-		text, err = engine.ExtractTextFromPDF(inputFile, pages, password, cli.Progress())
+		text, err = engine.ExtractTextFromPDF(cmd.Context(), inputFile, pages, password, cli.Progress())
 		if err != nil {
 			return pdferrors.WrapError("extracting text with OCR", inputFile, err)
 		}
 	} else {
 		cli.PrintVerbose("Extracting text from %s", inputFile)
 
-		text, err = pdf.ExtractTextWithProgress(inputFile, pages, password, cli.Progress())
+		text, err = pdf.ExtractTextWithProgress(cmd.Context(), inputFile, pages, password, cli.Progress())
 		if err != nil {
 			return pdferrors.WrapError("extracting text", inputFile, err)
 		}
@@ -116,7 +135,7 @@ func runText(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := os.WriteFile(output, []byte(text), 0600); err != nil {
+	if err := os.WriteFile(output, []byte(text), fileio.DefaultFilePerm); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 	fmt.Printf("Extracted text saved to %s\n", output)
