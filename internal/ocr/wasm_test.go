@@ -1,6 +1,7 @@
 package ocr
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,12 +81,12 @@ func TestWASMBackendEnsureTessdata(t *testing.T) {
 	}
 
 	// Should succeed because file exists
-	if err := backend.EnsureTessdata("eng"); err != nil {
+	if err := backend.EnsureTessdata(context.Background(), "eng"); err != nil {
 		t.Errorf("EnsureTessdata() error = %v", err)
 	}
 
 	// Test with empty lang (should use backend lang)
-	if err := backend.EnsureTessdata(""); err != nil {
+	if err := backend.EnsureTessdata(context.Background(), ""); err != nil {
 		t.Errorf("EnsureTessdata('') error = %v", err)
 	}
 }

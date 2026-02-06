@@ -172,11 +172,11 @@ func getDataDir() (string, error) {
 }
 
 // EnsureTessdata ensures the tessdata file for the language exists.
-func (e *Engine) EnsureTessdata() error {
+func (e *Engine) EnsureTessdata(ctx context.Context) error {
 	for _, lang := range parseLanguages(e.lang) {
 		dataFile := filepath.Join(e.dataDir, lang+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := downloadTessdata(context.TODO(), e.dataDir, lang); err != nil {
+			if err := downloadTessdata(ctx, e.dataDir, lang); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", lang, err)
 			}
 		}
@@ -330,7 +330,7 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 // ExtractTextFromPDF extracts text from a PDF using OCR.
 func (e *Engine) ExtractTextFromPDF(ctx context.Context, pdfPath string, pages []int, password string, showProgress bool) (string, error) {
 	if e.backend.Name() == "wasm" {
-		if err := e.EnsureTessdata(); err != nil {
+		if err := e.EnsureTessdata(ctx); err != nil {
 			return "", err
 		}
 	}

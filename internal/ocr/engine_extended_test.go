@@ -1,6 +1,7 @@
 package ocr
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +29,7 @@ func TestEnsureTessdata(t *testing.T) {
 	}
 
 	// Should succeed since file exists
-	if err := engine.EnsureTessdata(); err != nil {
+	if err := engine.EnsureTessdata(context.Background()); err != nil {
 		t.Errorf("EnsureTessdata() error = %v", err)
 	}
 }
@@ -52,7 +53,7 @@ func TestEnsureTessdataMultipleLanguages(t *testing.T) {
 		lang:    "eng+fra+deu",
 	}
 
-	if err := engine.EnsureTessdata(); err != nil {
+	if err := engine.EnsureTessdata(context.Background()); err != nil {
 		t.Errorf("EnsureTessdata() error = %v", err)
 	}
 }

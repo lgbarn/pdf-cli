@@ -42,7 +42,7 @@ func (w *WASMBackend) Available() bool {
 }
 
 // EnsureTessdata ensures the tessdata file for the language exists.
-func (w *WASMBackend) EnsureTessdata(lang string) error {
+func (w *WASMBackend) EnsureTessdata(ctx context.Context, lang string) error {
 	if lang == "" {
 		lang = w.lang
 	}
@@ -50,7 +50,7 @@ func (w *WASMBackend) EnsureTessdata(lang string) error {
 	for _, l := range parseLanguages(lang) {
 		dataFile := filepath.Join(w.dataDir, l+".traineddata")
 		if _, err := os.Stat(dataFile); os.IsNotExist(err) {
-			if err := downloadTessdata(context.TODO(), w.dataDir, l); err != nil {
+			if err := downloadTessdata(ctx, w.dataDir, l); err != nil {
 				return fmt.Errorf("failed to download tessdata for %s: %w", l, err)
 			}
 		}
@@ -68,7 +68,7 @@ func (w *WASMBackend) initializeTesseract(ctx context.Context, lang string) erro
 		lang = w.lang
 	}
 
-	if err := w.EnsureTessdata(lang); err != nil {
+	if err := w.EnsureTessdata(ctx, lang); err != nil {
 		return err
 	}
 

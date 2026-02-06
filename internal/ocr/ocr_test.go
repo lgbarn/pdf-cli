@@ -111,7 +111,7 @@ func TestEnsureTessdataDir(t *testing.T) {
 
 	// Call EnsureTessdata - it may download data or just verify existing
 	// This test just verifies it doesn't panic
-	err = engine.EnsureTessdata()
+	err = engine.EnsureTessdata(context.Background())
 	if err != nil {
 		t.Logf("EnsureTessdata error: %v (may be expected if no network)", err)
 	}
