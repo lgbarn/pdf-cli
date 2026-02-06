@@ -48,7 +48,7 @@
 
 ---
 
-## Phase 2: Security Hardening
+## Phase 2: Security Hardening — COMPLETE
 
 **Description**: Lock down the three remaining P1 security concerns: expand OCR checksum coverage to ~20 languages, make `--password` flag require explicit opt-in via `--allow-insecure-password`, and tighten directory permissions from 0750 to 0700. These are independent of each other but all security-scoped, so grouping them reduces context-switching.
 
