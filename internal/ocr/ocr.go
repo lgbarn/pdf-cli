@@ -498,6 +498,12 @@ func (e *Engine) processImagesParallel(ctx context.Context, imageFiles []string,
 		go func(idx int, path string) {
 			defer wg.Done()
 			defer func() { <-sem }() // Release semaphore
+
+			if ctx.Err() != nil {
+				results <- imageResult{index: idx, text: "", err: ctx.Err()}
+				return
+			}
+
 			text, err := e.backend.ProcessImage(ctx, path, e.lang)
 			results <- imageResult{index: idx, text: text, err: err}
 		}(i, imgPath)
