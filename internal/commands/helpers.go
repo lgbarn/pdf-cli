@@ -11,6 +11,16 @@ import (
 	"github.com/lgbarn/pdf-cli/internal/pdferrors"
 )
 
+// Output filename suffixes for batch operations.
+const (
+	SuffixEncrypted   = "_encrypted"
+	SuffixDecrypted   = "_decrypted"
+	SuffixCompressed  = "_compressed"
+	SuffixRotated     = "_rotated"
+	SuffixWatermarked = "_watermarked"
+	SuffixReordered   = "_reordered"
+)
+
 // checkOutputFile verifies the output file can be written.
 // Returns an error if the file exists and force mode is not enabled.
 func checkOutputFile(output string) error {

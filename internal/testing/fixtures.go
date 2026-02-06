@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
 )
 
 // TestdataDir returns the path to the testdata directory.
@@ -30,26 +31,26 @@ func TestImage() string {
 
 // TempDir creates a temporary directory for test artifacts.
 // Returns the path and a cleanup function.
-func TempDir(prefix string) (string, func()) {
+func TempDir(t testing.TB, prefix string) (string, func()) {
 	dir, err := os.MkdirTemp("", "pdf-cli-test-"+prefix+"-")
 	if err != nil {
-		panic("failed to create temp dir: " + err.Error())
+		t.Fatal("failed to create temp dir: " + err.Error())
 	}
 	return dir, func() { _ = os.RemoveAll(dir) }
 }
 
 // TempFile creates a temporary file with the given content.
 // Returns the path and a cleanup function.
-func TempFile(prefix, content string) (string, func()) {
+func TempFile(t testing.TB, prefix, content string) (string, func()) {
 	f, err := os.CreateTemp("", "pdf-cli-test-"+prefix+"-*.pdf")
 	if err != nil {
-		panic("failed to create temp file: " + err.Error())
+		t.Fatal("failed to create temp file: " + err.Error())
 	}
 	if content != "" {
 		if _, err := f.WriteString(content); err != nil {
 			_ = f.Close()
 			_ = os.Remove(f.Name())
-			panic("failed to write temp file: " + err.Error())
+			t.Fatal("failed to write temp file: " + err.Error())
 		}
 	}
 	_ = f.Close()
