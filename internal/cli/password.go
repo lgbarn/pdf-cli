@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -35,7 +36,21 @@ func ReadPassword(cmd *cobra.Command, promptMsg string) (string, error) {
 			if len(data) > 1024 {
 				return "", fmt.Errorf("password file exceeds 1KB size limit")
 			}
-			return strings.TrimSpace(string(data)), nil
+			content := string(data)
+			nonPrintableCount := 0
+			for _, r := range content {
+				if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+					continue
+				}
+				if !unicode.IsPrint(r) {
+					nonPrintableCount++
+				}
+			}
+			if nonPrintableCount > 0 {
+				fmt.Fprintf(os.Stderr, "WARNING: Password file contains %d non-printable character(s). "+
+					"This may indicate you're reading the wrong file.\n", nonPrintableCount)
+			}
+			return strings.TrimSpace(content), nil
 		}
 	}
 
