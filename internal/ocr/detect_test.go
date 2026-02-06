@@ -16,7 +16,7 @@ func TestIsValidTessdataDir(t *testing.T) {
 
 	// Create a valid tessdata directory
 	validDir := filepath.Join(tmpDir, "valid")
-	if err := os.MkdirAll(validDir, 0750); err != nil {
+	if err := os.MkdirAll(validDir, 0700); err != nil {
 		t.Fatalf("Failed to create valid dir: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(validDir, "eng.traineddata"), []byte("test"), 0600); err != nil {
@@ -25,13 +25,13 @@ func TestIsValidTessdataDir(t *testing.T) {
 
 	// Create an empty directory
 	emptyDir := filepath.Join(tmpDir, "empty")
-	if err := os.MkdirAll(emptyDir, 0750); err != nil {
+	if err := os.MkdirAll(emptyDir, 0700); err != nil {
 		t.Fatalf("Failed to create empty dir: %v", err)
 	}
 
 	// Create a directory with wrong file extensions
 	wrongDir := filepath.Join(tmpDir, "wrong")
-	if err := os.MkdirAll(wrongDir, 0750); err != nil {
+	if err := os.MkdirAll(wrongDir, 0700); err != nil {
 		t.Fatalf("Failed to create wrong dir: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(wrongDir, "eng.txt"), []byte("test"), 0600); err != nil {

@@ -18,7 +18,7 @@ func TestFindImageFiles(t *testing.T) {
 
 	// Create subdirectory
 	subDir := filepath.Join(tmpDir, "subdir")
-	if err := os.MkdirAll(subDir, 0750); err != nil {
+	if err := os.MkdirAll(subDir, 0700); err != nil {
 		t.Fatalf("Failed to create subdir: %v", err)
 	}
 

@@ -176,7 +176,7 @@ func TestLoadInvalidYAML(t *testing.T) {
 
 	// Create invalid YAML file
 	configDir := filepath.Join(tmpDir, "pdf-cli")
-	if err := os.MkdirAll(configDir, 0750); err != nil {
+	if err := os.MkdirAll(configDir, 0700); err != nil {
 		t.Fatal(err)
 	}
 	configPath := filepath.Join(configDir, "config.yaml")
