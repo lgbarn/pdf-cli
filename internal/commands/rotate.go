@@ -78,7 +78,7 @@ func runRotate(cmd *cobra.Command, args []string) error {
 		return rotateWithStdio(args[0], output, pagesStr, password, angle, toStdout)
 	}
 
-	if err := validateBatchOutput(args, output, "_rotated"); err != nil {
+	if err := validateBatchOutput(args, output, SuffixRotated); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func rotateDryRun(args []string, explicitOutput, pagesStr, password string, angl
 			continue
 		}
 
-		output := outputOrDefault(explicitOutput, inputFile, "_rotated")
+		output := outputOrDefault(explicitOutput, inputFile, SuffixRotated)
 		pageDesc := "all pages"
 		if pagesStr != "" {
 			pageDesc = "pages " + pagesStr
@@ -119,7 +119,7 @@ func rotateWithStdio(inputArg, explicitOutput, pagesStr, password string, angle 
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
-		DefaultSuffix:  "_rotated",
+		DefaultSuffix:  SuffixRotated,
 		Operation:      "rotate",
 	}
 	defer handler.Cleanup()
@@ -164,7 +164,7 @@ func rotateFile(inputFile, explicitOutput, pagesStr, password string, angle int)
 		return err
 	}
 
-	output := outputOrDefault(explicitOutput, inputFile, "_rotated")
+	output := outputOrDefault(explicitOutput, inputFile, SuffixRotated)
 
 	if err := checkOutputFile(output); err != nil {
 		return err

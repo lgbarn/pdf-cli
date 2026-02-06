@@ -78,7 +78,7 @@ func runReorder(cmd *cobra.Command, args []string) error {
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
-		DefaultSuffix:  "_reordered",
+		DefaultSuffix:  SuffixReordered,
 		Operation:      "reorder",
 	}
 	defer handler.Cleanup()
@@ -149,7 +149,7 @@ func reorderDryRun(inputArg, explicitOutput, sequence, password string) error {
 		return nil
 	}
 
-	output := outputOrDefault(explicitOutput, inputArg, "_reordered")
+	output := outputOrDefault(explicitOutput, inputArg, SuffixReordered)
 	cli.DryRunPrint("Would reorder: %s (%d pages)", inputArg, pageCount)
 	cli.DryRunPrint("  Sequence: %s", sequence)
 	cli.DryRunPrint("  Result: %d pages in order: %v", len(pageList), pageList)

@@ -73,7 +73,7 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 		return decryptWithStdio(args[0], output, password, toStdout)
 	}
 
-	if err := validateBatchOutput(args, output, "_decrypted"); err != nil {
+	if err := validateBatchOutput(args, output, SuffixDecrypted); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func decryptDryRun(args []string, explicitOutput, password string) error {
 			continue
 		}
 
-		output := outputOrDefault(explicitOutput, inputFile, "_decrypted")
+		output := outputOrDefault(explicitOutput, inputFile, SuffixDecrypted)
 		cli.DryRunPrint("Would decrypt: %s (%d pages)", inputFile, info.Pages)
 		cli.DryRunPrint("  Encrypted: %t", info.Encrypted)
 		cli.DryRunPrint("  Output: %s", output)
@@ -108,7 +108,7 @@ func decryptWithStdio(inputArg, explicitOutput, password string, toStdout bool) 
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
-		DefaultSuffix:  "_decrypted",
+		DefaultSuffix:  SuffixDecrypted,
 		Operation:      "decrypt",
 	}
 	defer handler.Cleanup()
@@ -143,7 +143,7 @@ func decryptFile(inputFile, explicitOutput, password string) error {
 		return err
 	}
 
-	output := outputOrDefault(explicitOutput, inputFile, "_decrypted")
+	output := outputOrDefault(explicitOutput, inputFile, SuffixDecrypted)
 
 	if err := checkOutputFile(output); err != nil {
 		return err

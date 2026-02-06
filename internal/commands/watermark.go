@@ -88,7 +88,7 @@ func runWatermark(cmd *cobra.Command, args []string) error {
 		return watermarkDryRun(args, output, pagesStr, password, text, image)
 	}
 
-	if err := validateBatchOutput(args, output, "_watermarked"); err != nil {
+	if err := validateBatchOutput(args, output, SuffixWatermarked); err != nil {
 		return err
 	}
 
@@ -105,7 +105,7 @@ func watermarkDryRun(args []string, explicitOutput, pagesStr, password, text, im
 			continue
 		}
 
-		output := outputOrDefault(explicitOutput, inputFile, "_watermarked")
+		output := outputOrDefault(explicitOutput, inputFile, SuffixWatermarked)
 		pageDesc := "all pages"
 		if pagesStr != "" {
 			pageDesc = "pages " + pagesStr
@@ -133,7 +133,7 @@ func watermarkFile(inputFile, explicitOutput, pagesStr, password, text, image st
 		return err
 	}
 
-	output := outputOrDefault(explicitOutput, inputFile, "_watermarked")
+	output := outputOrDefault(explicitOutput, inputFile, SuffixWatermarked)
 
 	if err := checkOutputFile(output); err != nil {
 		return err

@@ -71,7 +71,7 @@ func runCompress(cmd *cobra.Command, args []string) error {
 		return compressWithStdio(args[0], output, password, toStdout)
 	}
 
-	if err := validateBatchOutput(args, output, "_compressed"); err != nil {
+	if err := validateBatchOutput(args, output, SuffixCompressed); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func compressDryRun(args []string, explicitOutput, password string) error {
 			continue
 		}
 
-		output := outputOrDefault(explicitOutput, inputFile, "_compressed")
+		output := outputOrDefault(explicitOutput, inputFile, SuffixCompressed)
 		cli.DryRunPrint("Would compress: %s", inputFile)
 		cli.DryRunPrint("  Size: %s (%d pages)", fileio.FormatFileSize(info.FileSize), info.Pages)
 		cli.DryRunPrint("  Output: %s", output)
@@ -106,7 +106,7 @@ func compressWithStdio(inputArg, explicitOutput, password string, toStdout bool)
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
-		DefaultSuffix:  "_compressed",
+		DefaultSuffix:  SuffixCompressed,
 		Operation:      "compress",
 	}
 	defer handler.Cleanup()
@@ -143,7 +143,7 @@ func compressFile(inputFile, explicitOutput, password string) error {
 	}
 
 	originalSize, _ := fileio.GetFileSize(inputFile)
-	output := outputOrDefault(explicitOutput, inputFile, "_compressed")
+	output := outputOrDefault(explicitOutput, inputFile, SuffixCompressed)
 
 	if err := checkOutputFile(output); err != nil {
 		return err

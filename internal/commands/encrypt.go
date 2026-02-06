@@ -75,7 +75,7 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 		return encryptWithStdio(args[0], output, userPassword, ownerPassword, toStdout)
 	}
 
-	if err := validateBatchOutput(args, output, "_encrypted"); err != nil {
+	if err := validateBatchOutput(args, output, SuffixEncrypted); err != nil {
 		return err
 	}
 
@@ -97,7 +97,7 @@ func encryptDryRun(args []string, explicitOutput string, hasOwnerPassword bool) 
 			continue
 		}
 
-		output := outputOrDefault(explicitOutput, inputFile, "_encrypted")
+		output := outputOrDefault(explicitOutput, inputFile, SuffixEncrypted)
 		cli.DryRunPrint("Would encrypt: %s (%d pages)", inputFile, info.Pages)
 		cli.DryRunPrint("  Output: %s", output)
 		if hasOwnerPassword {
@@ -112,7 +112,7 @@ func encryptWithStdio(inputArg, explicitOutput, userPassword, ownerPassword stri
 		InputArg:       inputArg,
 		ExplicitOutput: explicitOutput,
 		ToStdout:       toStdout,
-		DefaultSuffix:  "_encrypted",
+		DefaultSuffix:  SuffixEncrypted,
 		Operation:      "encrypt",
 	}
 	defer handler.Cleanup()
@@ -147,7 +147,7 @@ func encryptFile(inputFile, explicitOutput, userPassword, ownerPassword string) 
 		return err
 	}
 
-	output := outputOrDefault(explicitOutput, inputFile, "_encrypted")
+	output := outputOrDefault(explicitOutput, inputFile, SuffixEncrypted)
 
 	if err := checkOutputFile(output); err != nil {
 		return err
