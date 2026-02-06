@@ -72,9 +72,11 @@ func Do(ctx context.Context, opts Options, fn func(ctx context.Context) error) e
 			if delay > maxDelay {
 				delay = maxDelay
 			}
+			timer := time.NewTimer(delay)
 			select {
-			case <-time.After(delay):
+			case <-timer.C:
 			case <-ctx.Done():
+				timer.Stop()
 				return ctx.Err()
 			}
 		}
