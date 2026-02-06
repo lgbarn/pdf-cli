@@ -11,6 +11,7 @@ import (
 	"github.com/ledongthuc/pdf"
 	"github.com/lgbarn/pdf-cli/internal/cleanup"
 	"github.com/lgbarn/pdf-cli/internal/config"
+	"github.com/lgbarn/pdf-cli/internal/logging"
 	"github.com/lgbarn/pdf-cli/internal/progress"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/schollz/progressbar/v3"
@@ -109,14 +110,17 @@ func extractPagesSequential(ctx context.Context, r *pdf.Reader, pages []int, tot
 // extractPageText extracts text from a single page, returning empty string on any error
 func extractPageText(r *pdf.Reader, pageNum, totalPages int) string {
 	if pageNum < 1 || pageNum > totalPages {
+		logging.Debug("page number out of range", "page", pageNum, "total", totalPages)
 		return ""
 	}
 	p := r.Page(pageNum)
 	if p.V.IsNull() {
+		logging.Debug("page object is null", "page", pageNum)
 		return ""
 	}
 	text, err := p.GetPlainText(nil)
 	if err != nil {
+		logging.Debug("failed to extract text from page", "page", pageNum, "error", err)
 		return ""
 	}
 	return text
@@ -143,6 +147,10 @@ func extractPagesParallel(ctx context.Context, r *pdf.Reader, pages []int, total
 			break
 		}
 		go func(pn int) {
+			if ctx.Err() != nil {
+				results <- pageResult{pageNum: pn, text: ""}
+				return
+			}
 			results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
 		}(pageNum)
 	}
