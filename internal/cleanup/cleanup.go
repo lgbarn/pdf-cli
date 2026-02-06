@@ -33,8 +33,8 @@ func Register(path string) func() {
 	}
 }
 
-// Run removes all registered paths in reverse order (LIFO). It is
-// idempotent: subsequent calls after the first are no-ops.
+// Run removes all registered paths. It is idempotent: subsequent calls
+// after the first are no-ops.
 func Run() error {
 	mu.Lock()
 	defer mu.Unlock()
