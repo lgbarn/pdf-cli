@@ -12,7 +12,7 @@ import (
 
 const (
 	// DefaultDirPerm is the default permission for creating directories.
-	DefaultDirPerm = 0750
+	DefaultDirPerm = 0700
 
 	// DefaultFilePerm is the default permission for creating files.
 	DefaultFilePerm = 0600

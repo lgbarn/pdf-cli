@@ -42,7 +42,7 @@ const (
 	DefaultDownloadTimeout = 5 * time.Minute
 
 	// DefaultDataDirPerm is the default permission for tessdata directory.
-	DefaultDataDirPerm = 0750
+	DefaultDataDirPerm = 0700
 
 	// DefaultRetryAttempts is the number of retry attempts for downloading tessdata.
 	DefaultRetryAttempts = 3
