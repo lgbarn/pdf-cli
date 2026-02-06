@@ -121,3 +121,32 @@ func TestRunIdempotent(t *testing.T) {
 		t.Errorf("expected f1 to be removed, got err=%v", err)
 	}
 }
+
+func TestUnregisterAfterRun(t *testing.T) {
+	setup(t)
+	dir := t.TempDir()
+	f1 := filepath.Join(dir, "test.tmp")
+	if err := os.WriteFile(f1, []byte("test"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	unregister := Register(f1)
+	if err := Run(); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if _, err := os.Stat(f1); !os.IsNotExist(err) {
+		t.Errorf("expected f1 to be removed by Run, got err=%v", err)
+	}
+	unregister()
+	Reset()
+	f2 := filepath.Join(dir, "test2.tmp")
+	if err := os.WriteFile(f2, []byte("test2"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	Register(f2)
+	if err := Run(); err != nil {
+		t.Fatalf("second Run returned error: %v", err)
+	}
+	if _, err := os.Stat(f2); !os.IsNotExist(err) {
+		t.Errorf("expected f2 to be removed, got err=%v", err)
+	}
+}
