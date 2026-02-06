@@ -24,6 +24,10 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
+var tessdataHTTPClient = &http.Client{
+	Timeout: DefaultDownloadTimeout,
+}
+
 const (
 	// TessdataURL is the base URL for downloading tessdata files.
 	TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
@@ -257,7 +261,7 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 			return retry.Permanent(reqErr)
 		}
 
-		resp, doErr := http.DefaultClient.Do(req)
+		resp, doErr := tessdataHTTPClient.Do(req)
 		if doErr != nil {
 			// Network error — retryable
 			fmt.Fprintf(os.Stderr, "Download attempt failed: %v\n", doErr)
