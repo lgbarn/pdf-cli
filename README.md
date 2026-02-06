@@ -530,6 +530,9 @@ pdf info secure.pdf --password mysecret --allow-insecure-password
 # ERROR without --allow-insecure-password: --password flag is insecure
 ```
 
+> [!WARNING]
+> The `--password` flag exposes passwords in process listings (`ps aux`), shell history, and system logs. Use `--password-file`, `PDF_CLI_PASSWORD` environment variable, or the interactive prompt instead. As of v2.0.0, `--password` requires `--allow-insecure-password` to use.
+
 Password sources are checked in the above order. The first available source is used.
 
 **Examples:**
