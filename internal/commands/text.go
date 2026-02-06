@@ -20,6 +20,7 @@ func init() {
 	cli.AddPagesFlag(textCmd, "Pages to extract text from (default: all)")
 	cli.AddPasswordFlag(textCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(textCmd, "")
+	cli.AddAllowInsecurePasswordFlag(textCmd)
 	textCmd.Flags().Bool("ocr", false, "Use OCR for image-based PDFs")
 	textCmd.Flags().String("ocr-lang", "eng", "OCR language(s), e.g., 'eng' or 'eng+fra'")
 	textCmd.Flags().String("ocr-backend", "auto", "OCR backend: auto (native if available, else wasm), native, or wasm")

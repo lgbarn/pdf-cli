@@ -17,6 +17,7 @@ func init() {
 	cli.AddOutputFlag(encryptCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(encryptCmd, "User password (required)")
 	cli.AddPasswordFileFlag(encryptCmd, "")
+	cli.AddAllowInsecurePasswordFlag(encryptCmd)
 	cli.AddStdoutFlag(encryptCmd)
 	encryptCmd.Flags().String("owner-password", "", "Owner password (defaults to user password)")
 }

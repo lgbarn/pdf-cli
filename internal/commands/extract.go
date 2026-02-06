@@ -17,6 +17,7 @@ func init() {
 	cli.AddPagesFlag(extractCmd, "Pages to extract (e.g., 1-5,7,10-12)")
 	cli.AddPasswordFlag(extractCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(extractCmd, "")
+	cli.AddAllowInsecurePasswordFlag(extractCmd)
 	cli.AddStdoutFlag(extractCmd)
 	_ = extractCmd.MarkFlagRequired("pages")
 }

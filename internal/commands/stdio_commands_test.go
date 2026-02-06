@@ -46,7 +46,7 @@ func TestDecryptWithStdout(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	encrypted := filepath.Join(tmpDir, "encrypted.pdf")
-	if err := executeCommand("encrypt", samplePDF(), "--password", "secret", "-o", encrypted); err != nil {
+	if err := executeCommand("encrypt", samplePDF(), "--password", "secret", "--allow-insecure-password", "-o", encrypted); err != nil {
 		t.Fatalf("encrypt failed: %v", err)
 	}
 
@@ -54,7 +54,7 @@ func TestDecryptWithStdout(t *testing.T) {
 
 	// Now decrypt to stdout
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"decrypt", encrypted, "--password", "secret", "--stdout"})
+	rootCmd.SetArgs([]string{"decrypt", encrypted, "--password", "secret", "--allow-insecure-password", "--stdout"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -70,7 +70,7 @@ func TestEncryptWithStdout(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "secret", "--stdout"})
+	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "secret", "--allow-insecure-password", "--stdout"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -189,7 +189,7 @@ func TestEncryptWithOwnerPassword(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	output := filepath.Join(tmpDir, "encrypted.pdf")
-	if err := executeCommand("encrypt", samplePDF(), "--password", "user", "--owner-password", "owner", "-o", output); err != nil {
+	if err := executeCommand("encrypt", samplePDF(), "--password", "user", "--owner-password", "owner", "--allow-insecure-password", "-o", output); err != nil {
 		t.Fatalf("encrypt with owner password failed: %v", err)
 	}
 

@@ -12,6 +12,7 @@ func newTestCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().String("password", "", "password")
 	cmd.Flags().String("password-file", "", "password file")
+	cmd.Flags().Bool("allow-insecure-password", false, "")
 	return cmd
 }
 
@@ -81,6 +82,7 @@ func TestReadPassword_DeprecatedFlag(t *testing.T) {
 
 	cmd := newTestCmd()
 	cmd.Flags().Set("password", "flagpassword")
+	cmd.Flags().Set("allow-insecure-password", "true")
 
 	got, err := ReadPassword(cmd, "")
 	if err != nil {
@@ -118,6 +120,7 @@ func TestReadPassword_Priority_EnvOverFlag(t *testing.T) {
 
 	cmd := newTestCmd()
 	cmd.Flags().Set("password", "flagpass")
+	cmd.Flags().Set("allow-insecure-password", "true")
 
 	got, err := ReadPassword(cmd, "")
 	if err != nil {
@@ -141,4 +144,59 @@ func TestReadPassword_NoSource(t *testing.T) {
 	if got != "" {
 		t.Errorf("got %q, want empty string when no source available", got)
 	}
+}
+
+func TestReadPassword_PasswordFlagWithoutOptIn(t *testing.T) {
+	t.Setenv("PDF_CLI_PASSWORD", "")
+
+	cmd := newTestCmd()
+	cmd.Flags().Set("password", "flagpassword")
+	// Do NOT set allow-insecure-password
+
+	_, err := ReadPassword(cmd, "")
+	if err == nil {
+		t.Fatal("expected error when using --password without opt-in")
+	}
+
+	errMsg := err.Error()
+	requiredStrings := []string{
+		"--password-file",
+		"PDF_CLI_PASSWORD",
+		"Interactive prompt",
+		"--allow-insecure-password",
+	}
+	for _, s := range requiredStrings {
+		if !contains(errMsg, s) {
+			t.Errorf("error message missing %q: %v", s, err)
+		}
+	}
+}
+
+func TestReadPassword_PasswordFlagWithOptIn(t *testing.T) {
+	t.Setenv("PDF_CLI_PASSWORD", "")
+
+	cmd := newTestCmd()
+	cmd.Flags().Set("password", "flagpassword")
+	cmd.Flags().Set("allow-insecure-password", "true")
+
+	got, err := ReadPassword(cmd, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "flagpassword" {
+		t.Errorf("got %q, want %q", got, "flagpassword")
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsRecursive(s, substr))
+}
+
+func containsRecursive(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

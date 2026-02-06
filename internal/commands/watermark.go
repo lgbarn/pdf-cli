@@ -16,6 +16,7 @@ func init() {
 	cli.AddPagesFlag(watermarkCmd, "Pages to watermark (default: all)")
 	cli.AddPasswordFlag(watermarkCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(watermarkCmd, "")
+	cli.AddAllowInsecurePasswordFlag(watermarkCmd)
 	watermarkCmd.Flags().StringP("text", "t", "", "Text watermark content")
 	watermarkCmd.Flags().StringP("image", "i", "", "Image file for image watermark")
 }

@@ -17,6 +17,7 @@ func init() {
 	cli.AddOutputFlag(compressCmd, "Output file path (only with single file)")
 	cli.AddPasswordFlag(compressCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(compressCmd, "")
+	cli.AddAllowInsecurePasswordFlag(compressCmd)
 	cli.AddStdoutFlag(compressCmd)
 }
 

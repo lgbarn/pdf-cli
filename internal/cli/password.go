@@ -44,11 +44,27 @@ func ReadPassword(cmd *cobra.Command, promptMsg string) (string, error) {
 		return envPass, nil
 	}
 
-	// 3. Check --password flag (deprecated)
+	// 3. Check --password flag (insecure, requires opt-in)
 	if cmd.Flags().Lookup("password") != nil {
 		password, _ := cmd.Flags().GetString("password")
 		if password != "" {
-			fmt.Fprintln(os.Stderr, "WARNING: --password flag is deprecated and exposes passwords in process listings. Use --password-file, PDF_CLI_PASSWORD, or interactive prompt instead.")
+			// Check if opt-in flag is present and set
+			allowInsecure := false
+			if cmd.Flags().Lookup("allow-insecure-password") != nil {
+				allowInsecure, _ = cmd.Flags().GetBool("allow-insecure-password")
+			}
+
+			if !allowInsecure {
+				return "", fmt.Errorf(`--password flag is insecure and disabled by default.
+Use one of these secure alternatives:
+  1. --password-file <path>        (recommended for automation)
+  2. PDF_CLI_PASSWORD env var      (recommended for CI/scripts)
+  3. Interactive prompt            (recommended for manual use)
+
+To use --password anyway (not recommended), add --allow-insecure-password`)
+			}
+
+			fmt.Fprintln(os.Stderr, "WARNING: --password flag exposes passwords in process listings. Use --password-file, PDF_CLI_PASSWORD, or interactive prompt instead.")
 			return password, nil
 		}
 	}

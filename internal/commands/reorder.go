@@ -17,6 +17,7 @@ func init() {
 	cli.AddOutputFlag(reorderCmd, "Output file path")
 	cli.AddPasswordFlag(reorderCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(reorderCmd, "")
+	cli.AddAllowInsecurePasswordFlag(reorderCmd)
 	cli.AddStdoutFlag(reorderCmd)
 	reorderCmd.Flags().StringP("sequence", "s", "", "Page sequence (required)")
 	_ = reorderCmd.MarkFlagRequired("sequence")

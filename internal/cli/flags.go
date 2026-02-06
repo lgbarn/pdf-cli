@@ -43,6 +43,17 @@ func AddPasswordFileFlag(cmd *cobra.Command, usage string) {
 	cmd.Flags().String("password-file", "", usage)
 }
 
+// AddAllowInsecurePasswordFlag adds the --allow-insecure-password flag to a command.
+func AddAllowInsecurePasswordFlag(cmd *cobra.Command) {
+	cmd.Flags().Bool("allow-insecure-password", false, "Allow use of insecure --password flag")
+}
+
+// GetAllowInsecurePassword gets the allow-insecure-password flag value.
+func GetAllowInsecurePassword(cmd *cobra.Command) bool {
+	allow, _ := cmd.Flags().GetBool("allow-insecure-password")
+	return allow
+}
+
 // GetOutput gets the output flag value
 func GetOutput(cmd *cobra.Command) string {
 	output, _ := cmd.Flags().GetString("output")

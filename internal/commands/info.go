@@ -18,6 +18,7 @@ func init() {
 	cli.AddCommand(infoCmd)
 	cli.AddPasswordFlag(infoCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(infoCmd, "")
+	cli.AddAllowInsecurePasswordFlag(infoCmd)
 	cli.AddFormatFlag(infoCmd)
 }
 

@@ -18,6 +18,7 @@ func init() {
 	cli.AddPagesFlag(rotateCmd, "Pages to rotate (default: all pages)")
 	cli.AddPasswordFlag(rotateCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(rotateCmd, "")
+	cli.AddAllowInsecurePasswordFlag(rotateCmd)
 	cli.AddStdoutFlag(rotateCmd)
 	rotateCmd.Flags().IntP("angle", "a", 90, "Rotation angle (90, 180, or 270)")
 }

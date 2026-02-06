@@ -15,6 +15,7 @@ func init() {
 	cli.AddOutputFlag(mergeCmd, "Output file path (required)")
 	cli.AddPasswordFlag(mergeCmd, "Password for encrypted input PDFs")
 	cli.AddPasswordFileFlag(mergeCmd, "")
+	cli.AddAllowInsecurePasswordFlag(mergeCmd)
 	_ = mergeCmd.MarkFlagRequired("output")
 }
 

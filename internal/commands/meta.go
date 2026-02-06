@@ -17,6 +17,7 @@ func init() {
 	cli.AddOutputFlag(metaCmd, "Output file path (for setting metadata)")
 	cli.AddPasswordFlag(metaCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(metaCmd, "")
+	cli.AddAllowInsecurePasswordFlag(metaCmd)
 	cli.AddFormatFlag(metaCmd)
 	metaCmd.Flags().String("title", "", "Set document title")
 	metaCmd.Flags().String("author", "", "Set document author")

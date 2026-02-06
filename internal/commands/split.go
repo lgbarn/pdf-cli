@@ -16,6 +16,7 @@ func init() {
 	cli.AddOutputFlag(splitCmd, "Output directory for split files")
 	cli.AddPasswordFlag(splitCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(splitCmd, "")
+	cli.AddAllowInsecurePasswordFlag(splitCmd)
 	splitCmd.Flags().IntP("pages", "n", 1, "Number of pages per output file")
 }
 

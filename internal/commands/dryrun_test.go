@@ -67,7 +67,7 @@ func TestDecryptDryRun(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"decrypt", samplePDF(), "--password", "test", "--dry-run"})
+	rootCmd.SetArgs([]string{"decrypt", samplePDF(), "--password", "test", "--allow-insecure-password", "--dry-run"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -82,7 +82,7 @@ func TestDecryptDryRun_MultipleFiles(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"decrypt", samplePDF(), samplePDF(), "--password", "test", "--dry-run"})
+	rootCmd.SetArgs([]string{"decrypt", samplePDF(), samplePDF(), "--password", "test", "--allow-insecure-password", "--dry-run"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -96,7 +96,7 @@ func TestEncryptDryRun(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "test", "--dry-run"})
+	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "test", "--allow-insecure-password", "--dry-run"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -112,7 +112,7 @@ func TestEncryptDryRun_WithOwnerPassword(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "user", "--owner-password", "owner", "--dry-run"})
+	rootCmd.SetArgs([]string{"encrypt", samplePDF(), "--password", "user", "--owner-password", "owner", "--allow-insecure-password", "--dry-run"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 
@@ -128,7 +128,7 @@ func TestEncryptDryRun_MultipleFiles(t *testing.T) {
 	}
 
 	rootCmd := cli.GetRootCmd()
-	rootCmd.SetArgs([]string{"encrypt", samplePDF(), samplePDF(), "--password", "test", "--dry-run"})
+	rootCmd.SetArgs([]string{"encrypt", samplePDF(), samplePDF(), "--password", "test", "--allow-insecure-password", "--dry-run"})
 	rootCmd.SetOut(&bytes.Buffer{})
 	rootCmd.SetErr(&bytes.Buffer{})
 

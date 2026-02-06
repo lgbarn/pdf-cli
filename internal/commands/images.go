@@ -16,6 +16,7 @@ func init() {
 	cli.AddPagesFlag(imagesCmd, "Pages to extract images from (default: all)")
 	cli.AddPasswordFlag(imagesCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(imagesCmd, "")
+	cli.AddAllowInsecurePasswordFlag(imagesCmd)
 }
 
 var imagesCmd = &cobra.Command{

@@ -19,12 +19,14 @@ func init() {
 
 	cli.AddPasswordFlag(pdfaValidateCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(pdfaValidateCmd, "")
+	cli.AddAllowInsecurePasswordFlag(pdfaValidateCmd)
 	cli.AddFormatFlag(pdfaValidateCmd)
 	pdfaValidateCmd.Flags().String("level", "", "PDF/A level to validate: 1b, 2b, 3b (default: any)")
 
 	cli.AddOutputFlag(pdfaConvertCmd, "Output file path")
 	cli.AddPasswordFlag(pdfaConvertCmd, "Password for encrypted PDFs")
 	cli.AddPasswordFileFlag(pdfaConvertCmd, "")
+	cli.AddAllowInsecurePasswordFlag(pdfaConvertCmd)
 	cli.AddStdoutFlag(pdfaConvertCmd)
 	pdfaConvertCmd.Flags().String("level", "2b", "Target PDF/A level: 1b, 2b, 3b")
 }
