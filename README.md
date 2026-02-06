@@ -460,9 +460,10 @@ These options work with all commands:
 | `--force` | `-f` | Overwrite existing files without prompting |
 | `--progress` | | Show progress bar for long operations |
 | `--password-file` | | Path to file containing password for encrypted PDFs |
-| `--password` | `-P` | Password for encrypted PDFs (deprecated, use --password-file) |
+| `--password` | `-P` | Password for encrypted PDFs (requires --allow-insecure-password, deprecated) |
+| `--allow-insecure-password` | | Opt-in to allow --password flag (insecure, use --password-file instead) |
 | `--dry-run` | | Preview what would happen without making changes |
-| `--log-level` | | Set logging level: `debug`, `info`, `warn`, `error`, `silent` (default: silent) |
+| `--log-level` | | Set logging level: `debug`, `info`, `warn`, `error`, `silent` (default: error) |
 | `--log-format` | | Set log format: `text` or `json` (default: text) |
 | `--help` | `-h` | Show help for any command |
 | `--version` | | Display version information |
@@ -479,7 +480,7 @@ pdf compress *.pdf --dry-run
 pdf merge -o combined.pdf *.pdf --dry-run
 
 # Check encryption without modifying files
-pdf encrypt document.pdf --password secret --dry-run
+pdf encrypt document.pdf --password-file pass.txt --dry-run
 ```
 
 ### Logging
@@ -523,10 +524,10 @@ export PDF_CLI_PASSWORD=mysecret
 pdf info secure.pdf
 ```
 
-**4. Command-line flag (deprecated, shows warning):**
+**4. Command-line flag (requires opt-in, not recommended):**
 ```bash
-pdf info secure.pdf --password mysecret
-# WARNING: --password flag exposes passwords in process listings
+pdf info secure.pdf --password mysecret --allow-insecure-password
+# ERROR without --allow-insecure-password: --password flag is insecure
 ```
 
 Password sources are checked in the above order. The first available source is used.
