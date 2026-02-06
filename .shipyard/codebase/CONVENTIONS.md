@@ -1,417 +1,296 @@
 # Code Conventions
 
-This document describes the coding standards, naming patterns, and style conventions used in pdf-cli.
+## Overview
+pdf-cli is a Go 1.25 CLI project following standard Go conventions with explicit linting rules enforced via golangci-lint, pre-commit hooks, and GitHub Actions CI. The codebase emphasizes clean structure, comprehensive error handling, and user-friendly messaging patterns.
 
-## Language & Tooling
+## Findings
 
-- **Language**: Go 1.24.1
-- **Linter**: golangci-lint v2.8.0 with custom configuration
-- **Formatter**: gofmt + goimports (auto-enabled via golangci-lint)
-- **Pre-commit**: Automated checks via `.pre-commit-config.yaml`
-- **Build**: Make-based workflow
+### Language and Build
 
-## Linting Configuration
+- **Language**: Go 1.25
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 3)
+  - Go modules enabled with `GO111MODULE=on` in all Makefile targets
 
-### Enabled Linters
+- **Code Formatting**: Standard `go fmt` and `goimports`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 92-94)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.pre-commit-config.yaml` (lines 17-22) -- `go fmt` runs on every commit
+  - All `.go` files formatted with tabs for indentation, standard Go style
 
-The project uses golangci-lint v2 with the following linters (`.golangci.yaml`):
+### Linting Configuration
 
-**Core linters:**
-- `govet` - Standard Go vet checks
-- `ineffassign` - Detects ineffectual assignments
-- `staticcheck` - Advanced static analysis
-- `unused` - Detects unused constants, variables, functions
+- **Primary Linter**: golangci-lint v2.8.0 with 5-minute timeout
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 3-4)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (lines 26-30)
 
-**Additional linters:**
-- `misspell` - Catches spelling errors (US locale)
-- `gocritic` - Comprehensive style and diagnostics
-- `revive` - Fast, configurable, extensible Go linter
-- `errcheck` - Ensures error return values are checked
+- **Enabled Linters**: 8 linters active
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 6-18)
+  - `govet`, `ineffassign`, `staticcheck`, `unused` (original set)
+  - `misspell` (US locale), `gocritic`, `revive`, `errcheck` (added later)
 
-### Linter Settings
+- **gocritic Settings**: Diagnostic and style tags enabled with 8 checks disabled
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 21-33)
+  - Disabled: `ifElseChain`, `whyNoLint`, `octalLiteral`, `importShadow`, `deferInLoop`, `httpNoBody`, `unnamedResult`, `paramTypeCombine`
 
-**gocritic configuration:**
-- Enabled tags: `diagnostic`, `style`
-- Disabled checks: `ifElseChain`, `whyNoLint`, `octalLiteral`, `importShadow`, `deferInLoop`, `httpNoBody`, `unnamedResult`, `paramTypeCombine`
+- **revive Settings**: 13 rules enabled, package-comments disabled
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 35-54)
+  - Key rules: `error-strings`, `error-naming`, `exported`, `var-naming`, `receiver-naming`, `indent-error-flow`, `errorf`
 
-**revive configuration:**
-- Enforces: blank-imports, context-as-argument, error-return, error-strings, error-naming, exported, var-naming, receiver-naming, time-naming, indent-error-flow, errorf
-- Disabled: `package-comments` (too noisy for CLI tools)
+- **Linter Exclusions**: Strategic exclusions for common patterns
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml` (lines 59-89)
+  - errcheck: Excludes `Close`, `Remove`, `RemoveAll`, `fmt.Fprint*` errors
+  - Test files: Exempt from `errcheck` and `unused-parameter` checks
+  - Exported comments: Excluded from `revive` (too noisy for CLI tools)
 
-**Common exclusions:**
-- `errcheck` ignored for: `Close()`, `Remove()`, `RemoveAll()`, `fmt.Fprint*()` functions
-- `errcheck` ignored in test files
-- `revive` exported comments rule disabled (too noisy for CLI)
-- `revive` unused-parameter ignored in test files
+### Naming Conventions
 
-### Formatter Configuration
+- **Package Names**: Single-word lowercase, descriptive
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (line 1) -- `package pages`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (line 1) -- `package pdferrors`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/progress/progress.go` (line 1) -- `package progress`
+  - Pattern: Package names match directory names exactly
 
-- `gofmt` - Standard Go formatting
-- `goimports` - Auto-manages imports
+- **File Names**: Snake_case with descriptive suffixes
+  - Evidence: `commands_test.go`, `commands_integration_test.go`, `stdio_test.go`, `mock_pdf.go`, `mock_ocr.go`
+  - Test files: `*_test.go`
+  - Integration tests: `*_integration_test.go`
+  - Mock implementations: `mock_*.go`
+  - Coverage tests: `coverage_*_test.go`, `additional_coverage_test.go`
 
-## Code Organization
+- **Type Names**: PascalCase, descriptive
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (line 11) -- `type PageRange struct`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (line 10) -- `type PDFError struct`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/output/formatter.go` (line 12) -- `type OutputFormat string`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/logging/logger.go` (line 12) -- `type Level string`
 
-### Package Structure
+- **Function Names**: MixedCaps, descriptive verbs
+  - Exported: PascalCase -- `ParsePageRanges`, `ExpandPageRanges`, `ValidatePageNumbers`, `FormatPageRanges`
+  - Unexported: camelCase -- `parseRangePart`, `parseSinglePage`, `formatRange`, `checkOutputFile`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (lines 16, 50, 78, 92, 118)
 
-```
-internal/
-├── cli/              # CLI framework and root command
-├── commands/         # One file per command
-│   └── patterns/     # Reusable command patterns
-├── config/           # Configuration management
-├── fileio/           # File I/O and stdio utilities
-├── logging/          # Structured logging
-├── ocr/              # OCR engine with backends
-├── output/           # Output formatting
-├── pages/            # Page range parsing
-├── pdf/              # PDF operations (pdfcpu wrapper)
-├── pdferrors/        # Error handling
-├── progress/         # Progress bars
-└── testing/          # Test helpers and mocks
-```
+- **Variable Names**: camelCase, concise but clear
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (lines 23, 30, 51-52, 57, 62) -- `ranges`, `parts`, `part`, `bounds`, `start`, `end`
+  - Short names for common patterns: `err`, `ctx`, `cmd`, `cfg`, `f` (file)
+  - Longer names for less obvious items: `pageNums`, `inputFile`, `totalPages`, `password`
 
-**Key principles:**
-- No circular dependencies
-- Leaf packages have minimal dependencies
-- External dependencies isolated in dedicated packages
-- One command per file in `commands/`
-- All packages in `internal/` (not exported as library)
+- **Constant Names**: PascalCase for exported, camelCase for unexported
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/logging/logger.go` (lines 14-19) -- `LevelDebug`, `LevelInfo`, `LevelWarn`, `LevelError`, `LevelSilent`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/output/formatter.go` (lines 15-18) -- `FormatHuman`, `FormatJSON`, `FormatCSV`, `FormatTSV`
 
-### Package Documentation
+- **Error Variables**: `Err` prefix for sentinel errors
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (lines 51-59)
+  - Examples: `ErrFileNotFound`, `ErrNotPDF`, `ErrInvalidPages`, `ErrPasswordRequired`, `ErrWrongPassword`, `ErrCorruptPDF`, `ErrOutputExists`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/testing/mock_pdf.go` (lines 86-90) -- `ErrMockPasswordRequired`, `ErrMockCorrupted`
 
-Every package includes a `doc.go` file with package-level documentation:
+### Import Organization
 
-```go
-// Package name provides description of what it does.
-package name
-```
+- **Import Grouping**: Standard library first, blank line, then external packages
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (lines 3-8)
+  ```go
+  import (
+      "fmt"
+      "sort"
+      "strconv"
+      "strings"
+  )
+  ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go` (lines 3-12)
+  ```go
+  import (
+      "errors"
+      "fmt"
 
-**Examples:**
-- `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/doc.go`
-- `/Users/lgbarn/Personal/pdf-cli/internal/fileio/doc.go`
-- `/Users/lgbarn/Personal/pdf-cli/internal/progress/doc.go`
+      "github.com/lgbarn/pdf-cli/internal/cli"
+      "github.com/lgbarn/pdf-cli/internal/fileio"
+      "github.com/lgbarn/pdf-cli/internal/pages"
+      "github.com/lgbarn/pdf-cli/internal/pdf"
+      "github.com/lgbarn/pdf-cli/internal/pdferrors"
+  )
+  ```
 
-## Naming Conventions
+- **Blank Imports**: Used for side-effect initialization
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/cmd/pdf/main.go` (line 11)
+  ```go
+  _ "github.com/lgbarn/pdf-cli/internal/commands" // Register all commands
+  ```
 
-### Files
+### Comment Style
 
-- **Source files**: lowercase with underscores: `pdf_operations.go`, `file_utils.go`
-- **Test files**: `*_test.go` (placed alongside source)
-- **Package docs**: `doc.go` (one per package)
-- **Commands**: Named after command: `compress.go`, `encrypt.go`, `rotate.go`
+- **Package Comments**: Single-line descriptive comments in `doc.go` files
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/doc.go` (lines 1-2)
+  ```go
+  // Package pages provides page range parsing and validation for pdf-cli.
+  package pages
+  ```
+  - Pattern: Every internal package has a `doc.go` file with package-level documentation
 
-### Functions & Methods
+- **Function Comments**: Complete sentences starting with function name
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (lines 16-17, 50, 78, 92, 118)
+  ```go
+  // ParsePageRanges parses a page range string like "1-5,7,10-12".
+  // Returns a slice of PageRange structs.
+  ```
+  - Pattern: Multi-sentence comments use separate lines for each sentence
 
-- **Exported functions**: PascalCase with descriptive names
-  - `ValidatePDFFile()`, `GenerateOutputFilename()`, `FormatFileSize()`
-- **Unexported functions**: camelCase
-  - `outputOrDefault()`, `compressFile()`, `checkOutputFile()`
-- **Test functions**: `TestFunctionName` or `TestFunctionName_Scenario`
-  - `TestFileExists()`, `TestCompressCommand_WithOutput()`
-- **Helper functions**: Named by purpose, often with `Helper` suffix
-  - `resetFlags(t)`, `executeCommand()`, `samplePDF()`
+- **Struct Field Comments**: Inline comments when brief, above when detailed
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (lines 10-15)
+  ```go
+  type PDFError struct {
+      Operation string
+      File      string
+      Cause     error
+      Hint      string
+  }
+  ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/testing/mock_pdf.go` (lines 8-23)
+  ```go
+  // PageCountResult is returned by PageCount
+  PageCountResult int
+  // PageCountError is returned by PageCount if set
+  PageCountError error
+  ```
 
-### Variables & Constants
+- **Inline Comments**: Used sparingly for non-obvious logic
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pages/parser.go` (line 141) -- `// Skip duplicates (sorted[i] == end)`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go` (lines 14-15, 23-24)
 
-- **Exported constants**: PascalCase
-  - `LevelDebug`, `FormatJSON`, `BackendNative`
-- **Unexported variables**: camelCase
-  - `global`, `version`, `commit`, `buildDate`
-- **Error variables**: Prefixed with `Err`
-  - `ErrFileNotFound`, `ErrNotPDF`, `ErrPasswordRequired`
-- **Package-level variables**: Exported when needed for configuration
-  - `SupportedImageExtensions` (slice of strings)
-
-### Types
-
-- **Structs**: PascalCase
-  - `PDFError`, `Engine`, `Config`, `Logger`
-- **Interfaces**: PascalCase, often with "-er" suffix
-  - `Backend` (OCR backend interface)
-- **Type aliases**: PascalCase
-  - `Level` (string), `Format` (string)
-
-### Receivers
-
-- **Consistent naming**: 1-2 letter abbreviation of type name
-  - `(e *PDFError)` for PDFError methods
-  - `(l *Logger)` for Logger methods
-  - `(m *MockOCRBackend)` for mock methods
-- **Pointer vs value**: Use pointer receivers for structs that maintain state
-
-## Code Style Patterns
+- **Security Comments**: `#nosec` annotations with justifications
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/testing/fixtures.go` (lines 61, 65)
+  ```go
+  data, err := os.ReadFile(src) // #nosec G304 - test fixture, paths are controlled
+  return os.WriteFile(dst, data, 0644) // #nosec G306 - test fixture, permissive permissions OK
+  ```
 
 ### Error Handling
 
-**Custom error type with context:**
+- **Error Wrapping**: Extensive use of `fmt.Errorf` with `%w` verb
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go` (lines 32, 37, 68, 92)
+  ```go
+  return nil, fmt.Errorf("invalid page specification: %w", err)
+  return nil, fmt.Errorf("invalid file path: %w", err)
+  ```
 
-```go
-type PDFError struct {
-    Operation string
-    File      string
-    Cause     error
-    Hint      string
-}
+- **Custom Error Types**: Structured errors with context
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (lines 9-33)
+  - `PDFError` implements `Error()` and `Unwrap()` methods
+  - Builder pattern with `WithHint()` method
 
-func (e *PDFError) Error() string {
-    var sb strings.Builder
-    sb.WriteString(e.Operation)
-    if e.File != "" {
-        sb.WriteString(fmt.Sprintf(" '%s'", e.File))
-    }
-    sb.WriteString(": ")
-    sb.WriteString(e.Cause.Error())
-    if e.Hint != "" {
-        sb.WriteString(fmt.Sprintf("\nHint: %s", e.Hint))
-    }
-    return sb.String()
-}
+- **Error Checking**: Checked immediately after call
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/merge.go` (lines 38-41, 49-52, 54-56)
+  ```go
+  args, err := sanitizeInputArgs(args)
+  if err != nil {
+      return err
+  }
+  ```
 
-func (e *PDFError) Unwrap() error {
-    return e.Cause
-}
-```
+- **Error Joining**: Multiple errors combined with `errors.Join`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go` (lines 88-96)
+  ```go
+  func processBatch(files []string, processor func(file string) error) error {
+      var errs []error
+      for _, file := range files {
+          if err := processor(file); err != nil {
+              errs = append(errs, fmt.Errorf("%s: %w", file, err))
+          }
+      }
+      return errors.Join(errs...)
+  }
+  ```
 
-**Error wrapping pattern:**
+### Code Organization Patterns
 
-```go
-if err := pdf.Compress(input, output, password); err != nil {
-    return pdferrors.WrapError("compressing file", inputArg, err)
-}
-```
+- **init() Functions**: Used for command registration
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/merge.go` (lines 13-19)
+  ```go
+  func init() {
+      cli.AddCommand(mergeCmd)
+      cli.AddOutputFlag(mergeCmd, "Output file path (required)")
+      cli.AddPasswordFlag(mergeCmd, "Password for encrypted input PDFs")
+      cli.AddPasswordFileFlag(mergeCmd, "")
+      _ = mergeCmd.MarkFlagRequired("output")
+  }
+  ```
+  - Pattern: Commands self-register via side-effect imports
 
-**Predefined errors:**
+- **Factory Functions**: Constructor functions with `New` prefix
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (line 36) -- `func NewPDFError(...)`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/output/formatter.go` (line 42) -- `func NewOutputFormatter(...)`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/testing/mock_pdf.go` (line 27) -- `func NewMockPDFOps()`
 
-```go
-var (
-    ErrFileNotFound     = errors.New("file not found")
-    ErrNotPDF           = errors.New("not a valid PDF file")
-    ErrPasswordRequired = errors.New("password required")
-)
-```
+- **Helper Functions**: Unexported helpers grouped logically
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go`
+  - Pattern: Small, focused functions with clear single responsibility
+  - Examples: `checkOutputFile`, `parseAndValidatePages`, `outputOrDefault`, `validateBatchOutput`, `sanitizeInputArgs`, `processBatch`
 
-### File Operations
+- **Singleton Pattern**: Global logger with lazy initialization
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/logging/logger.go` (lines 84-92, 123-141)
+  - Uses `sync.RWMutex` for thread-safe access
 
-**Atomic writes with cleanup:**
+### String Formatting
 
-```go
-tmpFile, err := os.CreateTemp(dir, ".pdf-cli-tmp-*")
-if err != nil {
-    return fmt.Errorf("failed to create temp file: %w", err)
-}
+- **Format Verbs**: Consistent use of standard format verbs
+  - `%s` for strings, `%d` for integers, `%v` for default format, `%w` for errors, `%q` for quoted strings
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (lines 21, 26)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/commands/helpers.go` (line 18)
 
-defer func() {
-    if tmpFile != nil {
-        _ = tmpFile.Close()
-        _ = os.Remove(tmpPath)
-    }
-}()
-```
+- **String Building**: `strings.Builder` for efficient concatenation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdferrors/errors.go` (lines 18-28)
+  ```go
+  var sb strings.Builder
+  sb.WriteString(e.Operation)
+  if e.File != "" {
+      sb.WriteString(fmt.Sprintf(" '%s'", e.File))
+  }
+  ```
 
-**Path validation before use:**
+### Build Tags
 
-```go
-func CopyFile(src, dst string) error {
-    // Clean paths to prevent directory traversal
-    cleanSrc := filepath.Clean(src)
-    cleanDst := filepath.Clean(dst)
+- **Ignore Tag**: Used for helper scripts
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/scripts/coverage-check.go` (line 1)
+  ```go
+  //go:build ignore
+  ```
 
-    srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is cleaned
-    // ...
-}
-```
+### Pre-commit and CI Integration
 
-### Security Annotations
+- **Pre-commit Hooks**: 11 hooks enforcing code quality
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.pre-commit-config.yaml`
+  - General: `trailing-whitespace`, `end-of-file-fixer`, `check-yaml`, `check-added-large-files`, `check-merge-conflict`
+  - Go-specific: `go-fmt`, `go-vet`, `go-mod-tidy`, `go-build`, `go-test`, `golangci-lint`
 
-Uses `#nosec` comments to suppress false positive security warnings from gosec:
+- **CI Pipeline**: 4 jobs (lint, test, build, security)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml`
+  - Runs golangci-lint with same config as local
+  - Security scanning with Gosec v2.22.11
+  - Multi-platform builds (Linux, Darwin, Windows) × (amd64, arm64)
 
-```go
-srcFile, err := os.Open(cleanSrc) // #nosec G304 -- path is cleaned
-if err := os.WriteFile(dst, data, 0644) // #nosec G306 -- test fixture, permissive OK
-```
+### Conventional Commits
 
-**Pattern**: Always include justification after `#nosec` directive
+- **Commit Prefixes**: Structured commit messages required
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/CONTRIBUTING.md` (lines 51-61)
+  - Prefixes: `feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`
+  - Example: `feat: add --dry-run flag to merge command`
 
-### Configuration Management
+## Summary Table
 
-**Global singleton with lazy initialization:**
+| Convention | Detail | Confidence |
+|------------|--------|------------|
+| Language | Go 1.25 | Observed |
+| Formatting | go fmt + goimports | Observed |
+| Linter | golangci-lint v2.8.0, 8 linters | Observed |
+| Package names | Single-word lowercase | Observed |
+| File names | Snake_case, `*_test.go`, `mock_*.go` | Observed |
+| Type names | PascalCase | Observed |
+| Function names | PascalCase (exported), camelCase (unexported) | Observed |
+| Variable names | camelCase, descriptive | Observed |
+| Error vars | `Err` prefix for sentinels | Observed |
+| Import order | stdlib first, then external with blank line | Observed |
+| Error wrapping | `fmt.Errorf` with `%w`, custom `PDFError` type | Observed |
+| Comments | Complete sentences, package docs in `doc.go` | Observed |
+| Pre-commit | 11 hooks including fmt, vet, lint, test | Observed |
+| CI | golangci-lint, tests with race detector, gosec | Observed |
+| Commit style | Conventional commits (feat:, fix:, etc.) | Observed |
 
-```go
-var global *Config
+## Open Questions
 
-func Get() *Config {
-    if global == nil {
-        var err error
-        global, err = Load()
-        if err != nil {
-            global = DefaultConfig()
-        }
-    }
-    return global
-}
-
-func Reset() {
-    global = nil
-}
-```
-
-**Environment variable overrides:**
-
-```go
-func applyEnvOverrides(cfg *Config) {
-    if env := os.Getenv("PDF_CLI_OUTPUT_FORMAT"); env != "" {
-        cfg.Defaults.OutputFormat = env
-    }
-    if env := os.Getenv("PDF_CLI_VERBOSE"); env == "true" || env == "1" {
-        cfg.Defaults.Verbose = true
-    }
-}
-```
-
-### Table-Driven Tests
-
-Standard pattern across the codebase:
-
-```go
-func TestFormatFileSize(t *testing.T) {
-    tests := []struct {
-        bytes int64
-        want  string
-    }{
-        {0, "0 B"},
-        {1024, "1.00 KB"},
-        {1024 * 1024, "1.00 MB"},
-        {1024 * 1024 * 1024, "1.00 GB"},
-    }
-    for _, tt := range tests {
-        if got := FormatFileSize(tt.bytes); got != tt.want {
-            t.Errorf("FormatFileSize(%d) = %q, want %q", tt.bytes, got, tt.want)
-        }
-    }
-}
-```
-
-### CLI Patterns
-
-**Command initialization:**
-
-```go
-func init() {
-    cli.AddCommand(compressCmd)
-    cli.AddOutputFlag(compressCmd, "Output file path (only with single file)")
-    cli.AddPasswordFlag(compressCmd, "Password for encrypted PDFs")
-    cli.AddStdoutFlag(compressCmd)
-}
-
-var compressCmd = &cobra.Command{
-    Use:   "compress <file.pdf> [file2.pdf...]",
-    Short: "Compress and optimize PDF(s)",
-    Long:  `...`,
-    Args:  cobra.MinimumNArgs(1),
-    RunE:  runCompress,
-}
-```
-
-**Stdin/stdout handling via patterns:**
-
-```go
-handler := &patterns.StdioHandler{
-    InputArg:       inputArg,
-    ExplicitOutput: explicitOutput,
-    ToStdout:       toStdout,
-    DefaultSuffix:  "_compressed",
-    Operation:      "compress",
-}
-defer handler.Cleanup()
-
-input, output, err := handler.Setup()
-if err != nil {
-    return err
-}
-```
-
-## File Permissions
-
-**Consistent permission model:**
-- **Directories**: `0750` (owner rwx, group r-x)
-- **Config files**: `0600` (owner rw only)
-- **Temporary files**: Created with `os.CreateTemp()` (secure by default)
-- **Test files**: `0644` (permissive OK for test fixtures)
-
-**Examples:**
-```go
-os.MkdirAll(dir, 0750)           // Directories
-os.WriteFile(path, data, 0600)   // Sensitive files like config
-os.WriteFile(testFile, data, 0644) // Test fixtures
-```
-
-## Commit Message Convention
-
-Follows Conventional Commits:
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation only
-- `test:` Test changes
-- `chore:` Maintenance tasks
-- `refactor:` Code restructuring without behavior change
-
-**Examples from git history:**
-- `docs: update README and CHANGELOG for v1.5.0 release`
-- `fix: add nosec directives for gosec false positives`
-- `fix: update golangci-lint config for v2 and fix CI gosec`
-- `docs: update architecture.md to reflect new package structure`
-
-## Comments & Documentation
-
-**Exported symbols**: Should have documentation comments (revive `exported` rule relaxed for CLI)
-
-**Inline comments**: Used for:
-- Security directives (`#nosec`)
-- Complex logic explanations
-- TODOs (if any)
-
-**Function documentation**: Describes what function does, not how
-
-```go
-// FileExists checks if a file exists
-func FileExists(path string) bool
-
-// AtomicWrite writes data to a file atomically by writing to a temp file first
-func AtomicWrite(path string, data []byte) error
-```
-
-## Build & Version Info
-
-**Build-time injection via ldflags:**
-
-```makefile
-VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
-DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
-```
-
-**Variables in main.go:**
-
-```go
-var (
-    version = "dev"
-    commit  = "none"
-    date    = "unknown"
-)
-```
-
-## Pre-commit Workflow
-
-Automated via `.pre-commit-config.yaml`:
-
-1. **File hygiene**: trailing whitespace, EOF fixer, YAML validation
-2. **Go formatting**: `go fmt`
-3. **Go vetting**: `go vet`
-4. **Dependency management**: `go mod tidy`
-5. **Build verification**: `go build ./...`
-6. **Test execution**: `go test ./...`
-7. **Linting**: `golangci-lint run`
-
-All hooks use `GO111MODULE=on` and `pass_filenames: false` for consistency.
+None. The project has comprehensive linting configuration, clear conventions documented in CONTRIBUTING.md, and enforcement via pre-commit hooks and CI. All conventions are consistently applied throughout the codebase.

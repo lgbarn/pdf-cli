@@ -1,271 +1,337 @@
 # External Integrations
 
-## External Services
+## Overview
+pdf-cli is designed as a self-contained, offline-first CLI tool with minimal external dependencies. The only external integration is for OCR language data downloads from GitHub. No databases, authentication services, or third-party APIs are used. All PDF operations occur locally using embedded Go libraries.
 
-### GitHub
+## Findings
 
-#### Tesseract Training Data Repository
-- **URL**: `https://github.com/tesseract-ocr/tessdata_fast`
-- **Purpose**: Download OCR language training data files
-- **Usage**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go:24`
-- **Constant**: `TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"`
-- **Access Pattern**: HTTP GET requests for `{lang}.traineddata` files
-- **Languages Supported**: English (eng), German (deu), French (fra), and others
-- **When Used**: On-demand when WASM OCR backend requires language data not already cached
-- **Cache Location**: User config directory (`~/.config/pdf-cli/tessdata/` or `XDG_CONFIG_HOME`)
-- **Network Dependency**: Required for first-time OCR usage with WASM backend (after that, cached locally)
-- **Fallback**: No fallback - operation fails if download fails and file not cached
+### External Services
 
-#### GitHub Releases (Distribution)
-- **Repository**: `lgbarn/pdf-cli`
-- **Purpose**: Binary distribution and version management
-- **Automated via**: GoReleaser in `.github/workflows/release.yaml`
-- **Artifacts**: Cross-platform binaries, checksums, deb/rpm packages
-- **Trigger**: Git tags matching `v*` pattern
+#### Tesseract OCR Training Data (GitHub)
+
+- **Service**: GitHub raw file hosting
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 29)
+  - Base URL: `https://github.com/tesseract-ocr/tessdata_fast/raw/main`
+  - Purpose: Download language training data files (`.traineddata`) for OCR operations
+
+- **When triggered**:
+  - First use of OCR functionality with WASM backend
+  - When requested language data not found in local cache
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 171-181)
+
+- **Download pattern**:
+  - URL format: `{baseURL}/{lang}.traineddata`
+  - Examples:
+    - English: `https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata`
+    - German: `https://github.com/tesseract-ocr/tessdata_fast/raw/main/deu.traineddata`
+    - French: `https://github.com/tesseract-ocr/tessdata_fast/raw/main/fra.traineddata`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 213)
+
+- **HTTP client configuration**:
+  - Client: `http.DefaultClient` (standard library)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 260)
+  - Method: HTTP GET with context
+  - Timeout: 5 minutes (DefaultDownloadTimeout)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 38)
+
+- **Retry logic**:
+  - Max attempts: 3 (DefaultRetryAttempts)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 44)
+  - Base delay: 1 second with exponential backoff
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 47)
+  - Retry package: `/Users/lgbarn/Personal/pdf-cli/internal/retry/retry.go`
+  - Retryable: Network errors, HTTP 429 (Too Many Requests), HTTP 5xx
+  - Permanent failure: HTTP 4xx (except 429)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 268-277)
+
+- **Security measures**:
+  - SHA256 checksum verification for known languages
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 305-315)
+  - Checksum database: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/checksums.go`
+  - Supply chain attack detection: Aborts on checksum mismatch with clear error message
+  - Path sanitization: Prevents directory traversal
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 216-220)
+
+- **Local storage**:
+  - Directory: `~/.config/pdf-cli/tessdata/` (Linux/macOS)
+  - Directory: `%APPDATA%\pdf-cli\tessdata\` (Windows, inferred)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 162)
+  - Permissions: 0750 (owner rwx, group rx, no world access)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 41)
+  - Files persist across runs (cache)
+
+- **Progress tracking**:
+  - Real-time progress bar with byte count
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 279-286)
+  - Output: stderr (non-blocking for pipelines)
+
+- **User notification**:
+  - Download initiation message: "Downloading tessdata for '{lang}'..."
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 222)
+  - Checksum verification: "Checksum verified for {lang}.traineddata"
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 315)
+  - Warning for missing checksum: Displays computed SHA256
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 317-320)
+
+#### Network Error Handling
+
+- **No external connectivity required** for non-OCR operations
+- **Graceful degradation**: If tessdata download fails, OCR operation fails with clear error
+- **Offline mode**: Native Tesseract backend uses system-installed language data (no download)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (lines 108-114)
+  - System paths checked: `/opt/homebrew/share/tessdata`, `/usr/local/share/tessdata`, `/usr/share/tesseract-ocr/*/tessdata`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 96-119)
+
+### External System Dependencies (Optional)
+
+#### Native Tesseract OCR
+
+- **Type**: Optional system-installed binary
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 24-42)
+  - Detection: `exec.LookPath("tesseract")`
+  - Execution: Subprocess via `exec.CommandContext`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (line 70)
+
+- **Why external**:
+  - Native backend preferred for performance (faster than WASM)
+  - Provides access to system-installed language data
+  - Reduces binary size (WASM engine embedded in pdf-cli binary)
+
+- **Communication protocol**:
+  - Input: Image file path
+  - Output: Text written to temporary file
+  - Command pattern: `tesseract [--tessdata-dir DIR] IMAGE_PATH OUTPUT_BASE -l LANG`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (lines 86-92)
+  - Temporary files cleaned up via cleanup registry
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (lines 51-66)
+
+- **Version detection**:
+  - Command: `tesseract --version`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 44-62)
+  - Regex: `tesseract\s+(\d+\.\d+(?:\.\d+)?)`
+  - Version stored in NativeInfo struct
+
+- **Language availability**:
+  - Checks for `.traineddata` files in system tessdata directory
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (lines 108-114)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 121-142)
+
+- **Fallback behavior**:
+  - If native Tesseract not found, automatically falls back to WASM backend
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 132-136)
+  - User can force backend via config or flag
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (line 43)
+
+### Configuration Sources
+
+#### Environment Variables
+
+- **Configuration overrides** (no external service calls):
+  - `PDF_CLI_OUTPUT_FORMAT`: Output format (json, csv, tsv, human)
+  - `PDF_CLI_VERBOSE`: Enable verbose logging (true/1)
+  - `PDF_CLI_OCR_LANGUAGE`: Default OCR language
+  - `PDF_CLI_OCR_BACKEND`: OCR backend selection (auto, native, wasm)
+  - `PDF_CLI_PERF_OCR_THRESHOLD`: Parallel OCR threshold
+  - `PDF_CLI_PERF_TEXT_THRESHOLD`: Parallel text extraction threshold
+  - `PDF_CLI_PERF_MAX_WORKERS`: Max parallel workers
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (lines 136-164)
+
+- **XDG Base Directory Spec** (Linux/macOS):
+  - `XDG_CONFIG_HOME`: Custom config directory location
+  - Default: `~/.config`
+  - Config file: `${XDG_CONFIG_HOME}/pdf-cli/config.yaml`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (lines 95-106)
+
+- **System environment** (native Tesseract):
+  - `TESSDATA_PREFIX`: Override tessdata directory location
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 66-69)
+
+### File System Integrations
+
+#### Local Configuration File
+
+- **Type**: YAML configuration file
+  - Path: `~/.config/pdf-cli/config.yaml` (XDG-compliant)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (line 105)
+  - Format: YAML (gopkg.in/yaml.v3)
+  - Permissions: 0644 (DefaultFilePerm, inferred from fileio package)
+
+- **Configuration sections**:
+  - defaults: output_format, verbose, show_progress
+  - compress: quality (low, medium, high)
+  - encrypt: algorithm (aes128, aes256)
+  - ocr: language, backend
+  - performance: ocr_parallel_threshold, text_parallel_threshold, max_workers
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (lines 14-51)
+
+- **Load behavior**:
+  - Non-existence not treated as error (uses defaults)
+  - Environment variables override config file values
+  - Singleton pattern with lazy initialization
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (lines 187-213)
+
+#### Temporary File Storage
+
+- **System temp directory**: Used for intermediate processing
+  - PDF image extraction: `os.MkdirTemp("", "pdf-ocr-*")`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 334)
+  - OCR output files: `os.CreateTemp("", "ocr-output-*.txt")`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go` (line 51)
+  - Tessdata downloads: `os.CreateTemp(dataDir, "tessdata-*.tmp")`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 227)
+
+- **Cleanup mechanism**:
+  - Cleanup registry tracks all temporary files
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/cleanup/cleanup.go` (inferred from imports)
+  - Deferred cleanup on function exit
+  - Global cleanup on program termination
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/cmd/pdf/main.go` (line 28)
+
+### Standard I/O Integration
+
+#### stdin/stdout Support
+
+- **stdin reading**: Supports PDF input from pipe
+  - Pattern: `pdf text -` or `pdf info -`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/README.md` (lines 63-64)
+  - Implementation: `/Users/lgbarn/Personal/pdf-cli/internal/fileio/stdio.go` (inferred)
+  - Allows pipeline operations: `cat doc.pdf | pdf text -`
+
+- **stdout writing**: Supports PDF output to pipe
+  - Pattern: `pdf merge file1.pdf file2.pdf > output.pdf`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/README.md` (table line 98-100)
+  - Enables Unix pipeline workflows
+
+- **stderr usage**:
+  - Progress bars written to stderr (non-blocking)
+  - Error messages written to stderr
+  - Allows piping output while displaying progress
+
+### No Database Integration
+
+- **No database servers**: All operations in-memory or file-based
+- **No embedded databases**: No SQLite, BoltDB, or similar
+- **State persistence**: Only via configuration file and tessdata cache
+
+### No Authentication Services
+
+- **No OAuth/OIDC**: No external authentication
+- **No API keys**: No service-specific credentials required
+- **Password handling**: Only for PDF encryption/decryption (local operation)
+  - Passwords passed via CLI flags or stdin
+  - Not logged or persisted
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/SECURITY.md` (lines 36-39)
+
+### No Cloud Services
+
+- **No cloud storage**: S3, GCS, Azure Blob, etc. not supported
+- **No cloud APIs**: No AWS, GCP, Azure service integrations
+- **No telemetry**: No usage tracking or analytics
+- **No update checks**: No phone-home behavior
+
+### CI/CD Integrations (Development Only)
 
 #### GitHub Actions
-- **Purpose**: CI/CD automation
-- **Workflows**: 2 workflows (CI, Release)
-- **Permissions**: `contents: read` (CI), `contents: write` (Release)
-- **External Actions Used**:
-  - `actions/checkout@v4` - Repository checkout
-  - `actions/setup-go@v5` - Go toolchain installation
-  - `actions/upload-artifact@v4` - Build artifact storage
-  - `golangci/golangci-lint-action@v8` - Linting
-  - `goreleaser/goreleaser-action@v6` - Release automation
-  - `codecov/codecov-action@v4` - Coverage reporting
+
+- **Purpose**: Automated testing and releases
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml`
+  - Triggers: Push to main/master, pull requests
+  - Jobs: lint, test, build, security scan
+
+- **External actions used**:
+  - actions/checkout@v4 -- Repository checkout
+  - actions/setup-go@v5 -- Go installation
+  - actions/upload-artifact@v4 -- Build artifact storage
+  - golangci/golangci-lint-action@v8 -- Linting
+  - codecov/codecov-action@v4 -- Coverage upload
+  - goreleaser/goreleaser-action@v6 -- Release automation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` and `release.yaml`
 
 #### Codecov
-- **Purpose**: Code coverage tracking and visualization
-- **Integration**: Via `codecov/codecov-action@v4` in CI workflow
-- **Upload**: Automatic on PR and main branch commits
-- **File**: `coverage.out` (atomic mode)
-- **Fail Behavior**: `fail_ci_if_error: false` (non-blocking)
-- **Dashboard**: Likely at `https://codecov.io/gh/lgbarn/pdf-cli`
+
+- **Service**: Code coverage tracking
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (lines 56-60)
+  - Upload: codecov-action uploads `coverage.out`
+  - Fail behavior: `fail_ci_if_error: false` (non-blocking)
+  - Purpose: Code quality metrics (not required for operation)
 
 #### Dependabot
-- **Purpose**: Automated dependency updates
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/.github/dependabot.yaml`
-- **Update Frequency**: Weekly
-- **Monitored Ecosystems**:
-  - Go modules (`go.mod`, `go.sum`)
-  - GitHub Actions (workflow files)
-- **PR Limits**: 5 per ecosystem
-- **Commit Convention**: Prefixed with `deps:` or `ci:`
 
-## External System Dependencies
+- **Service**: GitHub-native dependency updates
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/dependabot.yaml`
+  - Monitors: Go modules, GitHub Actions
+  - Frequency: Weekly
+  - No external API calls (GitHub-integrated)
 
-### Tesseract OCR (Optional Native Backend)
-- **Type**: Optional system dependency
-- **Purpose**: Native OCR processing (alternative to WASM backend)
-- **Detection**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go`
-- **Discovery Method**: `exec.LookPath("tesseract")`
-- **Version Detection**: `tesseract --version` command
-- **Supported Platforms**:
-  - **macOS**: Homebrew (`/opt/homebrew/share/tessdata`, `/usr/local/share/tessdata`)
-  - **Linux**: Package managers (`/usr/share/tesseract-ocr/*/tessdata`, `/usr/share/tessdata`)
-  - **Windows**: Program Files (`C:\Program Files\Tesseract-OCR\tessdata`)
-- **Backend Selection**: Auto-selected if available, otherwise falls back to WASM
-- **Configuration**: Can be forced via `--ocr-backend native` flag or `PDF_CLI_OCR_BACKEND=native`
-- **Tessdata Location**: Detected via:
-  1. `TESSDATA_PREFIX` environment variable
-  2. `tesseract --print-parameters` output parsing
-  3. Common OS-specific paths
-- **No Installation Required**: WASM backend works without Tesseract installed
+## Summary Table
 
-## Data Storage
-
-### Local File System
-
-#### User Configuration
-- **Location**: `~/.config/pdf-cli/config.yaml`
-- **Standard**: XDG Base Directory Specification
-- **Override**: `XDG_CONFIG_HOME` environment variable
-- **Format**: YAML
-- **Permissions**: 0600 (read/write owner only)
-- **Directory Permissions**: 0750
-- **Structure**:
-  ```yaml
-  defaults:
-    output_format: human|json|csv|tsv
-    verbose: bool
-    show_progress: bool
-  compress:
-    quality: low|medium|high
-  encrypt:
-    algorithm: aes128|aes256
-  ocr:
-    language: eng|deu|fra|...
-    backend: auto|native|wasm
-  ```
-- **Default Behavior**: Falls back to hardcoded defaults if file missing
-
-#### OCR Training Data Cache
-- **Location**: Same as config directory (`~/.config/pdf-cli/tessdata/`)
-- **Files**: `{language}.traineddata` (e.g., `eng.traineddata`)
-- **Size**: Varies by language (~10-30MB per language)
-- **Persistence**: Permanent cache (not cleaned automatically)
-- **Download**: Automatic on first use of WASM OCR with specific language
-- **Reuse**: Shared between all WASM OCR operations
-
-#### Temporary Files
-- **Base**: System temp directory (via `os.MkdirTemp`)
-- **Patterns**:
-  - `pdf-cli-text-*` - Text extraction working directory
-  - `pdf-merge-*.pdf` - Merge operation intermediate file
-  - Image files during OCR processing
-- **Cleanup**: Deferred cleanup via `defer os.RemoveAll(tmpDir)`
-- **Permissions**: Default system temp permissions
-
-## I/O Interfaces
-
-### Standard Input/Output
-- **stdin Support**: Yes - use `-` as input filename
-- **stdout Support**: Yes - via `--stdout` flag for binary PDF output
-- **stderr**: Used for progress bars and logging
-- **Use Cases**:
-  - `cat input.pdf | pdf text -`
-  - `curl -s https://example.com/doc.pdf | pdf info -`
-  - `pdf compress - --stdout > output.pdf`
-- **Implementation**: `/Users/lgbarn/Personal/pdf-cli/internal/fileio/stdio.go`
-- **Pattern Handling**: `/Users/lgbarn/Personal/pdf-cli/internal/commands/patterns/stdio.go`
-
-### Terminal Detection
-- **Library**: `golang.org/x/term`
-- **Purpose**: Determine if running in interactive terminal
-- **Impact**: Affects progress bar display and password prompting
-- **Detection Points**:
-  - Interactive mode for confirmation prompts
-  - Progress bar suppression in non-TTY contexts
-  - Password input masking
-
-## No Database Systems
-
-**Note**: This application does not integrate with any database systems. All data is:
-- Processed in-memory during operations
-- Read from and written to PDF files
-- Configured via local YAML file
-- Cached in local filesystem (OCR training data)
-
-## No Authentication Services
-
-**Note**: No OAuth, API keys, or authentication services are used except:
-- GitHub tokens (only in CI/CD via `GITHUB_TOKEN` secret, managed by GitHub Actions)
-- PDF user/owner passwords (provided by user, used locally only)
-
-## Network Communication Summary
-
-### Outbound Connections
-1. **Tesseract Training Data Downloads**
-   - Host: `github.com`
-   - Path: `/tesseract-ocr/tessdata_fast/raw/main/{lang}.traineddata`
-   - Protocol: HTTPS
-   - Frequency: Once per language (cached thereafter)
-   - Required: Only for WASM OCR with new language
-
-### No Inbound Connections
-- Application does not listen on any network ports
-- No web server or API endpoints
-- Pure CLI tool
-
-## External Command Execution
-
-### Tesseract (Native Backend)
-- **Command**: `tesseract` (from PATH)
-- **Detection**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go:26`
-  - `exec.LookPath("tesseract")` finds executable
-- **Version Check**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go:45`
-  - `tesseract --version`
-- **Data Directory Detection**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go:72`
-  - `tesseract --print-parameters`
-- **OCR Processing**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/native.go`
-  - `tesseract {input} {output} -l {lang}`
-  - Input: Temporary image files
-  - Output: Text files
-  - Context-aware: Supports cancellation via `context.Context`
-- **Security**: All commands use `#nosec G204` with justification - paths validated via `exec.LookPath`
-
-### No Other External Commands
-- Build system uses standard Go toolchain
-- No shell scripts executed at runtime
-- No system utilities called (other than Tesseract)
-
-## Package Repositories
-
-### Go Module Proxy
-- **Default**: `proxy.golang.org`
-- **Purpose**: Dependency resolution and download
-- **Dependencies**: 13 direct, 22 total (including indirect)
-- **Checksum Database**: `sum.golang.org`
-- **Files**: `go.mod`, `go.sum`
-
-### Pre-commit Hook Repository
-- **Host**: `github.com/pre-commit/pre-commit-hooks`
-- **Version**: v5.0.0
-- **Purpose**: Developer tooling (not runtime dependency)
-
-## Monitoring & Observability
-
-### No Telemetry
-- No analytics or telemetry data collected
-- No phone-home functionality
-- No crash reporting services
-- No usage tracking
-
-### Logging
-- **Destination**: stderr (via `/Users/lgbarn/Personal/pdf-cli/internal/logging/logger.go`)
-- **Levels**: Error, Warning, Info, Debug, Verbose
-- **Format**: Text-based, human-readable
-- **Configuration**: Controlled by `--verbose`, `--log-level`, `--log-format` flags
-- **Output**: Local only (never sent to external services)
+| Integration | Type | Purpose | Network Required | Confidence |
+|------------|------|---------|-----------------|------------|
+| GitHub tessdata | HTTP Download | OCR language data | Yes (first use) | Observed |
+| Native Tesseract | System Binary | OCR processing | No | Observed |
+| XDG Config | File System | User configuration | No | Observed |
+| Temp Directory | File System | Intermediate files | No | Observed |
+| stdin/stdout | Standard I/O | Pipeline support | No | Observed |
+| GitHub Actions | CI/CD | Automated builds | N/A (dev only) | Observed |
+| Codecov | CI/CD | Coverage reporting | N/A (dev only) | Observed |
+| Dependabot | CI/CD | Dependency updates | N/A (dev only) | Observed |
 
 ## Security Considerations
 
-### Security Scanning
-- **Tool**: gosec v2.21.4
-- **Frequency**: Every PR and commit to main
-- **Scope**: All Go source files (excluding `testdata/`)
-- **Integration**: GitHub Actions security job
+### Download Security
 
-### Dependency Scanning
-- **Tool**: Dependabot (GitHub native)
-- **Scope**: Go modules and GitHub Actions
-- **Alerts**: Via GitHub Security tab
-- **Updates**: Automated PRs weekly
+- **Checksum verification**: SHA256 validation for tessdata downloads
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 305-315)
+  - Known checksums: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/checksums.go`
+  - Failure mode: Explicit error message warning of potential supply chain attack
 
-### HTTPS Enforcement
-- **Tesseract Data**: Always downloaded via HTTPS
-- **No Insecure Protocols**: No HTTP, FTP, or other insecure protocols used
+- **Path sanitization**: Prevents directory traversal in file operations
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 216-220)
+  - Function: `fileio.SanitizePath()`
 
-### No Secrets Storage
-- PDF passwords: Provided via flags/prompts, used in-memory only
-- No credentials persisted to disk
-- No API keys or tokens (except CI/CD environment)
+- **HTTPS enforcement**: URL upgrades HTTP to HTTPS (if supported)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/SECURITY.md` (line 42)
+  - Base URL already HTTPS
 
-## Platform-Specific Integrations
+### Privacy
 
-### macOS
-- **Homebrew Paths**: `/opt/homebrew`, `/usr/local` (for Tesseract)
-- **Code Signing**: Not implemented in current build
-- **Notarization**: Not implemented
+- **No telemetry**: No usage data collected
+- **No external logging**: Logs stay local
+- **No credential storage**: Passwords not persisted
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/SECURITY.md` (lines 36-39)
 
-### Linux
-- **Package Managers**: deb/rpm packages generated via GoReleaser + nfpm
-- **Install Locations**: `/usr/bin/pdf`
-- **Standards**: FHS (Filesystem Hierarchy Standard) compliant
+### Offline Operation
 
-### Windows
-- **Program Files**: Detection for Tesseract installation
-- **Path Separators**: Handled via `filepath` package
-- **Binary Extension**: `.exe` suffix
-- **Archive Format**: ZIP (instead of tar.gz)
+- **Core features**: Work completely offline (merge, split, encrypt, text, images, compress, etc.)
+- **OCR fallback**: Native Tesseract uses system data (offline)
+- **WASM OCR**: Requires one-time download per language, then offline
 
-## Future Integration Considerations
+## Integration Failure Modes
 
-Based on code structure and patterns, potential future integrations might include:
-- Cloud storage providers (for PDF source/destination)
-- Additional OCR backends
-- PDF/A validation services
-- Digital signature services
+### Tessdata Download Failure
 
-However, **none of these are currently implemented**.
+- **Symptom**: OCR operation fails with download error
+- **Causes**: Network unavailable, GitHub down, rate limiting, firewall
+- **Mitigation**: Install native Tesseract with system package manager
+- **User control**: Can pre-download tessdata files manually
+
+### Native Tesseract Unavailable
+
+- **Symptom**: Fallback to WASM backend (slower)
+- **Causes**: Tesseract not installed or not in PATH
+- **Mitigation**: Automatic fallback (transparent to user)
+- **User control**: Set `PDF_CLI_OCR_BACKEND=wasm` to bypass detection
+
+### Filesystem Errors
+
+- **Symptom**: Cannot create temp files or read config
+- **Causes**: Disk full, permission denied, invalid paths
+- **Mitigation**: Detailed error messages guide user to issue
+- **User control**: Set TMPDIR or XDG_CONFIG_HOME to writable location
+
+## Open Questions
+
+- Is there a plan to support direct HTTP(S) URL input for PDFs (e.g., `pdf info https://example.com/doc.pdf`)?
+- Are there any plans to integrate with cloud storage providers (S3, Dropbox, etc.)?
+- Should there be an option to use a local mirror for tessdata downloads (e.g., corporate networks)?
+- Is there consideration for optional telemetry (opt-in) to track feature usage for prioritization?

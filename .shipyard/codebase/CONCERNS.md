@@ -1,691 +1,328 @@
-# Codebase Concerns Analysis
+# CONCERNS.md
 
-This document identifies technical debt, security concerns, performance issues, and upgrade needs in the pdf-cli codebase.
+## Overview
+The pdf-cli codebase demonstrates strong engineering practices overall with comprehensive testing (75% coverage threshold enforced), security scanning via gosec, and modern Go 1.25. However, several areas warrant attention: context.TODO usage in critical paths, limited language support for OCR checksum verification, deprecated password flag still in use, and potential goroutine leaks in parallel processing paths.
 
-## Priority Legend
+## Findings
 
-- **P0 (Critical)**: Security vulnerabilities or data loss risks requiring immediate attention
-- **P1 (High)**: Issues affecting reliability, performance, or maintenance significantly
-- **P2 (Medium)**: Technical debt that should be addressed in upcoming releases
-- **P3 (Low)**: Nice-to-have improvements with minimal impact
+### P0 - Critical Issues
 
----
+**None Identified**
 
-## P0 - Critical Security Concerns
-
-### 1. Password Handling in Command Line
-
-**Location**: `/internal/cli/flags.go:30-36`, `/internal/commands/*.go` (multiple files)
-
-**Issue**: Passwords are passed via command-line flags (`--password`), which exposes them in:
-- Process listings (`ps aux`)
-- Shell history files
-- System logs
-- Parent process environments
-
-**Evidence**:
-```go
-// internal/cli/flags.go
-func AddPasswordFlag(cmd *cobra.Command, usage string) {
-    cmd.Flags().String("password", "", usage)
-}
-
-// Usage throughout commands:
-pdf decrypt secure.pdf --password mysecret -o unlocked.pdf
-```
-
-**Impact**: Credentials can be logged or viewed by other users on multi-user systems.
-
-**Recommendation**:
-- Add stdin password reading support (e.g., `--password-stdin` or prompt interactively)
-- Support reading passwords from environment variables
-- Warn users in documentation about command-line password risks
-- Consider adding a `--password-file` option
-
-**References**: SECURITY.md mentions this issue but implementation doesn't mitigate it.
+The codebase has no critical security vulnerabilities or show-stopping issues. Security scanning is active in CI, paths are sanitized, and password handling follows secure patterns.
 
 ---
 
-### 2. HTTP Download Security - No Certificate Validation Controls
+### P1 - High Priority Issues
 
-**Location**: `/internal/ocr/ocr.go:169-209`
+#### **Context Management: context.TODO in Production Code**
+- **Issue**: Using `context.TODO()` instead of propagating parent context in OCR download operations
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/wasm.go` (line 53)
+    ```go
+    if err := downloadTessdata(context.TODO(), w.dataDir, l); err != nil {
+    ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 175)
+    ```go
+    if err := downloadTessdata(context.TODO(), e.dataDir, lang); err != nil {
+    ```
+- **Impact**: Downloads cannot be cancelled via parent context; user interrupts (Ctrl+C) won't cancel in-flight tessdata downloads
+- **Severity**: High - affects user experience and resource management
+- **Recommendation**: Pass `ctx` from caller instead of `context.TODO()`
 
-**Issue**: Tessdata downloads use `http.DefaultClient` without explicit TLS configuration or checksum verification. While HTTPS is used, there's no integrity verification of downloaded files.
-
-**Evidence**:
-```go
-// internal/ocr/ocr.go
-func downloadTessdata(dataDir, lang string) error {
-    url := fmt.Sprintf("%s/%s.traineddata", TessdataURL, lang)
-    // TessdataURL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main"
-
-    resp, err := http.DefaultClient.Do(req)  // No checksum verification
-    if err != nil {
-        return err
+#### **OCR Security: Limited Checksum Coverage**
+- **Issue**: Only English language has SHA256 checksum verification; other languages download without integrity checks
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/checksums.go` (lines 9-11)
+    ```go
+    var KnownChecksums = map[string]string{
+        "eng": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
     }
-    // ... writes directly to file without verification
-}
-```
-
-**Impact**:
-- Potential supply chain attack vector
-- Downloaded files could be corrupted or malicious
-- No way to verify file authenticity
-
-**Recommendation**:
-- Add SHA256 checksum verification for downloaded tessdata files
-- Implement retry logic with exponential backoff
-- Add download size limits to prevent DoS
-- Consider caching checksums or using signed releases
-
----
-
-### 3. Lack of Input Sanitization for File Paths
-
-**Location**: Multiple locations, especially `/internal/fileio/files.go`
-
-**Issue**: While `filepath.Clean()` is used in some places, there's inconsistent path sanitization across the codebase. Several operations use user-provided paths directly with only basic validation.
-
-**Evidence**:
-```go
-// internal/fileio/files.go:86-88
-func CopyFile(src, dst string) error {
-    cleanSrc := filepath.Clean(src)
-    cleanDst := filepath.Clean(dst)
-    // Good practice, but not consistently applied everywhere
-}
-
-// But in other places:
-// internal/pdf/text.go:176
-filePath := filepath.Join(tmpDir, filepath.Base(file.Name()))
-data, err := os.ReadFile(filePath) // #nosec G304 -- path is within controlled tmpDir
-```
-
-**Impact**: Potential path traversal vulnerabilities, though mitigated by nosec annotations showing manual review.
-
-**Recommendation**:
-- Create a centralized path sanitization function
-- Validate all user-provided paths against expected directories
-- Add explicit directory traversal prevention checks
-- Document security assumptions in code comments
-
----
-
-## P1 - High Priority Issues
-
-### 4. Global Mutable State (Race Condition Risk)
-
-**Location**: `/internal/config/config.go:142-155`, `/internal/logging/logger.go:82-130`
-
-**Issue**: Both config and logging packages use global mutable state without synchronization. While single-threaded CLI usage makes this safe currently, the codebase uses goroutines for parallel processing.
-
-**Evidence**:
-```go
-// internal/config/config.go
-var global *Config  // No mutex protection
-
-func Get() *Config {
-    if global == nil {
-        var err error
-        global, err = Load()  // Race if called from multiple goroutines
+    ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 316-321)
+    ```go
+    } else {
+        fmt.Fprintf(os.Stderr,
+            "WARNING: No checksum available for language '%s'. Computed SHA256: %s\n",
+            lang, computedHash,
+        )
     }
-    return global
-}
+    ```
+- **Impact**: Users of non-English OCR are vulnerable to corrupted downloads or supply chain attacks
+- **Severity**: High - security vulnerability for multi-language OCR users
+- **Recommendation**: Add checksums for commonly used languages (fra, deu, spa, etc.) or implement automated checksum generation
 
-// internal/logging/logger.go
-var global *Logger  // No mutex protection
+#### **Deprecated Password Flag Still Active**
+- **Issue**: The `--password` flag is deprecated but still functional, exposing passwords in process listings
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/cli/password.go` (lines 47-52)
+    ```go
+    // 3. Check --password flag (deprecated)
+    if cmd.Flags().Lookup("password") != nil {
+        password, _ := cmd.Flags().GetString("password")
+        if password != "" {
+            fmt.Fprintln(os.Stderr, "WARNING: --password flag is deprecated...")
+    ```
+- **Impact**: Users may continue using insecure password passing despite warnings
+- **Severity**: High - security concern (password exposure in `ps` output)
+- **Recommendation**: Remove flag in next major version (v3.0.0) or disable it by default with explicit opt-in
 
-func Get() *Logger {
-    if global == nil {
-        Init(LevelSilent, FormatText)  // Race condition possible
+---
+
+### P2 - Medium Priority Issues
+
+#### **Parallel Processing: Potential Goroutine Leak on Context Cancel**
+- **Issue**: Goroutines may continue running after context cancellation in parallel text extraction
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdf/text.go` (lines 140-148)
+    ```go
+    for _, pageNum := range pages {
+        if ctx.Err() != nil {
+            // Context canceled, don't launch more work
+            break
+        }
+        go func(pn int) {
+            results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
+        }(pageNum)
     }
-    return global
-}
-```
+    ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 478-492)
+    ```go
+    for i, imgPath := range imageFiles {
+        if ctx.Err() != nil {
+            // Context canceled, don't launch more work
+            break
+        }
+        // Goroutines launched but may not check context
+    ```
+- **Impact**: Goroutines launched before cancellation continue processing, wasting resources
+- **Severity**: Medium - resource leak on user cancellation
+- **Recommendation**: Check `ctx.Err()` inside goroutines before expensive operations
 
-**Impact**:
-- Potential race conditions if concurrent operations access config/logging during initialization
-- Tests using `Reset()` could interfere with parallel test execution
+#### **HTTP Client: No Timeout Configuration**
+- **Issue**: Using `http.DefaultClient` without custom timeout configuration for tessdata downloads
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 260)
+    ```go
+    resp, doErr := http.DefaultClient.Do(req)
+    ```
+- **Impact**: Network requests may hang indefinitely despite context timeout being set on request
+- **Severity**: Medium - DefaultClient has no timeout by default, though request context provides some protection
+- **Recommendation**: Create custom `http.Client` with `Timeout` field set for defense-in-depth
 
-**Recommendation**:
-- Use `sync.Once` for lazy initialization
-- Add mutex protection for global state access
-- Consider dependency injection instead of global state
-
----
-
-### 5. Context Usage - Missing Context Propagation
-
-**Location**: `/internal/ocr/ocr.go:316`, `/internal/ocr/wasm.go:123`
-
-**Issue**: Multiple places use `context.Background()` instead of accepting context from callers. This prevents proper cancellation propagation and timeout handling.
-
-**Evidence**:
-```go
-// internal/ocr/ocr.go:316
-ctx := context.Background()  // Should accept ctx from caller
-for _, imgPath := range imageFiles {
-    text, err := e.backend.ProcessImage(ctx, imgPath, e.lang)
-}
-
-// internal/ocr/wasm.go:123
-func (w *WASMBackend) Close() error {
-    if w.tess != nil {
-        return w.tess.Close(context.Background())  // Hardcoded context
+#### **Password File: Limited Size Validation**
+- **Issue**: Password file size limited to 1KB but no validation of content (e.g., binary data, non-printable chars)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/cli/password.go` (lines 35-38)
+    ```go
+    if len(data) > 1024 {
+        return "", fmt.Errorf("password file exceeds 1KB size limit")
     }
-    return nil
-}
-```
+    return strings.TrimSpace(string(data)), nil
+    ```
+- **Impact**: Potential confusion if user points to wrong file; binary data silently converted to string
+- **Severity**: Medium - usability issue more than security
+- **Recommendation**: Validate that file contains only printable characters or warn if suspicious content detected
 
-**Impact**:
-- Cannot cancel long-running operations
-- No timeout support for OCR operations
-- Resource leaks if operations hang
-
-**Recommendation**:
-- Add `context.Context` parameter to all long-running functions
-- Propagate context from command layer through all operations
-- Add timeout handling for HTTP downloads and OCR processing
-
----
-
-### 6. Error Handling - Silent Errors in Parallel Processing
-
-**Location**: `/internal/pdf/text.go:106-150`, `/internal/fileio/files.go:143-167`
-
-**Issue**: Parallel processing code silently ignores errors in some cases, which could lead to incomplete results without user notification.
-
-**Evidence**:
-```go
-// internal/pdf/text.go:122-124
-go func(pn int) {
-    results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
-}(pageNum)  // extractPageText swallows errors, returns empty string
-
-// internal/fileio/files.go:159-165
-for range paths {
-    r := <-results
-    if r.err != nil && firstErr == nil {
-        firstErr = r.err  // Only reports FIRST error, rest are silent
+#### **Error Handling: Silent Failures in Text Extraction**
+- **Issue**: Text extraction from individual pages silently returns empty string on errors
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdf/text.go` (lines 110-123)
+    ```go
+    func extractPageText(r *pdf.Reader, pageNum, totalPages int) string {
+        if pageNum < 1 || pageNum > totalPages {
+            return ""
+        }
+        // ...
+        if err != nil {
+            return ""
+        }
+        return text
     }
-}
-```
+    ```
+- **Impact**: Users may not realize pages failed to extract; no indication in output or logs
+- **Severity**: Medium - silent data loss
+- **Recommendation**: Collect errors and return as warning or log at debug level
 
-**Impact**:
-- Users may not know that some pages/files failed to process
-- Silent failures lead to incomplete output
-- Debugging is difficult when errors are swallowed
-
-**Recommendation**:
-- Collect all errors and report them comprehensively
-- Add verbose logging for skipped/failed items
-- Return partial success indication with error details
-
----
-
-### 7. Dependency Version Management
-
-**Location**: `go.mod`
-
-**Issue**: Using non-semantic versioned dependencies and outdated packages. At least 21 dependencies have newer versions available.
-
-**Evidence**:
-```
-// From go.mod
-github.com/danlock/gogosseract v0.0.11-0ad3421  // Commit hash, not semantic version
-github.com/danlock/pkg v0.0.17-a9828f2          // Commit hash, not semantic version
-
-// Outdated dependencies (from go list -m -u all):
-github.com/clipperhouse/uax29/v2 v2.2.0 [v2.4.0]
-github.com/danlock/pkg v0.0.17-a9828f2 [v0.0.46-2e8eb6d]
-github.com/google/pprof v0.0.0-20210407192527 [v0.0.0-20260115054156]
-github.com/jerbob92/wazero-emscripten-embind v1.3.0 [v1.5.2]
-... 17 more outdated packages
-```
-
-**Impact**:
-- Missing security patches
-- Missing bug fixes and performance improvements
-- Harder to track dependency changes
-- Potential compatibility issues
-
-**Recommendation**:
-- Update all dependencies to latest stable versions
-- Switch from commit hashes to tagged releases
-- Add Dependabot or similar tool for automated dependency updates
-- Document dependency update policy in CONTRIBUTING.md
-
----
-
-### 8. Missing Resource Cleanup - Deferred Close Errors Ignored
-
-**Location**: Throughout codebase
-
-**Issue**: Deferred `Close()` calls ignore errors, which could lead to data loss or incomplete writes. The `.golangci.yaml` explicitly excludes these from errcheck linting.
-
-**Evidence**:
-```go
-// Pattern appears in multiple files:
-defer f.Close()  // Error ignored
-defer resp.Body.Close()  // Error ignored
-
-// .golangci.yaml:60-64
-exclusions:
-  rules:
-    - linters:
-        - errcheck
-      text: "Error return value of .*(Close|Remove|RemoveAll).*is not checked"
-```
-
-**Impact**:
-- File write operations may not complete (buffered data not flushed)
-- Network connections may not close cleanly
-- Resource leaks in error paths
-
-**Recommendation**:
-- Check `Close()` errors for file writes
-- Use named return values and defer error checking
-- At minimum, log ignored close errors in verbose mode
-
----
-
-## P2 - Medium Priority Technical Debt
-
-### 9. Go Version Requirement Mismatch
-
-**Location**: `go.mod:3`, `CONTRIBUTING.md:8`, `README.md:71`
-
-**Issue**: Documentation claims Go 1.21+ compatibility, but go.mod specifies Go 1.24.1 (bleeding edge at time of analysis).
-
-**Evidence**:
-```go
-// go.mod
-go 1.24.1
-
-// CONTRIBUTING.md
-Prerequisites
-- Go 1.21 or later
-
-// README.md
-Prerequisites
-- Go 1.24 or later
-```
-
-**Impact**:
-- Users with Go 1.21-1.23 may encounter unexpected issues
-- Documentation inconsistency confuses users
-- May exclude users on stable Go versions
-
-**Recommendation**:
-- Use the minimum supported Go version in go.mod (likely 1.21 or 1.22)
-- Align all documentation
-- Test against multiple Go versions in CI
-
----
-
-### 10. Large Test Files and Coverage Gaps
-
-**Location**: `/internal/pdf/pdf_test.go` (2340 lines)
-
-**Issue**: Some test files are very large and difficult to maintain. The largest test file has 2,340 lines, making it hard to navigate and maintain.
-
-**Evidence**:
-```bash
-# Largest test files:
-2340 ./internal/pdf/pdf_test.go
-882 ./internal/commands/commands_integration_test.go
-620 ./internal/commands/additional_coverage_test.go
-```
-
-**Impact**:
-- Harder to maintain and understand tests
-- Slower test execution
-- Difficult to identify which specific functionality is being tested
-
-**Recommendation**:
-- Split large test files by functionality
-- Use table-driven tests more consistently
-- Consider sub-test organization with `t.Run()`
-
----
-
-### 11. Temporary File Management Risk
-
-**Location**: `/internal/ocr/ocr.go:219-223`, `/internal/pdf/text.go:154-158`
-
-**Issue**: Temporary directories are created and cleaned up with `defer os.RemoveAll()`, but if the process crashes or is killed, temp files may persist.
-
-**Evidence**:
-```go
-// internal/ocr/ocr.go
-tmpDir, err := os.MkdirTemp("", "pdf-ocr-*")
-if err != nil {
-    return "", fmt.Errorf("failed to create temp directory: %w", err)
-}
-defer os.RemoveAll(tmpDir)  // Won't run if process killed
-```
-
-**Impact**:
-- Disk space consumption from orphaned temp files
-- Potential sensitive data exposure in temp directories
-- No cleanup mechanism for stale temp files
-
-**Recommendation**:
-- Document temp file location for manual cleanup
-- Consider adding a cleanup command
-- Use OS temp directory cleaning (relies on OS-level cleanup)
-- Add process exit handlers where appropriate
-
----
-
-### 12. Limited PDF/A Support
-
-**Location**: Documentation and `/internal/pdf/validation.go`
-
-**Issue**: PDF/A validation is explicitly documented as basic/limited, but users may not realize the limitations until after attempting validation.
-
-**Evidence**:
-```markdown
-// README.md:419-432
-> **⚠️ PDF/A Limitations**
-> This tool provides **basic** PDF/A validation and optimization, not full ISO compliance:
-> | Feature | Status |
-> | Font embedding check | ✗ Limited |
-> | Color profile validation | ✗ Not supported |
-> | Full ISO 19005 compliance | ✗ Not supported |
-```
-
-**Impact**:
-- Users may rely on incomplete validation
-- False sense of compliance
-- Potential issues when submitting to systems requiring full PDF/A
-
-**Recommendation**:
-- Make limitations more prominent in command output
-- Add warning when validation is run
-- Consider removing feature if not fully supported or integrate with veraPDF
-
----
-
-### 13. No Rate Limiting on External Downloads
-
-**Location**: `/internal/ocr/ocr.go:169-209`
-
-**Issue**: No rate limiting or retry logic for tessdata downloads from GitHub.
-
-**Evidence**:
-```go
-func downloadTessdata(dataDir, lang string) error {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-    defer cancel()
-
-    req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-    // No retry logic, no rate limiting
-    resp, err := http.DefaultClient.Do(req)
-}
-```
-
-**Impact**:
-- Single failure means user must retry manually
-- Could hit GitHub rate limits with multiple parallel downloads
-- No graceful degradation
-
-**Recommendation**:
-- Add exponential backoff retry logic
-- Implement rate limiting for multiple language downloads
-- Cache downloaded files more aggressively
-- Consider bundling common languages
-
----
-
-### 14. WASM Backend Performance Concerns
-
-**Location**: `/internal/ocr/ocr.go:302-307`
-
-**Issue**: WASM OCR backend is forced to single-threaded execution even for large batches, significantly slower than native Tesseract.
-
-**Evidence**:
-```go
-// internal/ocr/ocr.go:302-307
-func (e *Engine) processImages(imageFiles []string, showProgress bool) (string, error) {
-    // Use sequential processing for small batches or WASM backend (not thread-safe)
-    if len(imageFiles) <= parallelThreshold || e.backend.Name() == "wasm" {
-        return e.processImagesSequential(imageFiles, showProgress)
+#### **Temporary File Cleanup: Race Condition Window**
+- **Issue**: Cleanup registry uses slice index tracking which can fail if cleanup runs concurrently during registration
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/cleanup/cleanup.go` (lines 20-34)
+    ```go
+    func Register(path string) func() {
+        mu.Lock()
+        defer mu.Unlock()
+        idx := len(paths)
+        paths = append(paths, path)
+        return func() {
+            mu.Lock()
+            defer mu.Unlock()
+            if idx < len(paths) {
+                paths[idx] = "" // mark as unregistered
+            }
+        }
     }
-    return e.processImagesParallel(imageFiles, showProgress)
-}
-```
-
-**Impact**:
-- WASM OCR is significantly slower for multi-page documents
-- No way to parallelize WASM operations
-- Poor user experience for large documents without native Tesseract
-
-**Recommendation**:
-- Document performance difference in README
-- Encourage native Tesseract installation where possible
-- Consider worker pool with multiple WASM instances if library supports it
-- Add estimated time warnings for large WASM operations
+    ```
+- **Impact**: Index may be out of bounds if Run() clears slice while unregister executes; though mutex protects against this, the idempotent Run() using `hasRun` flag could cause issues if reset during execution
+- **Severity**: Medium - edge case in cleanup logic
+- **Recommendation**: Use map[string]bool instead of slice with indices
 
 ---
 
-## P3 - Low Priority Improvements
+### P3 - Low Priority Issues
 
-### 15. Hardcoded Magic Numbers
+#### **Testing: Panic Usage in Test Helpers**
+- **Issue**: Test helper functions use `panic()` which can make debugging harder
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/testing/fixtures.go` (lines 14, 36, 46, 52)
+    ```go
+    panic("failed to get caller information")
+    panic("failed to create temp dir: " + err.Error())
+    panic("failed to create temp file: " + err.Error())
+    panic("failed to write temp file: " + err.Error())
+    ```
+- **Impact**: Test failures less informative; panics bypass deferred cleanup
+- **Severity**: Low - test-only code
+- **Recommendation**: Return errors from test helpers instead of panicking
 
-**Location**: Various files
+#### **Performance: Sequential Downloads During Retry**
+- **Issue**: Progress bar created once for retry loop but may not display correctly on retries
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 239-241)
+    ```go
+    // Progress bar created once; may not display perfectly on retries
+    var bar *progressbar.ProgressBar
+    ```
+- **Impact**: Users see confusing progress output during download retries
+- **Severity**: Low - cosmetic issue
+- **Recommendation**: Reset/recreate progress bar on each retry attempt
 
-**Issue**: Magic numbers scattered throughout code without named constants.
+#### **Dependency: Pseudo-versions in Production**
+- **Issue**: Using pseudo-versioned dependencies (not proper semver tags)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (lines 6-7, 18)
+    ```go
+    github.com/danlock/gogosseract v0.0.11-0ad3421
+    github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
+    github.com/danlock/pkg v0.0.46-2e8eb6d
+    ```
+- **Impact**: Harder to track dependency updates; no semantic versioning guarantees
+- **Severity**: Low - common in Go ecosystem but not ideal
+- **Recommendation**: Request maintainers to publish proper releases or fork and maintain tagged versions
 
-**Evidence**:
-```go
-// internal/ocr/ocr.go:299
-const parallelThreshold = 5
+#### **Code Duplication: Repeated Output Filename Generation**
+- **Issue**: Batch operations duplicate suffix patterns across commands
+  - Evidence: Multiple commands use `outputOrDefault(output, inputFile, "_compressed.pdf")` pattern
+  - Files: `/Users/lgbarn/Personal/pdf-cli/internal/commands/compress.go`, `encrypt.go`, `decrypt.go`, etc.
+- **Impact**: Inconsistent suffix naming if someone forgets to update all locations
+- **Severity**: Low - technical debt
+- **Recommendation**: Define suffix constants in a central location
 
-// internal/pdf/text.go:58
-if len(pages) > 5 {  // Hardcoded threshold
+#### **Security: Directory Permissions Too Permissive**
+- **Issue**: Directories created with 0750 permissions; group read/execute enabled
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/fileio/files.go` (line 15)
+    ```go
+    DefaultDirPerm = 0750
+    ```
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 41)
+    ```go
+    DefaultDataDirPerm = 0750
+    ```
+- **Impact**: Users in same group can read tessdata/config directories
+- **Severity**: Low - acceptable for most use cases; sensitive files use 0600
+- **Recommendation**: Consider 0700 for user-only access, though current permissions are acceptable
 
-// internal/fileio/files.go:28
-return os.MkdirAll(path, 0750)  // Permission constant
-```
-
-**Impact**:
-- Harder to understand code intent
-- Difficult to tune performance
-- Inconsistent thresholds
-
-**Recommendation**:
-- Extract magic numbers to named constants
-- Document reasoning for threshold values
-- Consider making some values configurable
-
----
-
-### 16. Inconsistent Logging
-
-**Location**: Throughout codebase
-
-**Issue**: Mix of `fmt.Fprintf(os.Stderr, ...)`, structured logging with `slog`, and `cli.PrintVerbose()`. No consistent logging strategy.
-
-**Evidence**:
-```go
-// internal/ocr/ocr.go:173
-fmt.Fprintf(os.Stderr, "Downloading tessdata for '%s'...\n", lang)
-
-// internal/commands/meta.go:91
-cli.PrintVerbose("Reading metadata from %s", inputFile)
-
-// Both logging packages exist but not used consistently
-```
-
-**Impact**:
-- Hard to filter/search logs
-- Inconsistent output format
-- Can't disable certain log types easily
-
-**Recommendation**:
-- Standardize on structured logging (slog)
-- Use consistent log levels
-- Route all output through logging package
-
----
-
-### 17. Test Coverage Dependency
-
-**Location**: `Makefile:112-121`, `.github/workflows/ci.yaml:52-61`
-
-**Issue**: 75% coverage threshold is enforced but uses shell scripting with `bc` or `awk`, which may not be portable.
-
-**Evidence**:
-```makefile
-# Makefile requires bc which isn't standard on all systems
-coverage-check:
-    if [ $$(echo "$$coverage < 75" | bc -l) -eq 1 ]; then
-```
-
-**Impact**:
-- Build may fail on systems without `bc`
-- CI/CD dependency on specific tools
-
-**Recommendation**:
-- Use Go-based coverage tools
-- Consider `gocover-cobertura` or similar
-- Document required system tools
+#### **Logging: Silent Mode is Default**
+- **Issue**: Log level defaults to "silent" which hides debugging information
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/cli/flags.go` (line 93)
+    ```go
+    cmd.PersistentFlags().StringVar(&logLevel, "log-level", "silent", "Log level (debug, info, warn, error, silent)")
+    ```
+- **Impact**: Users may struggle to debug issues without realizing logging is available
+- **Severity**: Low - design decision; documented in help
+- **Recommendation**: Consider "error" as default instead of "silent"
 
 ---
 
-### 18. Documentation Sync Challenges
+### P3 - Technical Debt
 
-**Location**: `go.mod` vs `CONTRIBUTING.md`, `SECURITY.md`
+#### **Time.After in Retry Logic**
+- **Issue**: Using `time.After` in select can cause timer leak if context cancelled first
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/retry/retry.go` (line 76)
+    ```go
+    case <-time.After(delay):
+    ```
+- **Impact**: Timer goroutine remains until timer expires even if context cancelled
+- **Severity**: Low - minor resource leak during retries
+- **Recommendation**: Use `time.NewTimer` with explicit Stop() call
 
-**Issue**: Multiple places specify version support, security policies, etc. Easy to get out of sync.
+#### **WASM Backend: Not Thread-Safe**
+- **Issue**: WASM backend documented as not thread-safe; only native backend supports parallelism
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 422)
+    ```go
+    if len(imageFiles) <= threshold || e.backend.Name() == "wasm" {
+        return e.processImagesSequential(ctx, imageFiles, showProgress)
+    }
+    ```
+- **Impact**: WASM OCR is slower than native for large documents
+- **Severity**: Low - known limitation of underlying library
+- **Recommendation**: Document in README; consider using worker pool with single WASM instance
 
-**Evidence**:
-- Go version: 1.24.1 in go.mod, 1.21+ in CONTRIBUTING.md, 1.24+ in README.md
-- Security policy mentions versions 1.2.x and 1.3.x but current version is 1.5.0
-
-**Impact**:
-- Confusing for users
-- Incorrect security expectations
-
-**Recommendation**:
-- Single source of truth for versions (generate docs from code)
-- Automated checks for documentation consistency
-- Update security policy to match current release
-
----
-
-## Performance Optimization Opportunities
-
-### 19. Parallel Processing Thresholds
-
-**Location**: `/internal/fileio/files.go:134`, `/internal/pdf/text.go:58`, `/internal/ocr/ocr.go:299`
-
-**Issue**: Hardcoded thresholds (3, 5) for parallel processing may not be optimal for all systems.
-
-**Evidence**:
-```go
-// internal/fileio/files.go:134
-if len(paths) <= 3 {  // Why 3?
-    // sequential
-}
-
-// internal/pdf/text.go:58
-if len(pages) > 5 {  // Why 5?
-    // parallel
-}
-```
-
-**Impact**:
-- May not utilize available CPU cores efficiently
-- Could spawn too many goroutines on small systems
-
-**Recommendation**:
-- Base thresholds on `runtime.NumCPU()`
-- Make configurable for advanced users
-- Benchmark different thresholds
+#### **Merge Progress: Inefficient for Large File Sets**
+- **Issue**: Incremental merge creates intermediate files for each step
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/pdf/transform.go` (lines 58-68)
+    ```go
+    for i := 1; i < len(inputs); i++ {
+        err := api.MergeCreateFile([]string{tmpPath, inputs[i]}, tmpPath+".new", false, NewConfig(password))
+        // ...
+        if err := os.Rename(tmpPath+".new", tmpPath); err != nil {
+    ```
+- **Impact**: O(n²) I/O operations for n files; slow for large merges
+- **Severity**: Low - only affects >3 files with --progress
+- **Recommendation**: Consider pdfcpu's batch merge API if available
 
 ---
 
-### 20. Memory Usage - Unbuffered Channels
+## Summary Table
 
-**Location**: `/internal/pdf/text.go:119`, `/internal/ocr/ocr.go:340`
-
-**Issue**: Buffered channels with capacity = len(items) could consume significant memory for large batches.
-
-**Evidence**:
-```go
-// internal/pdf/text.go:119
-results := make(chan pageResult, len(pages))  // Could be 1000+ pages
-
-// internal/ocr/ocr.go:340
-results := make(chan imageResult, len(imageFiles))  // Could be 100+ images
-```
-
-**Impact**:
-- High memory usage for large documents
-- Could cause OOM on constrained systems
-
-**Recommendation**:
-- Use fixed buffer size (e.g., NumCPU * 2)
-- Implement worker pool pattern
-- Stream results instead of buffering all
+| Concern | Category | Severity | Affected Area | Confidence |
+|---------|----------|----------|---------------|------------|
+| context.TODO in downloads | Context Management | P1 High | OCR downloads | Observed |
+| Limited OCR checksum coverage | Security | P1 High | Non-English OCR | Observed |
+| Deprecated password flag active | Security | P1 High | Password handling | Observed |
+| Goroutine leak on cancel | Concurrency | P2 Medium | Parallel processing | Observed |
+| No HTTP client timeout | Network | P2 Medium | OCR downloads | Observed |
+| Password file validation | Input Validation | P2 Medium | Password handling | Observed |
+| Silent page extraction errors | Error Handling | P2 Medium | Text extraction | Observed |
+| Cleanup race condition | Concurrency | P2 Medium | Temp file cleanup | Inferred |
+| Panic in test helpers | Testing | P3 Low | Test infrastructure | Observed |
+| Progress bar during retries | UX | P3 Low | OCR downloads | Observed |
+| Pseudo-version dependencies | Dependencies | P3 Low | Build system | Observed |
+| Code duplication (suffixes) | Technical Debt | P3 Low | Commands | Observed |
+| Directory permissions | Security | P3 Low | File system | Observed |
+| Silent logging default | UX | P3 Low | Logging | Observed |
+| time.After leak | Performance | P3 Low | Retry logic | Observed |
+| WASM not thread-safe | Performance | P3 Low | OCR backend | Observed |
+| Inefficient merge progress | Performance | P3 Low | PDF merge | Observed |
 
 ---
 
-## Summary Statistics
+## Open Questions
 
-**Total Issues Identified**: 20
+1. **OCR Checksum Strategy**: Should all tessdata languages have checksums, or is warning sufficient? Consider automated checksum generation script.
 
-| Priority | Count | Focus Area |
-|----------|-------|------------|
-| P0 (Critical) | 3 | Security (password handling, download integrity, path sanitization) |
-| P1 (High) | 5 | Race conditions, context handling, error handling, dependencies, resource cleanup |
-| P2 (Medium) | 6 | Version management, test organization, temp files, limitations disclosure, downloads |
-| P3 (Low) | 4 | Code quality (magic numbers, logging consistency, documentation) |
-| Performance | 2 | Parallel processing tuning, memory optimization |
+2. **Password Flag Removal**: Is v2.0.0 the right time to remove `--password` entirely, or wait for v3.0.0? Breaking change policy?
 
-**Code Metrics**:
-- Total Go files: 87
-- Production code: ~5,644 lines
-- Largest test file: 2,340 lines
-- Direct dependencies: 12
-- Total dependencies (including transitive): 43 (from go.sum)
-- Outdated dependencies: 21
+3. **Parallel Processing**: Should native Tesseract backend parallelism be configurable or always enabled? Current threshold is 5 images.
 
-**Security Posture**:
-- Gosec scanning enabled in CI
-- Multiple `#nosec` annotations (14+ instances) - all appear justified with comments
-- SECURITY.md exists and is maintained
-- No obvious SQL injection, XSS, or remote code execution vulnerabilities
-- Main concerns: credential exposure and supply chain security
+4. **Error Aggregation**: Should text extraction return partial results with warnings, or fail fast on first error? Current behavior is silent continuation.
 
-**Maintenance Health**:
-- Active CI/CD pipeline with testing, linting, and security scanning
-- 75% test coverage threshold enforced
-- Recent refactoring (v1.5.0) shows active maintenance
-- Clear contributing guidelines
-- Architecture documentation exists
+5. **Dependency Management**: Should the project fork `gogosseract` and `ledongthuc/pdf` to maintain stable tagged versions?
 
-## Recommended Action Plan
+6. **Security Policy**: SECURITY.md lists v1.3.x as supported, but current release is v2.0.0. Update needed?
+   - Evidence: `/Users/lgbarn/Personal/pdf-cli/SECURITY.md` (lines 7-9)
 
-### Immediate (Next Sprint)
-1. **Fix password handling** - Add stdin/env var support (P0)
-2. **Add download integrity verification** - SHA256 checksums for tessdata (P0)
-3. **Update critical dependencies** - Security patches (P1)
+7. **Golangci-lint Version**: CI uses golangci-lint v2.8.0 which is outdated (current is v1.62+). Intentional or needs update?
+   - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (line 29)
 
-### Short-term (Next Release)
-4. **Fix race conditions** - Add sync.Once to global state (P1)
-5. **Add context propagation** - Proper cancellation support (P1)
-6. **Improve error reporting** - Collect and report all errors from parallel operations (P1)
+8. **Resource Limits**: Should there be limits on parallel workers, temp file sizes, or memory usage for very large PDFs?
 
-### Medium-term (Next Quarter)
-7. **Dependency modernization** - Update all 21 outdated packages (P1)
-8. **Resource cleanup** - Check close errors for file writes (P1)
-9. **Documentation consistency** - Align version requirements (P2)
-10. **Test refactoring** - Split large test files (P2)
+---
 
-### Long-term (Backlog)
-11. **Standardize logging** - Unified structured logging (P3)
-12. **Performance tuning** - Adaptive parallelism based on CPU cores (Perf)
-13. **Memory optimization** - Worker pool pattern for large batches (Perf)
+## Positive Observations
+
+- **Strong Security Practices**: Path sanitization, gosec scanning, password file limits, #nosec annotations with justification
+- **Comprehensive Testing**: 75% coverage threshold enforced, race detection in CI, both unit and integration tests
+- **Good Error Handling**: Custom error types with context, password-specific error detection, retry with exponential backoff
+- **Signal Handling**: Proper cleanup on SIGTERM/SIGINT via cleanup registry
+- **Modern Go**: Using Go 1.25, no deprecated ioutil usage, proper context propagation in most places
+- **Documentation**: README is thorough, SECURITY.md exists, inline comments explain non-obvious code

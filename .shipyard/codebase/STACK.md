@@ -1,275 +1,280 @@
 # Technology Stack
 
-## Language & Runtime
+## Overview
+pdf-cli is a single-binary Go CLI application for PDF manipulation operations. Built on Go 1.25, it leverages native Go libraries for PDF processing, OCR capabilities (with dual backend support), and cross-platform compilation. The project follows modern Go practices with comprehensive tooling for build, test, lint, and release automation.
 
-### Go 1.24.1
-- **Specified in**: `/Users/lgbarn/Personal/pdf-cli/go.mod`
-- **Module**: `github.com/lgbarn/pdf-cli`
-- **Build Configuration**: `GO111MODULE=on` (enforced throughout build scripts and CI)
-- **CGO**: Disabled (`CGO_ENABLED=0` in GoReleaser config for static binary compilation)
-- **Target Platforms**:
-  - Linux (amd64, arm64)
-  - macOS/Darwin (amd64, arm64)
-  - Windows (amd64)
+## Findings
 
-## Core Dependencies
+### Primary Language
 
-### PDF Processing Libraries
+- **Language**: Go 1.25
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 3)
+  - Module path: `github.com/lgbarn/pdf-cli`
+  - Supports cross-compilation for Linux, macOS (amd64/arm64), and Windows (amd64)
 
-#### pdfcpu v0.11.1
-- **Purpose**: Primary PDF manipulation library
-- **Import**: `github.com/pdfcpu/pdfcpu/pkg/api` and subpackages
-- **Capabilities**: Merge, split, extract, rotate, compress, encrypt/decrypt, watermark, metadata
-- **Usage**: Used in `/Users/lgbarn/Personal/pdf-cli/internal/pdf/*.go`
-- **Key Subpackages**:
-  - `pkg/api` - High-level API functions
-  - `pkg/pdfcpu` - Core PDF processing
-  - `pkg/pdfcpu/model` - Configuration and data models
-  - `pkg/pdfcpu/types` - Type definitions
+### Core PDF Libraries
 
-#### ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
-- **Purpose**: Alternative/fallback PDF text extraction
-- **Import**: `github.com/ledongthuc/pdf`
-- **Usage**: Primary method for text extraction in `/Users/lgbarn/Personal/pdf-cli/internal/pdf/text.go`
-- **Note**: Used as primary extractor with pdfcpu as fallback for better text quality
+- **pdfcpu v0.11.1** -- Primary PDF manipulation library
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 8)
+  - Purpose: PDF operations including merge, split, encrypt, compress, watermark, metadata
+  - Used throughout `/Users/lgbarn/Personal/pdf-cli/internal/pdf/` package
+  - Configuration abstraction: `/Users/lgbarn/Personal/pdf-cli/internal/pdf/pdf.go`
 
-### OCR Libraries
+- **ledongthuc/pdf v0.0.0-20250511090121-5959a4027728** -- Text extraction library
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 7)
+  - Purpose: Primary text extraction from PDFs (better quality than pdfcpu fallback)
+  - Used in: `/Users/lgbarn/Personal/pdf-cli/internal/pdf/text.go` (lines 11, 46)
+  - Supports parallel text extraction for large documents
 
-#### gogosseract v0.0.11-0ad3421
-- **Purpose**: WASM-based Tesseract OCR engine (no system dependencies)
-- **Import**: `github.com/danlock/gogosseract`
-- **Usage**: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/wasm.go`
-- **Key Feature**: Embedded WASM Tesseract - works without native Tesseract installation
-- **Dependencies**:
-  - `github.com/danlock/pkg v0.0.17-a9828f2` (indirect)
-  - `github.com/jerbob92/wazero-emscripten-embind v1.3.0` (indirect)
-  - `github.com/tetratelabs/wazero v1.5.0` (WebAssembly runtime)
+### OCR Dependencies
+
+- **danlock/gogosseract v0.0.11-0ad3421** -- WASM-based Tesseract OCR
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 6)
+  - Purpose: Built-in OCR fallback when native Tesseract is unavailable
+  - Implementation: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/wasm.go` (lines 10, 84-90)
+  - Requires downloading tessdata files from GitHub on first use
+  - Uses wazero WebAssembly runtime (see below)
+
+- **tetratelabs/wazero v1.11.0** -- WebAssembly runtime
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 29)
+  - Purpose: Runtime for WASM-based Tesseract OCR engine
+  - Transitive dependency via gogosseract
+
+- **jerbob92/wazero-emscripten-embind v1.5.2** -- Emscripten bindings
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 23)
+  - Purpose: Emscripten-to-WASM bridge for Tesseract
+  - Transitive dependency via gogosseract
+
+- **Native Tesseract** -- Optional system-installed OCR
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go` (lines 24-42)
+  - Detection via `exec.LookPath("tesseract")`
+  - Preferred backend when available; graceful fallback to WASM
+  - Backend selection: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (lines 120-138)
 
 ### CLI Framework
 
-#### spf13/cobra v1.10.2
-- **Purpose**: Command-line interface framework
-- **Import**: `github.com/spf13/cobra`
-- **Usage**: Root command and all subcommands in `/Users/lgbarn/Personal/pdf-cli/internal/cli/cli.go` and `/Users/lgbarn/Personal/pdf-cli/internal/commands/*.go`
-- **Features Used**: Flags, subcommands, completion generation
-- **Dependencies**:
-  - `github.com/spf13/pflag v1.0.10` (POSIX/GNU-style flags)
-  - `github.com/inconshreveable/mousetrap v1.1.0` (Windows support)
+- **spf13/cobra v1.10.2** -- Command-line interface framework
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 10)
+  - Usage: `/Users/lgbarn/Personal/pdf-cli/internal/cli/cli.go` (line 9)
+  - Provides root command structure, subcommand registration, flag parsing
+  - Supports shell completion generation (bash, zsh, fish)
 
-### UI/UX Libraries
+- **spf13/pflag v1.0.10** -- POSIX-compliant flag parsing
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 28)
+  - Transitive dependency of cobra
 
-#### progressbar v3.19.0
-- **Purpose**: Terminal progress bars for long-running operations
-- **Import**: `github.com/schollz/progressbar/v3`
-- **Usage**: `/Users/lgbarn/Personal/pdf-cli/internal/progress/progress.go`
-- **Operations**: Merging, extracting, OCR processing, text extraction
-- **Dependencies**:
-  - `github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db`
-  - `github.com/rivo/uniseg v0.4.7` (Unicode text segmentation)
-  - `github.com/mattn/go-runewidth v0.0.19` (East Asian width)
+### User Interface Libraries
 
-### System Libraries
+- **schollz/progressbar/v3 v3.19.0** -- Progress bar display
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 9)
+  - Usage: `/Users/lgbarn/Personal/pdf-cli/internal/progress/progress.go`
+  - Provides progress tracking for long-running operations (OCR, text extraction, downloads)
+  - Used in: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 279)
 
-#### golang.org/x/term v0.39.0
-- **Purpose**: Terminal state detection and handling
-- **Usage**: Password input, terminal capabilities detection
-- **Related**: `golang.org/x/sys v0.40.0` (system calls)
+- **mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db** -- Terminal color support
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 25)
+  - Transitive dependency via progressbar
 
-#### gopkg.in/yaml.v3 v3.0.1
-- **Purpose**: Configuration file parsing
-- **Usage**: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go`
-- **Config Location**: `~/.config/pdf-cli/config.yaml` (XDG_CONFIG_HOME compliant)
-- **Note**: Also uses `gopkg.in/yaml.v2 v2.4.0` (indirect dependency)
+- **mattn/go-runewidth v0.0.19** -- Unicode display width calculation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 24)
+  - Purpose: Correct terminal width calculation for progress bars
+
+- **rivo/uniseg v0.4.7** -- Unicode text segmentation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 27)
+  - Transitive dependency for Unicode handling
+
+### Configuration Management
+
+- **gopkg.in/yaml.v3 v3.0.1** -- YAML parsing
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 12)
+  - Usage: `/Users/lgbarn/Personal/pdf-cli/internal/config/config.go` (line 11)
+  - Purpose: Parse user configuration file at `~/.config/pdf-cli/config.yaml`
+  - Supports defaults for output format, OCR language, compression quality, performance tuning
+
+### Standard Library Extensions
+
+- **golang.org/x/term v0.39.0** -- Terminal interaction
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 11)
+  - Purpose: Password input from terminal (no echo)
+  - Used for secure password prompts
+
+- **golang.org/x/crypto v0.47.0** -- Cryptographic functions
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 30)
+  - Purpose: PDF encryption/decryption operations
+  - Transitive dependency via pdfcpu
+
+- **golang.org/x/image v0.35.0** -- Image processing
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 32)
+  - Purpose: Image extraction and manipulation from PDFs
+  - Transitive dependency via pdfcpu
+
+- **golang.org/x/text v0.33.0** -- Text processing and encoding
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 34)
+  - Purpose: Character encoding and internationalization
+  - Transitive dependency
+
+- **golang.org/x/sys v0.40.0** -- System calls
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 33)
+  - Purpose: Low-level OS interaction
+  - Transitive dependency
+
+- **golang.org/x/exp v0.0.0-20260112195511-716be5621a96** -- Experimental packages
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 31)
+  - Transitive dependency
 
 ### Supporting Libraries
 
-#### Image Processing
-- `golang.org/x/image v0.32.0` - Image format support (PNG, JPEG, etc.)
-- `github.com/hhrutter/tiff v1.0.2` - TIFF support for pdfcpu
-- `github.com/clipperhouse/uax29/v2 v2.2.0` - Unicode text segmentation
+- **pkg/errors v0.9.1** -- Error handling with stack traces
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 26)
+  - Transitive dependency via pdfcpu
 
-#### Cryptography & Encoding
-- `golang.org/x/crypto v0.43.0` - Cryptographic primitives
-- `github.com/hhrutter/pkcs7 v0.2.0` - PKCS#7 support for PDF signatures
-- `github.com/hhrutter/lzw v1.0.0` - LZW compression
+- **hhrutter/lzw v1.0.0** -- LZW compression
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 19)
+  - Purpose: PDF compression algorithm support
+  - Transitive dependency via pdfcpu
 
-#### Text Processing
-- `golang.org/x/text v0.30.0` - Unicode and text processing
-- `golang.org/x/exp v0.0.0-20231006140011-7918f672742d` - Experimental packages
+- **hhrutter/tiff v1.0.2** -- TIFF image handling
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 21)
+  - Purpose: TIFF extraction/embedding in PDFs
+  - Transitive dependency via pdfcpu
 
-#### Error Handling
-- `github.com/pkg/errors v0.9.1` - Enhanced error handling
+- **hhrutter/pkcs7 v0.2.0** -- PKCS#7 cryptographic message syntax
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 20)
+  - Purpose: PDF digital signatures
+  - Transitive dependency via pdfcpu
 
-## Build Tools
+- **inconshreveable/mousetrap v1.1.0** -- Windows CLI behavior
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 22)
+  - Purpose: Windows-specific command execution
+  - Transitive dependency via cobra
 
-### Make
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/Makefile`
-- **Key Targets**:
-  - `build` - Single binary for host platform
-  - `build-all` - Cross-compile for Linux, macOS, Windows (amd64, arm64)
-  - `test` - Run test suite
-  - `test-coverage` - Generate coverage reports with HTML output
-  - `test-race` - Run with race detector
-  - `lint` - Run golangci-lint
-  - `coverage-check` - Enforce 75% coverage threshold
-  - `completions` - Generate shell completions (bash, zsh, fish)
+- **clipperhouse/stringish v0.1.1** and **clipperhouse/uax29/v2 v2.4.0** -- Text tokenization
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (lines 16-17)
+  - Purpose: Unicode text segmentation for OCR
+  - Transitive dependencies via gogosseract
 
-### GoReleaser v2
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/.goreleaser.yaml`
-- **Purpose**: Automated release builds and distribution
-- **Build Flags**: `-s -w` (strip debug info and symbol table)
-- **Output Formats**:
-  - Archives: tar.gz (Linux/macOS), zip (Windows)
-  - Package formats: deb, rpm (via nfpm)
-  - Checksums file
-- **Version Injection**: Sets `main.version`, `main.commit`, `main.date` via ldflags
-- **GitHub Integration**: Automated releases to `lgbarn/pdf-cli`
+- **danlock/pkg v0.0.46-2e8eb6d** -- Utility library
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/go.mod` (line 18)
+  - Transitive dependency via gogosseract
 
-### Build Script
-- **Location**: `/Users/lgbarn/Personal/pdf-cli/scripts/build.sh`
-- **Features**: Colored output, cross-compilation, file size reporting
-- **Platforms**: Same as Makefile (5 platform/arch combinations)
+### Build Tools
 
-## Code Quality Tools
+- **make** -- Build automation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/Makefile` (all lines)
+  - Targets: build, test, lint, coverage, cross-compilation
+  - Version information injected via ldflags
 
-### golangci-lint v2.8.0
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml`
-- **Version**: 2 (config format)
-- **Timeout**: 5 minutes
-- **Enabled Linters**:
-  - `govet` - Official Go static analyzer
-  - `ineffassign` - Detect ineffectual assignments
-  - `staticcheck` - Advanced Go linter
-  - `unused` - Find unused code
-  - `misspell` - Spell checker (US locale)
-  - `gocritic` - Opinionated linter (diagnostic + style tags)
-  - `revive` - Fast, configurable linter
-  - `errcheck` - Check error handling
-- **Formatters**: `gofmt`, `goimports`
-- **Custom Exclusions**: Configured for common cleanup patterns, test files, package comments
+- **GoReleaser v2** -- Release automation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.goreleaser.yaml` (line 4)
+  - Purpose: Multi-platform binary builds, archives, checksums, GitHub releases
+  - Supports deb/rpm package generation (lines 77-88)
+  - Configuration: `/Users/lgbarn/Personal/pdf-cli/.goreleaser.yaml`
 
-### gosec v2.21.4
-- **Purpose**: Security scanner for Go code
-- **Usage**: CI security scan job
-- **Exclusions**: `testdata/` directory
-- **Installation**: `go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4`
+- **golangci-lint v2.8.0** -- Linting aggregator
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (line 29)
+  - Configuration: `/Users/lgbarn/Personal/pdf-cli/.golangci.yaml`
+  - Enabled linters: govet, ineffassign, staticcheck, unused, misspell, gocritic, revive, errcheck
+  - Timeout: 5 minutes
 
-### Pre-commit Hooks
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/.pre-commit-config.yaml`
-- **Framework**: pre-commit.com
-- **Hooks**:
-  - File hygiene (trailing whitespace, EOF fixer, YAML validation, merge conflict detection)
-  - Large file detection (1MB limit, excluding testdata)
-  - Go formatting (`go fmt`)
-  - Go vetting (`go vet`)
-  - Module tidying (`go mod tidy`)
-  - Build verification (`go build`)
-  - Test execution (`go test`)
-  - Linting (`golangci-lint`)
+- **gosec v2.22.11** -- Security scanner
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (line 114)
+  - Purpose: Static security analysis for Go code
+  - Updated for Go 1.24+ compatibility
 
-## Testing Tools
+- **pre-commit v5.0.0** -- Git hook framework
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.pre-commit-config.yaml` (line 3)
+  - Hooks: trailing-whitespace, end-of-file-fixer, check-yaml, check-merge-conflict
+  - Custom Go hooks: fmt, vet, mod tidy, build, test, golangci-lint
 
-### Go Testing Framework
-- **Built-in**: `testing` package
-- **Coverage Tools**: `go tool cover`
-- **Flags Used**:
-  - `-v` (verbose output)
-  - `-race` (race detector in CI)
-  - `-coverprofile=coverage.out` (coverage tracking)
-  - `-covermode=atomic` (thread-safe coverage)
-- **Coverage Threshold**: 75% (enforced in CI and Makefile)
-- **Test Organization**: `*_test.go` files alongside implementation
+### Testing Framework
 
-### Coverage Reporting
-- **Local**: HTML reports via `coverage.html`
-- **CI**: Codecov integration (via `codecov/codecov-action@v4`)
-- **Files Generated**: Multiple coverage files tracked (`cover.out`, `cover_final.out`, etc.)
+- **Go standard testing** -- Unit and integration tests
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/backend_test.go` (grep results)
+  - Test files throughout codebase (`*_test.go`)
+  - Coverage threshold: 75% (enforced in CI)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml` (line 54)
 
-## Version Control
+- **Coverage tool** -- Custom coverage checker
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/scripts/coverage-check.go`
+  - Purpose: Parse and validate test coverage against threshold
+  - Runs in CI pipeline
 
-### Git
-- **Repository**: `https://github.com/lgbarn/pdf-cli`
-- **Versioning**: Git tags (semantic versioning pattern `v*`)
-- **Ignored Files**: `.gitignore` excludes build artifacts, coverage reports, binaries
+### CI/CD
 
-### Dependabot
-- **Configuration**: `/Users/lgbarn/Personal/pdf-cli/.github/dependabot.yaml`
-- **Ecosystems**:
-  - `gomod` - Go module dependencies (weekly updates)
-  - `github-actions` - GitHub Actions versions (weekly updates)
-- **Limits**: 5 open PRs per ecosystem
-- **Commit Prefixes**: `deps` (Go), `ci` (Actions)
+- **GitHub Actions** -- Continuous integration
+  - Workflows: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/ci.yaml`, `/Users/lgbarn/Personal/pdf-cli/.github/workflows/release.yaml`
+  - CI jobs: lint, test (with race detection and coverage), build (matrix for 5 OS/arch combinations), security scan
+  - Go version: Read from `go.mod` (line 22-23 in ci.yaml)
+  - Actions versions: actions/checkout@v4, actions/setup-go@v5, actions/upload-artifact@v4
+  - Coverage upload: codecov/codecov-action@v4 (line 57)
 
-## CI/CD Platform
+- **Dependabot v2** -- Dependency updates
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/dependabot.yaml`
+  - Monitors: Go modules (weekly), GitHub Actions (weekly)
+  - Pull request limit: 5 per ecosystem
 
-### GitHub Actions
-- **Workflows**:
-  - **CI** (`.github/workflows/ci.yaml`):
-    - Lint job (golangci-lint v2.8.0)
-    - Test job (with race detection and coverage)
-    - Build job (matrix: 5 platform/arch combinations)
-    - Security job (gosec scan)
-  - **Release** (`.github/workflows/release.yaml`):
-    - Triggered on version tags
-    - Runs tests
-    - Executes GoReleaser
-- **Go Setup**: `actions/setup-go@v5` with version from `go.mod`
-- **Caching**: Enabled for Go modules
-- **Artifacts**: Cross-compiled binaries uploaded via `actions/upload-artifact@v4`
+### Build Scripts
 
-## Shell Completion
+- **build.sh** -- Cross-compilation script
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/scripts/build.sh`
+  - Platforms: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64
+  - Sets ldflags for version, commit, date injection
 
-### Supported Shells
-- **bash** - POSIX-compatible shell
-- **zsh** - Z shell
-- **fish** - Friendly interactive shell
+## Summary Table
 
-### Generation
-- **Method**: Via cobra's built-in completion command
-- **Target**: `make completions` generates files in `completions/` directory
-- **File Names**:
-  - `pdf.bash`
-  - `_pdf` (zsh format)
-  - `pdf.fish`
+| Category | Item | Version | Source | Confidence |
+|----------|------|---------|--------|------------|
+| Language | Go | 1.25 | go.mod | Observed |
+| PDF Core | pdfcpu | v0.11.1 | go.mod | Observed |
+| PDF Text | ledongthuc/pdf | 2025-05-11 snapshot | go.mod | Observed |
+| OCR WASM | gogosseract | v0.0.11-0ad3421 | go.mod | Observed |
+| OCR Native | Tesseract | system-dependent | detect.go | Observed |
+| CLI Framework | cobra | v1.10.2 | go.mod | Observed |
+| Progress UI | progressbar | v3.19.0 | go.mod | Observed |
+| Config | yaml.v3 | v3.0.1 | go.mod | Observed |
+| Terminal | golang.org/x/term | v0.39.0 | go.mod | Observed |
+| WASM Runtime | wazero | v1.11.0 | go.mod | Observed |
+| Linter | golangci-lint | v2.8.0 | ci.yaml | Observed |
+| Security | gosec | v2.22.11 | ci.yaml | Observed |
+| Release | GoReleaser | v2 | release.yaml | Observed |
+| Pre-commit | pre-commit-hooks | v5.0.0 | pre-commit-config.yaml | Observed |
+| CI Platform | GitHub Actions | N/A | .github/workflows/ | Observed |
+| Dependency Bot | Dependabot | v2 | dependabot.yaml | Observed |
 
-## Binary Distribution
+## Version Management
 
-### Artifact Naming
-- **Pattern**: `pdf-cli_{version}_{os}_{arch}.tar.gz` (or `.zip` for Windows)
-- **Binary Name**: `pdf` (or `pdf.exe` on Windows)
-- **Included Files**: `README.md`, `LICENSE`
+- **Version injection**: Build-time ldflags set `main.version`, `main.commit`, `main.date`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/Makefile` (line 8)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/cmd/pdf/main.go` (lines 15-18)
+- **Git tags**: Version derived from `git describe --tags` when available
+- **Release workflow**: Triggered on `v*` tags
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.github/workflows/release.yaml` (lines 5-6)
 
-### Package Formats
-- **Debian**: `.deb` packages
-- **Red Hat**: `.rpm` packages
-- **Maintainer**: lgbarn
-- **License**: MIT
-- **Install Path**: `/usr/bin/pdf`
+## Runtime Requirements
 
-## Environment Variables
+- **No external dependencies** for core functionality (merge, split, encrypt, etc.)
+- **Optional Tesseract** for native OCR backend (falls back to WASM)
+  - Detection: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/detect.go`
+  - Common paths: Homebrew (/opt/homebrew), apt (/usr/share/tesseract-ocr), Windows Program Files
+- **Internet access** required only for tessdata downloads (first-time OCR use)
+  - URL: `https://github.com/tesseract-ocr/tessdata_fast/raw/main`
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/internal/ocr/ocr.go` (line 29)
 
-### Configuration Overrides
-- `PDF_CLI_OUTPUT_FORMAT` - Override output format (json, csv, tsv, human)
-- `PDF_CLI_VERBOSE` - Enable verbose mode (true/1)
-- `PDF_CLI_OCR_LANGUAGE` - Default OCR language
-- `PDF_CLI_OCR_BACKEND` - OCR backend preference (auto, native, wasm)
-- `XDG_CONFIG_HOME` - Config directory location
-- `TESSDATA_PREFIX` - Tesseract data directory (for native OCR)
+## Build Environment
 
-### Build Variables
-- `GOPATH` - Go workspace path
-- `GOOS` - Target operating system
-- `GOARCH` - Target architecture
-- `GO111MODULE` - Go modules mode (always `on`)
-- `CGO_ENABLED` - CGO compilation (set to `0`)
+- **CGO**: Disabled (CGO_ENABLED=0) for static binary compilation
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.goreleaser.yaml` (line 18)
+- **Module mode**: GO111MODULE=on (enforced in Makefile)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/Makefile` (line 28)
+- **Supported platforms**:
+  - Linux: amd64, arm64
+  - macOS: amd64, arm64
+  - Windows: amd64 only (arm64 excluded)
+  - Evidence: `/Users/lgbarn/Personal/pdf-cli/.goreleaser.yaml` (lines 19-28)
 
-## Documentation Tools
+## Open Questions
 
-### Markdown
-- **Files**: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`
-- **Architecture Docs**: `docs/architecture.md`, `docs/plans/*.md`
-
-### Package Documentation
-- **Format**: Go doc comments
-- **Package Docs**: `doc.go` files in each package
-- **Examples**: Embedded in command help text via cobra
+- Are there plans to support additional OCR engines beyond Tesseract?
+- Is there a minimum Tesseract version requirement for the native backend?
+- Are there any plans to add GPU acceleration for image/OCR processing?
+- What is the deprecation timeline for Go 1.24 support (currently 1.25 minimum)?

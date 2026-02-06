@@ -1,76 +1,80 @@
-# pdf-cli Technical Debt Remediation
+# pdf-cli Remaining Tech Debt
 
 ## Description
 
-Systematically address all 20 identified technical concerns in the pdf-cli codebase, prioritized by severity (P0 critical through P3 minor). The project covers security vulnerabilities, reliability issues, code quality improvements, and dependency updates. Breaking changes are acceptable where they improve security or correctness.
+Address all 17 technical concerns identified in the fresh codebase analysis following the v2.0.0 release. These span security hardening (OCR checksum coverage, password flag lockdown), reliability improvements (context propagation, goroutine leak prevention, HTTP client hardening), error handling (silent failures, cleanup race conditions), and code quality cleanup (timer leaks, test helper quality, logging defaults, dependency hygiene).
 
-pdf-cli is a Go CLI tool for PDF manipulation (merge, split, encrypt, OCR, watermark, metadata, validation) built with Cobra, pdfcpu, and a dual OCR backend (native Tesseract + WASM fallback). The codebase is ~87 Go files with 81.5% test coverage.
+This milestone completes the technical debt remediation started in "Clean Baseline" and brings the codebase to a fully clean state with no known P1-P3 concerns remaining.
 
 ## Goals
 
-1. Fix all P0 critical security issues (password exposure in CLI flags, no download integrity verification, inconsistent path sanitization)
-2. Fix all P1 high-priority reliability issues (race conditions in global state, missing context propagation, silent errors in parallel processing, outdated dependencies, ignored close errors)
-3. Address P2 medium-priority technical debt (Go version documentation mismatches, large test files, orphaned temp files, missing retry logic, documentation drift)
-4. Clean up P3 code quality issues (magic numbers as named constants, inconsistent logging, coverage tooling portability, adaptive parallelism thresholds)
-5. Update all 21 outdated dependencies to latest compatible versions
+1. Eliminate all P1 high-priority concerns (context.TODO removal, OCR checksum expansion, password flag lockdown)
+2. Fix all P2 medium-priority concerns (goroutine leaks, HTTP client timeout, password file validation, silent errors, cleanup race condition)
+3. Clean up all P3 low-priority concerns (timer leaks, test helper panics, progress bar retries, dependency pseudo-versions, output suffix constants, directory permissions, logging defaults, WASM documentation, merge efficiency)
+4. Update stale documentation (SECURITY.md supported versions, README where applicable)
 
 ## Non-Goals
 
 - Adding new PDF features or CLI commands
 - Changing the overall architecture or package structure
-- Achieving test coverage beyond current 81% level
-- Migrating away from core dependencies (pdfcpu, Cobra, gogosseract)
-- Performance optimization beyond fixing existing issues
-- UI/UX changes to the CLI interface (beyond security-driven flag changes)
+- Bumping to v3.0.0 (all changes are backwards-compatible)
+- Achieving test coverage beyond current levels (maintain >= 75%)
+- Forking upstream dependencies (pseudo-version cleanup is best-effort)
 
 ## Requirements
 
-### Security (P0)
-- R1: Passwords must not be visible in process listings or shell history — use stdin, env vars, or file-based input instead of CLI flags
-- R2: Downloaded tessdata files must be verified with SHA256 checksums
-- R3: All file path inputs must be sanitized against path traversal attacks consistently
+### Security (P1)
+- R1: OCR tessdata downloads must have SHA256 checksum verification for the top ~20 most common languages. Unknown languages continue with a warning.
+- R2: The `--password` flag must be non-functional unless `--allow-insecure-password` is also passed. Clear error message directing users to secure alternatives.
+- R3: Directory permissions for tessdata and config directories should use 0700 instead of 0750.
 
-### Reliability (P1)
-- R4: Global config and logging state must be thread-safe (mutex or sync.Once)
-- R5: All long-running operations must accept and propagate context.Context for cancellation
-- R6: Parallel processing must surface all errors, not silently drop failures
-- R7: All 21 outdated dependencies updated to latest compatible versions
-- R8: File close errors must be checked and propagated, especially for write operations
+### Reliability (P1/P2)
+- R4: All `context.TODO()` calls in production code replaced with proper context propagation from callers.
+- R5: Goroutines in parallel text extraction and OCR processing must check `ctx.Err()` before performing expensive operations.
+- R6: HTTP client for tessdata downloads must use a custom `http.Client` with explicit timeout (not `http.DefaultClient`).
+- R7: Cleanup registry must use map-based tracking instead of slice-index approach to eliminate race condition window.
 
-### Technical Debt (P2)
-- R9: Go version requirements consistent across go.mod, README, and CI config
-- R10: Test files over 500 lines should be split into focused files
-- R11: Temp file cleanup on crash/interrupt via signal handlers
-- R12: Network operations (tessdata download) should have retry logic with backoff
-- R13: Documentation (README, architecture.md) aligned with current code
+### Error Handling (P2)
+- R8: Text extraction from individual pages must log errors at debug level instead of silently returning empty strings.
+- R9: Password file reader must validate content contains only printable characters and warn if suspicious binary content detected.
 
 ### Code Quality (P3)
-- R14: Magic numbers replaced with named constants
-- R15: Logging consolidated to a single approach (slog)
-- R16: Coverage tooling made portable (no bc/awk dependency)
-- R17: Parallelism thresholds made configurable or adaptive to system resources
+- R10: `time.After` in retry logic replaced with `time.NewTimer` and explicit `Stop()` call.
+- R11: Test helper functions must accept `testing.TB` and call `t.Fatal()` instead of `panic()`.
+- R12: Progress bar must be recreated/reset on each retry attempt during tessdata downloads.
+- R13: Output filename suffixes consolidated into named constants in a central location.
+- R14: Default log level changed from "silent" to "error".
+- R15: WASM backend thread-safety limitation documented in README troubleshooting section.
+- R16: Merge progress implementation improved to reduce I/O overhead for large file sets where possible.
+
+### Documentation
+- R17: SECURITY.md updated to reflect v2.0.0 as current supported version.
+- R18: Any README sections affected by code changes updated accordingly.
 
 ## Non-Functional Requirements
 
 - All changes must pass `go test -race ./...`
-- Test coverage must remain >= 81%
+- Test coverage must remain >= 75%
 - CI pipeline must pass cleanly (lint, test, build, security scan)
-- No new `#nosec` directives added without documented justification
+- No new `#nosec` directives without documented justification
 - All changes follow existing Conventional Commits format
+- No major version bump (all changes backwards-compatible or additive)
 
 ## Success Criteria
 
-1. `gosec` runs clean — all warnings resolved without `#nosec` where possible
-2. `go test -race ./...` passes with zero race conditions
-3. `go mod tidy` shows no outdated dependencies
-4. CI pipeline (lint, test, build, security) passes on all platforms
-5. Test coverage >= 81% as reported by Codecov
-6. No passwords visible in `ps aux` output during encrypt/decrypt operations
-7. All file downloads verified with checksums
+1. `go test -race ./...` passes with zero data races
+2. Zero `context.TODO()` calls in production code (non-test files)
+3. OCR checksum map contains entries for >= 20 languages
+4. `--password flag` without `--allow-insecure-password` produces clear error
+5. CI pipeline passes on all platforms
+6. Test coverage >= 75%
+7. SECURITY.md references v2.0.0
+8. No items remaining in CONCERNS.md at P1 or P2 severity
 
 ## Constraints
 
-- Must maintain Go 1.24.1+ compatibility
+- Must maintain Go 1.25+ compatibility
 - Cross-platform support (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64)
-- No new external dependencies unless strictly necessary
-- Existing CI/CD pipeline (GitHub Actions + GoReleaser) must continue to work
+- No new external dependencies
+- Existing CI/CD pipeline must continue to work
+- No breaking changes to public CLI interface (v2.x compatibility)
