@@ -22,7 +22,7 @@
 
 ---
 
-## Phase 1: OCR Download Path Hardening
+## Phase 1: OCR Download Path Hardening — COMPLETE
 
 **Description**: Fix the OCR tessdata download path end-to-end. This is the highest-risk area because it touches context propagation, HTTP client configuration, and progress bar behavior in a single code path. Fixing it first de-risks the rest of the milestone and establishes patterns other phases depend on (the `ctx` propagation through `EnsureTessdata`).
 
