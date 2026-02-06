@@ -9,7 +9,7 @@ import (
 
 var (
 	mu     sync.Mutex
-	paths  []string
+	paths  map[string]struct{}
 	hasRun bool
 )
 
@@ -21,15 +21,15 @@ func Register(path string) func() {
 	mu.Lock()
 	defer mu.Unlock()
 
-	idx := len(paths)
-	paths = append(paths, path)
+	if paths == nil {
+		paths = make(map[string]struct{})
+	}
+	paths[path] = struct{}{}
 
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
-		if idx < len(paths) {
-			paths[idx] = "" // mark as unregistered
-		}
+		delete(paths, path)
 	}
 }
 
@@ -45,11 +45,7 @@ func Run() error {
 	hasRun = true
 
 	var firstErr error
-	for i := len(paths) - 1; i >= 0; i-- {
-		p := paths[i]
-		if p == "" {
-			continue
-		}
+	for p := range paths {
 		if err := os.RemoveAll(p); err != nil && firstErr == nil {
 			firstErr = err
 		}

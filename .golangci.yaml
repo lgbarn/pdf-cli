@@ -31,6 +31,7 @@ linters:
         - httpNoBody
         - unnamedResult
         - paramTypeCombine
+        - uncheckedInlineErr
 
     revive:
       rules:
