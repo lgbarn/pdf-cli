@@ -240,7 +240,7 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 	// Create SHA256 hasher to verify download integrity
 	hasher := sha256.New()
 
-	// Progress bar created once; may not display perfectly on retries
+	// Progress bar recreated per retry attempt
 	var bar *progressbar.ProgressBar
 
 	retryErr := retry.Do(ctx, retry.Options{
@@ -255,6 +255,12 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 			return retry.Permanent(fmt.Errorf("failed to truncate temp file: %w", truncErr))
 		}
 		hasher.Reset()
+
+		// Reset progress bar from previous attempt
+		if bar != nil {
+			progress.FinishProgressBar(bar)
+			bar = nil
+		}
 
 		req, reqErr := http.NewRequestWithContext(retryCtx, http.MethodGet, dlURL, nil)
 		if reqErr != nil {
@@ -280,6 +286,7 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 			return retry.Permanent(fmt.Errorf("failed to download: HTTP %d", resp.StatusCode))
 		}
 
+		// Create new bar for this download attempt
 		bar = progress.NewBytesProgressBar(
 			fmt.Sprintf("Downloading %s.traineddata", lang),
 			resp.ContentLength,
@@ -304,6 +311,7 @@ func downloadTessdataWithBaseURL(ctx context.Context, dataDir, lang, baseURL str
 		}
 	}()
 
+	// Finish final bar
 	progress.FinishProgressBar(bar)
 
 	// Verify checksum if known
