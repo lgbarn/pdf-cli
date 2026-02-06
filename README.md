@@ -781,6 +781,25 @@ Common solutions:
 
 The first time you use WASM OCR, pdf-cli will download the required language data (~15MB for English).
 
+### OCR Performance with WASM Backend
+
+The WASM OCR backend processes images sequentially due to thread-safety limitations in the underlying WASM runtime. Native Tesseract uses parallel processing for batches of more than 5 images, which is significantly faster for multi-page documents.
+
+For better OCR performance on large documents, install native Tesseract:
+
+```bash
+# macOS
+brew install tesseract
+
+# Ubuntu/Debian
+sudo apt install tesseract-ocr
+
+# Verify installation
+tesseract --version
+```
+
+The CLI automatically detects and uses native Tesseract when available (`--ocr-backend=auto`, the default).
+
 ### Large PDF processing is slow
 
 For very large PDFs (hundreds of pages), operations may take time. Use `--progress` to see a progress bar:
