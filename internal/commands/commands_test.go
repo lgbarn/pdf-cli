@@ -12,8 +12,8 @@ func TestOutputOrDefault(t *testing.T) {
 		output, inputFile, suffix, want string
 	}{
 		{"custom.pdf", "input.pdf", "_modified", "custom.pdf"},
-		{"", "document.pdf", "_compressed", "document_compressed.pdf"},
-		{"", "/path/to/file.pdf", "_rotated", "/path/to/file_rotated.pdf"},
+		{"", "document.pdf", SuffixCompressed, "document_compressed.pdf"},
+		{"", "/path/to/file.pdf", SuffixRotated, "/path/to/file_rotated.pdf"},
 		{"", "document.pdf", "", "document.pdf"},
 		{"myfile.pdf", "document.pdf", "_ignored", "myfile.pdf"},
 		{"", "./docs/file.pdf", "_out", "./docs/file_out.pdf"},
