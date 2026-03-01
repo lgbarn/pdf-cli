@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 
@@ -142,39 +141,20 @@ func TestProgressFlagExists(t *testing.T) {
 func TestPrintVerbose(t *testing.T) {
 	cmd := GetRootCmd()
 
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
 	// Test with verbose off
 	_ = cmd.PersistentFlags().Set("verbose", "false")
-	PrintVerbose("test message %s", "arg")
-
-	// Close write end and read output
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output := buf.String()
+	output := captureStderr(t, func() {
+		PrintVerbose("test message %s", "arg")
+	})
 	if output != "" {
 		t.Errorf("PrintVerbose() with verbose=false should produce no output, got %q", output)
 	}
 
 	// Test with verbose on
-	r, w, _ = os.Pipe()
-	os.Stderr = w
-
 	_ = cmd.PersistentFlags().Set("verbose", "true")
-	PrintVerbose("test message %s", "arg")
-
-	w.Close()
-	buf.Reset()
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output = buf.String()
+	output = captureStderr(t, func() {
+		PrintVerbose("test message %s", "arg")
+	})
 	if !strings.Contains(output, "test message arg") {
 		t.Errorf("PrintVerbose() with verbose=true should output message, got %q", output)
 	}
@@ -184,19 +164,9 @@ func TestPrintVerbose(t *testing.T) {
 }
 
 func TestPrintStatus(t *testing.T) {
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	PrintStatus("status message %d", 42)
-
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output := buf.String()
+	output := captureStderr(t, func() {
+		PrintStatus("status message %d", 42)
+	})
 	if !strings.Contains(output, "status message 42") {
 		t.Errorf("PrintStatus() should output message, got %q", output)
 	}
@@ -206,36 +176,19 @@ func TestPrintProgress(t *testing.T) {
 	cmd := GetRootCmd()
 
 	// Test with verbose off - should produce no output
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
 	_ = cmd.PersistentFlags().Set("verbose", "false")
-	PrintProgress("operation")
-
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output := buf.String()
+	output := captureStderr(t, func() {
+		PrintProgress("operation")
+	})
 	if output != "" {
 		t.Errorf("PrintProgress() with verbose=false should produce no output, got %q", output)
 	}
 
 	// Test with verbose on
-	r, w, _ = os.Pipe()
-	os.Stderr = w
-
 	_ = cmd.PersistentFlags().Set("verbose", "true")
-	PrintProgress("operation")
-
-	w.Close()
-	buf.Reset()
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output = buf.String()
+	output = captureStderr(t, func() {
+		PrintProgress("operation")
+	})
 	if !strings.Contains(output, "Processing: operation") {
 		t.Errorf("PrintProgress() with verbose=true should output message, got %q", output)
 	}
@@ -406,19 +359,9 @@ func TestDryRunFlagExists(t *testing.T) {
 }
 
 func TestDryRunPrint(t *testing.T) {
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	DryRunPrint("would do %s with %d items", "action", 5)
-
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	os.Stderr = oldStderr
-
-	output := buf.String()
+	output := captureStderr(t, func() {
+		DryRunPrint("would do %s with %d items", "action", 5)
+	})
 	if !strings.Contains(output, "[dry-run]") {
 		t.Errorf("DryRunPrint() should contain [dry-run] prefix, got %q", output)
 	}

@@ -147,10 +147,6 @@ func extractPagesParallel(ctx context.Context, r *pdf.Reader, pages []int, total
 			break
 		}
 		go func(pn int) {
-			if ctx.Err() != nil {
-				results <- pageResult{pageNum: pn, text: ""}
-				return
-			}
 			results <- pageResult{pageNum: pn, text: extractPageText(r, pn, totalPages)}
 		}(pageNum)
 	}

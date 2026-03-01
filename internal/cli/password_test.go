@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,7 +167,7 @@ func TestReadPassword_PasswordFlagWithoutOptIn(t *testing.T) {
 		"--allow-insecure-password",
 	}
 	for _, s := range requiredStrings {
-		if !contains(errMsg, s) {
+		if !strings.Contains(errMsg, s) {
 			t.Errorf("error message missing %q: %v", s, err)
 		}
 	}
@@ -190,21 +189,7 @@ func TestReadPassword_PasswordFlagWithOptIn(t *testing.T) {
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsRecursive(s, substr))
-}
-
-func containsRecursive(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
 func TestReadPassword_BinaryContentWarning(t *testing.T) {
-	// Create a password file with binary data
 	tmpDir := t.TempDir()
 	pwdFile := filepath.Join(tmpDir, "binary_pwd.txt")
 	binaryData := []byte{0x00, 0x01, 0x02, 'p', 'a', 's', 's', 0xFF, 0xFE}
@@ -212,48 +197,34 @@ func TestReadPassword_BinaryContentWarning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Capture stderr
-	origStderr := os.Stderr
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Stderr = w
-	defer func() { os.Stderr = origStderr }()
-
 	cmd := newTestCmd()
 	cmd.Flags().Set("password-file", pwdFile)
 
-	// Read password
-	got, err := ReadPassword(cmd, "")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	var got string
+	stderrStr := captureStderr(t, func() {
+		var err error
+		got, err = ReadPassword(cmd, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 	if got == "" {
 		t.Error("expected non-empty password content")
 	}
-
-	// Close writer and read stderr
-	w.Close()
-	stderrOutput, _ := io.ReadAll(r)
-	stderrStr := string(stderrOutput)
-
-	// Verify warning was printed
 	if !strings.Contains(stderrStr, "WARNING") {
 		t.Errorf("expected WARNING in stderr, got: %q", stderrStr)
 	}
 	if !strings.Contains(stderrStr, "non-printable") {
 		t.Errorf("expected 'non-printable' in stderr, got: %q", stderrStr)
 	}
-	// Should mention count of non-printable characters (3 in our test data: 0x00, 0x01, 0x02)
-	// Note: 0xFF and 0xFE form a UTF-8 replacement character sequence, not individual non-printable chars
+	// 3 non-printable characters: 0x00, 0x01, 0x02
+	// Note: 0xFF and 0xFE form a UTF-8 replacement character sequence
 	if !strings.Contains(stderrStr, "3") {
 		t.Errorf("expected count '3' in stderr, got: %q", stderrStr)
 	}
 }
 
 func TestReadPassword_PrintableContent_NoWarning(t *testing.T) {
-	// Create a password file with only printable characters and whitespace
 	tmpDir := t.TempDir()
 	pwdFile := filepath.Join(tmpDir, "printable_pwd.txt")
 	printableData := []byte("my secure password\t\nwith spaces")
@@ -261,33 +232,20 @@ func TestReadPassword_PrintableContent_NoWarning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Capture stderr
-	origStderr := os.Stderr
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Stderr = w
-	defer func() { os.Stderr = origStderr }()
-
 	cmd := newTestCmd()
 	cmd.Flags().Set("password-file", pwdFile)
 
-	// Read password
-	got, err := ReadPassword(cmd, "")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	var got string
+	stderrStr := captureStderr(t, func() {
+		var err error
+		got, err = ReadPassword(cmd, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 	if got == "" {
 		t.Error("expected non-empty password content")
 	}
-
-	// Close writer and read stderr
-	w.Close()
-	stderrOutput, _ := io.ReadAll(r)
-	stderrStr := string(stderrOutput)
-
-	// Verify NO warning was printed
 	if strings.Contains(stderrStr, "WARNING") {
 		t.Errorf("expected NO WARNING in stderr for printable content, got: %q", stderrStr)
 	}

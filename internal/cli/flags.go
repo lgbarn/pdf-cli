@@ -101,8 +101,8 @@ func GetStdout(cmd *cobra.Command) bool {
 
 // AddLoggingFlags adds --log-level and --log-format persistent flags to a command.
 func AddLoggingFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", "error", "Log level (debug, info, warn, error, silent)")
-	cmd.PersistentFlags().StringVar(&logFormat, "log-format", "text", "Log format (text, json)")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", string(logging.LevelError), "Log level (debug, info, warn, error, silent)")
+	cmd.PersistentFlags().StringVar(&logFormat, "log-format", string(logging.FormatText), "Log format (text, json)")
 }
 
 // GetLogLevel returns the log level flag value.
