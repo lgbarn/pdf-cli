@@ -6,7 +6,7 @@ require (
 	github.com/danlock/gogosseract v0.0.11-0ad3421
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/pdfcpu/pdfcpu v0.12.1
-	github.com/schollz/progressbar/v3 v3.19.0
+	github.com/schollz/progressbar/v3 v3.19.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.44.0
 	gopkg.in/yaml.v3 v3.0.1
