@@ -54,7 +54,7 @@ jobs:
           go run scripts/coverage-check.go coverage-summary.txt 75
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.out
           fail_ci_if_error: false
